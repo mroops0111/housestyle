@@ -1,0 +1,42 @@
+[project]
+name = "commentstyle"
+version = "0.0.1"
+description = "A linter and formatter for the prose inside code comments, across languages."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "mroops0111", email = "mroops0111@gmail.com" }]
+keywords = ["linter", "formatter", "comments", "prose", "lsp", "tree-sitter"]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/mroops0111/commentstyle"
+Repository = "https://github.com/mroops0111/commentstyle"
+
+[project.scripts]
+commentstyle = "commentstyle.presentation.cli:main"
+cmst = "commentstyle.presentation.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/commentstyle"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.basedpyright]
+typeCheckingMode = "strict"
+pythonVersion = "3.11"

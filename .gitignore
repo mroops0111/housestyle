@@ -1,0 +1,19 @@
+# Design notes stay local, not in git
+docs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Tooling caches
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# macOS
+.DS_Store
