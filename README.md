@@ -1,8 +1,8 @@
-# commentprose
+# housestyle
 
 A linter and formatter for the prose inside code comments, across languages.
 
-Linters check your code. Almost nothing checks your comments. `commentprose` extracts comment blocks with
+Linters check your code. Almost nothing checks your comments. `housestyle` extracts comment blocks with
 tree-sitter and enforces prose rules on them, covering the layout and position rules that markup-aware prose
 linters structurally cannot reach.
 
@@ -22,7 +22,7 @@ Rules fall into three tiers. Most of them are shared across every language.
 
 One pure core, `lint(text, path, config) -> Diagnostic[]`, behind several thin adapters.
 
-- **CLI**: `commentprose check` and `commentprose fix`
+- **CLI**: `housestyle check` and `housestyle fix`
 - **LSP**: diagnostics and quick fixes for any editor
 - **Agent hook**: blocking feedback for coding agents
 

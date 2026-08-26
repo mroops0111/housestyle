@@ -1,5 +1,5 @@
 [project]
-name = "commentprose"
+name = "housestyle"
 version = "0.0.1"
 description = "A linter and formatter for the prose inside code comments, across languages."
 authors = [
@@ -30,20 +30,20 @@ dev = [
 ]
 
 [project.scripts]
-commentprose = "commentprose.presentation.cli:main"
-cprose = "commentprose.presentation.cli:main"
+housestyle = "housestyle.presentation.cli:main"
+hstyle = "housestyle.presentation.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/mroops0111/commentprose"
-Repository = "https://github.com/mroops0111/commentprose"
-Issues = "https://github.com/mroops0111/commentprose/issues"
+Homepage = "https://github.com/mroops0111/housestyle"
+Repository = "https://github.com/mroops0111/housestyle"
+Issues = "https://github.com/mroops0111/housestyle/issues"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/commentprose"]
+packages = ["src/housestyle"]
 
 [tool.ruff]
 line-length = 120
@@ -96,7 +96,7 @@ line-ending = "auto"
 "__init__.py" = ["F401"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["commentprose"]
+known-first-party = ["housestyle"]
 force-single-line = false
 lines-after-imports = 2
 split-on-trailing-comma = true
