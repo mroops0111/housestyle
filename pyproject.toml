@@ -2,29 +2,41 @@
 name = "commentprose"
 version = "0.0.1"
 description = "A linter and formatter for the prose inside code comments, across languages."
+authors = [
+    {name = "Yun-Tai Yang"},
+]
 readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.11"
-license = "MIT"
-authors = [{ name = "mroops0111", email = "mroops0111@gmail.com" }]
 keywords = ["linter", "formatter", "comments", "prose", "lsp", "tree-sitter"]
 classifiers = [
     "Development Status :: 1 - Planning",
     "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Quality Assurance",
-    "Typing :: Typed",
 ]
+
 dependencies = []
 
-[project.urls]
-Homepage = "https://github.com/mroops0111/commentprose"
-Repository = "https://github.com/mroops0111/commentprose"
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.0",
+    "basedpyright>=1.39.0",
+    "ruff>=0.15.0",
+]
 
 [project.scripts]
 commentprose = "commentprose.presentation.cli:main"
 cprose = "commentprose.presentation.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/mroops0111/commentprose"
+Repository = "https://github.com/mroops0111/commentprose"
+Issues = "https://github.com/mroops0111/commentprose/issues"
 
 [build-system]
 requires = ["hatchling"]
@@ -36,7 +48,65 @@ packages = ["src/commentprose"]
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "N",    # pep8-naming
+    "S",    # flake8-bandit
+    "T20",  # flake8-print
+    "SIM",  # flake8-simplify
+    "RUF",  # Ruff-specific rules
+    "ERA",  # eradicate, commented-out code
+]
+
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "S104",   # use of binding
+    "T201",   # print statements
+    "B008",   # do not perform function calls in argument defaults
+    "RUF012", # mutable class attributes should be annotated with ClassVar
+]
+
+fixable = ["ALL"]
+unfixable = []
+
+exclude = [
+    ".git",
+    ".venv",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S106", "S603", "S607"]
+"__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["commentprose"]
+force-single-line = false
+lines-after-imports = 2
+split-on-trailing-comma = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.basedpyright]
-typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
 pythonVersion = "3.11"
+typeCheckingMode = "basic"
+reportMissingImports = "warning"
