@@ -24,7 +24,7 @@ wheels = [
 ]
 
 [[package]]
-name = "commentprose"
+name = "housestyle"
 version = "0.0.1"
 source = { editable = "." }
 

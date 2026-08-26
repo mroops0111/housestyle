@@ -1,7 +1,7 @@
 import pytest
 
-from commentprose import __version__
-from commentprose.presentation.cli import main
+from housestyle import __version__
+from housestyle.presentation.cli import main
 
 
 def test_main_succeeds(capsys: pytest.CaptureFixture[str]) -> None:
