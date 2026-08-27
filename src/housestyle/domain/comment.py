@@ -2,7 +2,7 @@ import dataclasses
 import enum
 
 from .position import SourceRange
-from .prose import Prose
+from .prose import Prose, reflow_sentence
 from .text import TextEdit
 
 
@@ -95,6 +95,58 @@ class CommentBlock:
             for line in self.lines
         ]
         return Prose('\n'.join(rendered))
+
+    def reflow(self, width: int) -> 'CommentBlock':
+        payloads = self._reflowed_payloads(width)
+        if not payloads:
+            return self
+        return self._rebuild(payloads)
+
+    def _reflowed_payloads(self, width: int) -> tuple[str, ...]:
+        budget = max(20, width - self.lines[0].prefix_width)
+        out: list[str] = []
+        for paragraph, is_literal in self._paragraphs():
+            if out:
+                out.append('')
+            if is_literal:
+                out.extend(paragraph)
+                continue
+            joined = ' '.join(line.strip() for line in paragraph if line.strip())
+            for sentence in Prose(joined).sentences():
+                out.extend(reflow_sentence(sentence.text, budget))
+        return tuple(out)
+
+    def _paragraphs(self) -> tuple[tuple[tuple[str, ...], bool], ...]:
+        found: list[tuple[tuple[str, ...], bool]] = []
+        for segment in self.prose().segments():
+            current: list[str] = []
+            for line in segment.lines:
+                if line.strip():
+                    current.append(line)
+                elif current:
+                    found.append((tuple(current), segment.is_literal))
+                    current = []
+            if current:
+                found.append((tuple(current), segment.is_literal))
+        return tuple(found)
+
+    def _rebuild(self, payloads: tuple[str, ...]) -> 'CommentBlock':
+        if self.form is not CommentForm.DOC:
+            return self.with_payloads(payloads)
+        opening, closing = self.lines[0], self.lines[-1]
+        closes_alone = len(self.lines) > 1 and not closing.payload.strip()
+        body = [
+            dataclasses.replace(opening, marker='', suffix='', payload=payload, range=opening.range)
+            for payload in payloads
+        ]
+        body[0] = dataclasses.replace(body[0], marker=opening.marker)
+        if closes_alone or len(payloads) > 1:
+            body.append(dataclasses.replace(closing, marker=closing.marker or opening.marker, payload='', suffix=''))
+            if not closes_alone:
+                body[-1] = dataclasses.replace(body[-1], marker=opening.marker.strip())
+        else:
+            body[0] = dataclasses.replace(body[0], suffix=closing.suffix or opening.marker.strip())
+        return dataclasses.replace(self, lines=tuple(body))
 
     def with_payloads(self, payloads: tuple[str, ...]) -> 'CommentBlock':
         if not payloads:
