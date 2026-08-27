@@ -112,9 +112,16 @@ class CommentBlock:
                 out.extend(paragraph)
                 continue
             joined = ' '.join(line.strip() for line in paragraph if line.strip())
-            for sentence in Prose(joined).sentences():
+            sentences = Prose(joined).sentences()
+            if any(len(item.text) > budget and ',' not in item.text for item in sentences):
+                out.extend(paragraph)
+                continue
+            for sentence in sentences:
                 out.extend(reflow_sentence(sentence.text, budget))
         return tuple(out)
+
+    def fits(self, width: int) -> bool:
+        return self.widest_line <= width
 
     def _paragraphs(self) -> tuple[tuple[tuple[str, ...], bool], ...]:
         found: list[tuple[tuple[str, ...], bool]] = []
