@@ -183,3 +183,39 @@ class Prose:
         if rest[0] in '"\')]}':
             rest = rest[1:]
         return not rest or rest[0] == ' '
+
+
+def reflow_sentence(sentence: str, width: int) -> tuple[str, ...]:
+    if len(sentence) <= width:
+        return (sentence,)
+    pieces = _comma_pieces(sentence)
+    if len(pieces) == 1:
+        return (sentence,)
+    return _pack(pieces, width)
+
+
+def _comma_pieces(sentence: str) -> tuple[str, ...]:
+    pieces: list[str] = []
+    start = 0
+    for match in re.finditer(r',\s+', sentence):
+        pieces.append(sentence[start : match.end()].rstrip())
+        start = match.end()
+    tail = sentence[start:].strip()
+    if tail:
+        pieces.append(tail)
+    return tuple(pieces) if pieces else (sentence,)
+
+
+def _pack(pieces: tuple[str, ...], width: int) -> tuple[str, ...]:
+    lines: list[str] = []
+    current = ''
+    for piece in pieces:
+        candidate = f'{current} {piece}'.strip() if current else piece
+        if current and len(candidate) > width:
+            lines.append(current)
+            current = piece
+        else:
+            current = candidate
+    if current:
+        lines.append(current)
+    return tuple(lines)
