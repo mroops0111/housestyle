@@ -12,6 +12,7 @@ from .document import Document
 from .ports import SourceParser
 from .position import Encoding, Position, PositionMap, SourceRange
 from .prose import BreakPoint, BreakStrength, Prose, Sentence
+from .rules import ConfigSource, Rule, RuleContext, RuleSet, RuleSettings
 from .text import TextEdit, apply_edits
 
 
@@ -22,6 +23,7 @@ __all__ = [
     'CommentForm',
     'CommentLine',
     'CommentPlacement',
+    'ConfigSource',
     'Diagnostic',
     'Document',
     'Encoding',
@@ -31,7 +33,11 @@ __all__ = [
     'PositionMap',
     'Prose',
     'Report',
+    'Rule',
+    'RuleContext',
     'RuleMeta',
+    'RuleSet',
+    'RuleSettings',
     'Sentence',
     'Severity',
     'SourceParser',
