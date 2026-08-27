@@ -1,0 +1,33 @@
+import typing
+
+from .comment import CommentBlock, CommentForm, Visibility
+from .document import Document
+
+
+class LanguageProfile(typing.Protocol):
+    @property
+    def language_id(self) -> str: ...
+
+    @property
+    def extensions(self) -> frozenset[str]: ...
+
+    @property
+    def doc_form_marker(self) -> str: ...
+
+    @property
+    def line_width(self) -> int: ...
+
+    @property
+    def signature_tags(self) -> tuple[str, ...]: ...
+
+    def query(self) -> str: ...
+
+    def visibility_of(self, name: str) -> Visibility: ...
+
+    def split_marker(self, line: str, form: CommentForm) -> tuple[str, str, str, str]: ...
+
+
+class SourceParser(typing.Protocol):
+    def supports(self, language_id: str) -> bool: ...
+
+    def parse(self, document: Document) -> tuple[CommentBlock, ...]: ...

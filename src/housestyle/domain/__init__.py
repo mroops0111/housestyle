@@ -1,6 +1,7 @@
 from .comment import CommentBlock, CommentForm, CommentLine, CommentPlacement, SymbolRef, Visibility
 from .diagnostic import Diagnostic, Fix, FixKind, Report, RuleMeta, Severity
 from .document import Document
+from .ports import LanguageProfile, SourceParser
 from .position import Encoding, Position, PositionMap, SourceRange
 from .prose import BreakPoint, BreakStrength, Prose, Sentence
 from .text import TextEdit, apply_edits
@@ -18,6 +19,7 @@ __all__ = [
     'Encoding',
     'Fix',
     'FixKind',
+    'LanguageProfile',
     'Position',
     'PositionMap',
     'Prose',
@@ -25,6 +27,7 @@ __all__ = [
     'RuleMeta',
     'Sentence',
     'Severity',
+    'SourceParser',
     'SourceRange',
     'SymbolRef',
     'TextEdit',

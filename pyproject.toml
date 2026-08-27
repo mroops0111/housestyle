@@ -20,7 +20,10 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance",
 ]
 
-dependencies = []
+dependencies = [
+    "tree-sitter>=0.26.0",
+    "tree-sitter-language-pack>=1.15.8",
+]
 
 [project.optional-dependencies]
 dev = [
