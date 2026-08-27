@@ -3,15 +3,27 @@ import pytest
 from housestyle.domain import Encoding, Position, PositionMap, SourceRange
 
 
-ASCII = 'const x = 1\nconst y = 2\n'
-CJK = '使用 MCP 協定\n第二行也有中文\n'
-EMOJI = 'tail 🐍 head\nfamily 👨‍👩‍👧 done\n'
-MIXED = '// 說明 with 🐍 mixed\n// second\n'
-NO_TRAILING_NEWLINE = 'alpha\nbeta'
-CRLF = 'alpha\r\nbeta\r\n'
+ONE_BYTE = 'const x = 1\nconst y = 2\n'
+TWO_BYTE = 'cafe\u0301 vs café\nsegunda línea\n'
+THREE_BYTE = 'a three byte run 中文\nsecond line 日本\n'
+FOUR_BYTE = 'tail 🐍 head\nsecond 🎯 line\n'
+JOINED_GRAPHEME = 'family 👨\u200d👩\u200d👧 done\n'
+MIXED_WIDTH = '// note é 中 🐍 together\n// second\n'
+CRLF_LINES = 'alpha\r\nbeta\r\n'
+NO_FINAL_NEWLINE = 'alpha\nbeta'
 EMPTY = ''
 
-ALL_TEXTS = [ASCII, CJK, EMOJI, MIXED, NO_TRAILING_NEWLINE, CRLF, EMPTY]
+ALL_TEXTS = [
+    ONE_BYTE,
+    TWO_BYTE,
+    THREE_BYTE,
+    FOUR_BYTE,
+    JOINED_GRAPHEME,
+    MIXED_WIDTH,
+    CRLF_LINES,
+    NO_FINAL_NEWLINE,
+    EMPTY,
+]
 
 
 @pytest.mark.parametrize('text', ALL_TEXTS)
@@ -49,7 +61,7 @@ def test_utf16_counts_surrogate_pairs_as_two() -> None:
     assert mapper.to_position(len('a🐍'.encode()), Encoding.UTF8).character == 5
 
 
-def test_utf16_and_utf32_diverge_on_cjk_only_beyond_bmp() -> None:
+def test_multibyte_below_the_bmp_costs_one_unit_in_both_utf16_and_utf32() -> None:
     mapper = PositionMap('中文')
     offset = len('中文'.encode())
     assert mapper.to_position(offset, Encoding.UTF16).character == 2
@@ -58,31 +70,31 @@ def test_utf16_and_utf32_diverge_on_cjk_only_beyond_bmp() -> None:
 
 
 def test_crlf_is_excluded_from_line_range() -> None:
-    mapper = PositionMap(CRLF)
+    mapper = PositionMap(CRLF_LINES)
     assert mapper.line_text(0) == 'alpha'
     assert mapper.line_text(1) == 'beta'
 
 
 def test_line_starts_track_every_newline() -> None:
-    mapper = PositionMap(ASCII)
+    mapper = PositionMap(ONE_BYTE)
     assert mapper.line_count == 3
     assert mapper.line_text(2) == ''
 
 
 def test_out_of_range_offset_is_rejected() -> None:
-    mapper = PositionMap(ASCII)
+    mapper = PositionMap(ONE_BYTE)
     with pytest.raises(ValueError, match='out of range'):
-        mapper.to_position(len(ASCII.encode()) + 1)
+        mapper.to_position(len(ONE_BYTE.encode()) + 1)
 
 
 def test_out_of_range_line_is_rejected() -> None:
-    mapper = PositionMap(ASCII)
+    mapper = PositionMap(ONE_BYTE)
     with pytest.raises(ValueError, match='out of range'):
         mapper.line_range(99)
 
 
 def test_character_past_line_end_clamps_to_line_end() -> None:
-    mapper = PositionMap(ASCII)
+    mapper = PositionMap(ONE_BYTE)
     assert mapper.to_offset(Position(0, 999)) == mapper.line_range(0).end
 
 

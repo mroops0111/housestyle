@@ -1,0 +1,6 @@
+extends: existence
+message: "Semicolon found. Split into two sentences or use a comma."
+level: error
+nonword: true
+tokens:
+  - ';'

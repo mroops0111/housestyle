@@ -1,0 +1,6 @@
+extends: existence
+message: "Em-dash, en-dash, or arrow found. Use a comma, period, or parentheses."
+level: error
+nonword: true
+tokens:
+  - '[—–→←↔]'
