@@ -88,7 +88,13 @@ class CommentBlock:
         return self.attachment is not None and self.attachment.visibility is Visibility.PUBLIC
 
     def prose(self) -> Prose:
-        return Prose('\n'.join(line.payload.strip() for line in self.lines))
+        filled = [line for line in self.lines if line.payload.strip()]
+        base = min((len(line.indent) for line in filled), default=0)
+        rendered = [
+            ' ' * max(0, len(line.indent) - base) + line.payload.rstrip() if line.payload.strip() else ''
+            for line in self.lines
+        ]
+        return Prose('\n'.join(rendered))
 
     def with_payloads(self, payloads: tuple[str, ...]) -> 'CommentBlock':
         if not payloads:
