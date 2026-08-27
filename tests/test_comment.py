@@ -6,6 +6,7 @@ from housestyle.domain import (
     CommentLine,
     CommentPlacement,
     SourceRange,
+    SymbolKind,
     SymbolRef,
     Visibility,
 )
@@ -89,8 +90,8 @@ def test_with_payloads_rejects_an_empty_result() -> None:
 
 
 def test_public_attachment_is_reported() -> None:
-    public = block('doc', attachment=SymbolRef('buildProposal', 'function', Visibility.PUBLIC))
-    internal = block('doc', attachment=SymbolRef('_helper', 'function', Visibility.INTERNAL))
+    public = block('doc', attachment=SymbolRef('buildProposal', SymbolKind.FUNCTION, Visibility.PUBLIC))
+    internal = block('doc', attachment=SymbolRef('_helper', SymbolKind.FUNCTION, Visibility.INTERNAL))
 
     assert public.attaches_to_public_symbol
     assert not internal.attaches_to_public_symbol

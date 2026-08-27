@@ -10,7 +10,7 @@ from ..domain.comment import (
 )
 from ..domain.document import Document
 from ..domain.position import SourceRange
-from .languages import LanguageProfile
+from .languages import LanguageProfile, NodeRole
 
 
 class TreeSitterParser:
@@ -125,7 +125,8 @@ class TreeSitterParser:
         if self._next_definition(profile, node) is not None:
             return CommentPlacement.LEADING_DECLARATION
         parent = node.parent
-        if parent is not None and parent.type in profile.root_nodes and not self._has_code_before(profile, node):
+        is_root = parent is not None and profile.role_of(parent.type) is NodeRole.ROOT
+        if is_root and not self._has_code_before(profile, node):
             return CommentPlacement.FILE_HEADER
         return CommentPlacement.INLINE_BODY
 
@@ -134,16 +135,17 @@ class TreeSitterParser:
         if parent is None:
             return False
         return any(
-            sibling.start_byte < node.start_byte and sibling.type != profile.comment_node
+            sibling.start_byte < node.start_byte and profile.role_of(sibling.type) is not NodeRole.COMMENT
             for sibling in parent.named_children
         )
 
     def _next_definition(self, profile: LanguageProfile, node: Node) -> Node | None:
         candidate = node.next_named_sibling
         while candidate is not None:
-            if candidate.type in profile.definition_nodes:
+            role = profile.role_of(candidate.type)
+            if role is NodeRole.DEFINITION:
                 return candidate
-            if candidate.type != profile.comment_node:
+            if role is not NodeRole.COMMENT:
                 return None
             candidate = candidate.next_named_sibling
         return None
@@ -151,9 +153,10 @@ class TreeSitterParser:
     def _owning_definition(self, profile: LanguageProfile, node: Node) -> Node | None:
         cursor = node.parent
         while cursor is not None:
-            if cursor.type in profile.definition_nodes:
+            role = profile.role_of(cursor.type)
+            if role is NodeRole.DEFINITION:
                 return cursor
-            if cursor.type in profile.root_nodes:
+            if role is NodeRole.ROOT:
                 return None
             cursor = cursor.parent
         return None

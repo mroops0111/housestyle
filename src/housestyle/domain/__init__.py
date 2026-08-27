@@ -1,4 +1,12 @@
-from .comment import CommentBlock, CommentForm, CommentLine, CommentPlacement, SymbolRef, Visibility
+from .comment import (
+    CommentBlock,
+    CommentForm,
+    CommentLine,
+    CommentPlacement,
+    SymbolKind,
+    SymbolRef,
+    Visibility,
+)
 from .diagnostic import Diagnostic, Fix, FixKind, Report, RuleMeta, Severity
 from .document import Document
 from .ports import SourceParser
@@ -28,6 +36,7 @@ __all__ = [
     'Severity',
     'SourceParser',
     'SourceRange',
+    'SymbolKind',
     'SymbolRef',
     'TextEdit',
     'Visibility',

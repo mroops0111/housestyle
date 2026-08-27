@@ -1,7 +1,15 @@
 import dataclasses
+import enum
 import typing
 
-from ...domain.comment import CommentForm, Visibility
+from ...domain.comment import CommentForm, SymbolKind, Visibility
+
+
+class NodeRole(enum.Enum):
+    ROOT = 'root'
+    DEFINITION = 'definition'
+    COMMENT = 'comment'
+    OTHER = 'other'
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -12,7 +20,7 @@ class MarkerSplit:
     suffix: str = ''
 
 
-class LanguageProfile(typing.Protocol):
+class LanguageConventions(typing.Protocol):
     @property
     def language_id(self) -> str: ...
 
@@ -25,19 +33,17 @@ class LanguageProfile(typing.Protocol):
     @property
     def signature_tags(self) -> tuple[str, ...]: ...
 
-    @property
-    def comment_node(self) -> str: ...
-
-    @property
-    def root_nodes(self) -> frozenset[str]: ...
-
-    @property
-    def definition_nodes(self) -> frozenset[str]: ...
-
-    def query(self) -> str: ...
-
-    def symbol_kind(self, node_type: str) -> str: ...
-
     def visibility_of(self, name: str) -> Visibility: ...
 
     def split_marker(self, line: str, form: CommentForm) -> MarkerSplit: ...
+
+
+class GrammarAdapter(typing.Protocol):
+    def query(self) -> str: ...
+
+    def role_of(self, node_type: str) -> NodeRole: ...
+
+    def symbol_kind(self, node_type: str) -> SymbolKind: ...
+
+
+class LanguageProfile(LanguageConventions, GrammarAdapter, typing.Protocol): ...

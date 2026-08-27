@@ -1,7 +1,7 @@
 import re
 
-from ...domain.comment import CommentForm, Visibility
-from .base import MarkerSplit
+from ...domain.comment import CommentForm, SymbolKind, Visibility
+from .base import MarkerSplit, NodeRole
 
 
 _DOC_DELIMITER = re.compile(r'^([rRbBuUfF]{0,2})("""|\'\'\')')
@@ -20,15 +20,22 @@ class PythonProfile:
     extensions = frozenset({'.py', '.pyi'})
     doc_form_marker = '"""'
     signature_tags = ('Args:', 'Returns:', 'Raises:', 'Yields:', ':param', ':return', ':rtype')
-    comment_node = 'comment'
-    root_nodes = frozenset({'module'})
-    definition_nodes = frozenset({'function_definition', 'class_definition', 'decorated_definition'})
+    _ROLES = {
+        'module': NodeRole.ROOT,
+        'comment': NodeRole.COMMENT,
+        'function_definition': NodeRole.DEFINITION,
+        'class_definition': NodeRole.DEFINITION,
+        'decorated_definition': NodeRole.DEFINITION,
+    }
 
     def query(self) -> str:
         return QUERY
 
-    def symbol_kind(self, node_type: str) -> str:
-        return 'class' if node_type == 'class_definition' else 'function'
+    def role_of(self, node_type: str) -> NodeRole:
+        return self._ROLES.get(node_type, NodeRole.OTHER)
+
+    def symbol_kind(self, node_type: str) -> SymbolKind:
+        return SymbolKind.CLASS if node_type == 'class_definition' else SymbolKind.FUNCTION
 
     def visibility_of(self, name: str) -> Visibility:
         return Visibility.INTERNAL if name.startswith('_') else Visibility.PUBLIC

@@ -1,8 +1,8 @@
 import re
 
-from housestyle.domain import CommentForm, CommentPlacement, Document, Visibility
+from housestyle.domain import CommentForm, CommentPlacement, Document, SymbolKind, Visibility
 from housestyle.infrastructure import TreeSitterParser
-from housestyle.infrastructure.languages import LanguageProfile, MarkerSplit
+from housestyle.infrastructure.languages import LanguageProfile, MarkerSplit, NodeRole
 
 
 _TS_MARKER = re.compile(r'^(/\*\*|/\*|//+)\s?')
@@ -15,15 +15,23 @@ class TypeScriptProfile:
     extensions = frozenset({'.ts', '.tsx'})
     doc_form_marker = '/**'
     signature_tags = ('@param', '@returns', '@type')
-    comment_node = 'comment'
-    root_nodes = frozenset({'program'})
-    definition_nodes = frozenset({'function_declaration', 'class_declaration', 'method_definition', 'export_statement'})
+    _ROLES = {
+        'program': NodeRole.ROOT,
+        'comment': NodeRole.COMMENT,
+        'function_declaration': NodeRole.DEFINITION,
+        'class_declaration': NodeRole.DEFINITION,
+        'method_definition': NodeRole.DEFINITION,
+        'export_statement': NodeRole.DEFINITION,
+    }
 
     def query(self) -> str:
         return TYPESCRIPT_QUERY
 
-    def symbol_kind(self, node_type: str) -> str:
-        return 'class' if node_type == 'class_declaration' else 'function'
+    def role_of(self, node_type: str) -> NodeRole:
+        return self._ROLES.get(node_type, NodeRole.OTHER)
+
+    def symbol_kind(self, node_type: str) -> SymbolKind:
+        return SymbolKind.CLASS if node_type == 'class_declaration' else SymbolKind.FUNCTION
 
     def visibility_of(self, name: str) -> Visibility:
         return Visibility.INTERNAL if name.startswith('_') else Visibility.PUBLIC
@@ -66,7 +74,7 @@ def test_a_typescript_doc_comment_attaches_to_its_class() -> None:
 
     assert blocks[0].attachment is not None
     assert blocks[0].attachment.name == 'Widget'
-    assert blocks[0].attachment.kind == 'class'
+    assert blocks[0].attachment.kind is SymbolKind.CLASS
 
 
 def test_grammar_node_names_come_from_the_profile_not_the_parser() -> None:
@@ -77,8 +85,8 @@ def test_grammar_node_names_come_from_the_profile_not_the_parser() -> None:
     assert aware[0].placement is CommentPlacement.INLINE_BODY
 
     class BlindProfile(TypeScriptProfile):
-        definition_nodes = frozenset()
-        root_nodes = frozenset()
+        def role_of(self, node_type: str) -> NodeRole:
+            return NodeRole.COMMENT if node_type == 'comment' else NodeRole.OTHER
 
     blind = TreeSitterParser((BlindProfile(),)).parse(document)
     assert blind[0].placement is CommentPlacement.INLINE_BODY
