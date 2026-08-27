@@ -160,8 +160,9 @@ def test_blocks_come_back_in_source_order() -> None:
 
 
 def test_the_profile_satisfies_the_language_profile_port() -> None:
-    from housestyle.domain import LanguageProfile, SourceParser
+    from housestyle.domain import SourceParser
     from housestyle.infrastructure import PYTHON
+    from housestyle.infrastructure.languages import LanguageProfile
 
     profile: LanguageProfile = PYTHON
     parser: SourceParser = DEFAULT_PARSER
