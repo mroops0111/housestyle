@@ -24,10 +24,16 @@ class Visibility(enum.Enum):
     INTERNAL = 'internal'
 
 
+class SymbolKind(enum.Enum):
+    MODULE = 'module'
+    CLASS = 'class'
+    FUNCTION = 'function'
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class SymbolRef:
     name: str
-    kind: str
+    kind: SymbolKind
     visibility: Visibility
 
 

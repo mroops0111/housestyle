@@ -1,6 +1,7 @@
 import re
 
-from ...domain.comment import CommentForm, Visibility
+from ...domain.comment import CommentForm, SymbolKind, Visibility
+from .base import MarkerSplit, NodeRole
 
 
 _DOC_DELIMITER = re.compile(r'^([rRbBuUfF]{0,2})("""|\'\'\')')
@@ -18,24 +19,37 @@ class PythonProfile:
     language_id = 'python'
     extensions = frozenset({'.py', '.pyi'})
     doc_form_marker = '"""'
-    line_width = 120
     signature_tags = ('Args:', 'Returns:', 'Raises:', 'Yields:', ':param', ':return', ':rtype')
+    _ROLES = {
+        'module': NodeRole.ROOT,
+        'comment': NodeRole.COMMENT,
+        'function_definition': NodeRole.DEFINITION,
+        'class_definition': NodeRole.DEFINITION,
+        'decorated_definition': NodeRole.DEFINITION,
+    }
 
     def query(self) -> str:
         return QUERY
 
+    def role_of(self, node_type: str) -> NodeRole:
+        return self._ROLES.get(node_type, NodeRole.OTHER)
+
+    def symbol_kind(self, node_type: str) -> SymbolKind:
+        return SymbolKind.CLASS if node_type == 'class_definition' else SymbolKind.FUNCTION
+
     def visibility_of(self, name: str) -> Visibility:
         return Visibility.INTERNAL if name.startswith('_') else Visibility.PUBLIC
 
-    def split_marker(self, line: str, form: CommentForm) -> tuple[str, str, str, str]:
+    def split_marker(self, line: str, form: CommentForm) -> MarkerSplit:
         indent = line[: len(line) - len(line.lstrip())]
         rest = line[len(indent) :]
         if form is CommentForm.DOC:
-            return (indent, *self._split_doc(rest))
+            marker, payload, suffix = self._split_doc(rest)
+            return MarkerSplit(indent=indent, marker=marker, payload=payload, suffix=suffix)
         match = _HASH_MARKER.match(rest)
         if match is None:
-            return indent, '', rest.rstrip(), ''
-        return indent, match.group(1), rest[match.end() :].rstrip(), ''
+            return MarkerSplit(indent=indent, marker='', payload=rest.rstrip())
+        return MarkerSplit(indent=indent, marker=match.group(1), payload=rest[match.end() :].rstrip())
 
     def _split_doc(self, rest: str) -> tuple[str, str, str]:
         opening = _DOC_DELIMITER.match(rest)

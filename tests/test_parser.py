@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.domain import CommentBlock, CommentForm, CommentPlacement, Document, Visibility
+from housestyle.domain import CommentBlock, CommentForm, CommentPlacement, Document, SymbolKind, Visibility
 from housestyle.infrastructure import DEFAULT_PARSER
 
 
@@ -109,7 +109,7 @@ def test_visibility_follows_the_leading_underscore() -> None:
 def test_a_class_docstring_attaches_to_the_class() -> None:
     block = parse('class Widget:\n    """Doc."""\n')[0]
     assert block.attachment is not None
-    assert block.attachment.kind == 'class'
+    assert block.attachment.kind is SymbolKind.CLASS
     assert block.attachment.name == 'Widget'
 
 
@@ -160,8 +160,9 @@ def test_blocks_come_back_in_source_order() -> None:
 
 
 def test_the_profile_satisfies_the_language_profile_port() -> None:
-    from housestyle.domain import LanguageProfile, SourceParser
+    from housestyle.domain import SourceParser
     from housestyle.infrastructure import PYTHON
+    from housestyle.infrastructure.languages import LanguageProfile
 
     profile: LanguageProfile = PYTHON
     parser: SourceParser = DEFAULT_PARSER
