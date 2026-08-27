@@ -1,0 +1,7 @@
+extends: existence
+message: "External reference '%s' a reader cannot open. Restate the constraint."
+level: error
+nonword: true
+tokens:
+  - '[A-Z]{2,}-\d+'
+  - '\d{4}-\d{2}-\d{2}'

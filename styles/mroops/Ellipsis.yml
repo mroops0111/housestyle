@@ -1,0 +1,9 @@
+extends: existence
+message: "Trailing '%s'. Give two or three concrete examples and stop."
+level: error
+ignorecase: true
+tokens:
+  - '\.\.\.'
+  - '…'
+  - '\band so on\b'
+  - '\betc\b'

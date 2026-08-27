@@ -52,10 +52,22 @@ jobs:
       - run: uv sync --extra dev
       - run: uv run pytest tests/ -v --tb=short
 
+  prose:
+    name: Prose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: errata-ai/vale-action@reviewdog
+        with:
+          version: 3.18.0
+          files: src tests README.md
+          fail_on_error: true
+          reporter: github-check
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, test]
+    needs: [lint, typecheck, test, prose]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
