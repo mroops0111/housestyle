@@ -23,6 +23,8 @@ _SENTENCE_END = re.compile(r'[.!?]')
 _TRAILING_WORD = re.compile(r'([A-Za-z][A-Za-z.]*)$')
 _URL = re.compile(r'\b(?:https?://|www\.)\S+')
 _CODE_SPAN = re.compile(r'`[^`]*`')
+_FENCE = re.compile(r'^\s*(```|~~~)')
+_LITERAL_MARKER = '\\b'
 
 
 class BreakStrength(enum.IntEnum):
@@ -47,6 +49,16 @@ class Sentence:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
+class Segment:
+    lines: tuple[str, ...]
+    is_literal: bool
+
+    @property
+    def text(self) -> str:
+        return '\n'.join(self.lines)
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
 class Prose:
     text: str
 
@@ -54,9 +66,56 @@ class Prose:
     def physical_lines(self) -> tuple[str, ...]:
         return tuple(self.text.split('\n'))
 
+    def segments(self) -> tuple[Segment, ...]:
+        found: list[Segment] = []
+        current: list[str] = []
+        literal = False
+        fenced = False
+        held = False
+
+        def flush(next_literal: bool) -> None:
+            nonlocal current, literal
+            if current and next_literal != literal:
+                found.append(Segment(tuple(current), literal))
+                current = []
+            literal = next_literal
+
+        for line in self.physical_lines:
+            stripped = line.strip()
+            if _FENCE.match(line):
+                fenced = not fenced
+                flush(next_literal=True)
+                current.append(line)
+                continue
+            if stripped.startswith(_LITERAL_MARKER):
+                held = stripped == _LITERAL_MARKER
+                flush(next_literal=True)
+                current.append(line)
+                continue
+            if not stripped:
+                held = False
+                flush(next_literal=fenced)
+                current.append(line)
+                continue
+            flush(next_literal=fenced or held or self._is_indented(line))
+            current.append(line)
+
+        if current:
+            found.append(Segment(tuple(current), literal))
+        return tuple(found)
+
+    def _is_indented(self, line: str) -> bool:
+        return line.startswith(('    ', '\t'))
+
     @property
     def flattened(self) -> str:
-        return ' '.join(line.strip() for line in self.physical_lines if line.strip())
+        return ' '.join(
+            line.strip()
+            for segment in self.segments()
+            if not segment.is_literal
+            for line in segment.lines
+            if line.strip()
+        )
 
     def sentences(self) -> tuple[Sentence, ...]:
         text = self.flattened

@@ -119,3 +119,45 @@ def test_physical_lines_are_preserved_separately() -> None:
     prose = Prose('one\ntwo\nthree')
     assert prose.physical_lines == ('one', 'two', 'three')
     assert prose.flattened == 'one two three'
+
+
+def test_a_backslash_b_block_is_literal_and_excluded_from_prose() -> None:
+    prose = Prose('Run it.\n\n\\b example --flag value\n\\b example --other value\n\nDone.')
+    literal = [segment for segment in prose.segments() if segment.is_literal]
+
+    assert len(literal) == 1
+    assert literal[0].lines == ('\\b example --flag value', '\\b example --other value')
+    assert prose.flattened == 'Run it. Done.'
+
+
+def test_an_indented_block_is_literal() -> None:
+    prose = Prose('Summary.\n\n    code_line(1)\n    code_line(2)\n\nTrailing text.')
+    assert prose.flattened == 'Summary. Trailing text.'
+
+
+def test_a_fenced_block_is_literal_including_its_fences() -> None:
+    prose = Prose('Before.\n```\ncode here\n```\nAfter.')
+    assert prose.flattened == 'Before. After.'
+
+
+def test_literal_lines_stay_available_for_rendering() -> None:
+    prose = Prose('Before.\n    indented code\nAfter.')
+    assert [segment.lines for segment in prose.segments()] == [
+        ('Before.',),
+        ('    indented code',),
+        ('After.',),
+    ]
+
+
+def test_a_literal_block_produces_no_sentences() -> None:
+    assert Prose('\\b just --an example\n').sentences() == ()
+
+
+def test_a_literal_block_produces_no_break_candidates() -> None:
+    assert Prose('\\b example --a, --b, --c\n').break_candidates() == ()
+
+
+def test_prose_without_literal_blocks_is_unchanged() -> None:
+    prose = Prose('cap the size to the limit,\nan unbounded value faults')
+    assert [segment.is_literal for segment in prose.segments()] == [False]
+    assert prose.flattened == 'cap the size to the limit, an unbounded value faults'

@@ -103,3 +103,31 @@ def test_as_edit_targets_the_block_range() -> None:
     edit = subject.as_edit()
     assert edit.range == SourceRange(4, 40)
     assert edit.new_text == '  // alpha'
+
+
+def test_prose_preserves_indentation_relative_to_the_block() -> None:
+    lines = (
+        CommentLine(SourceRange(0, 1), '    ', '', 'Summary.'),
+        CommentLine(SourceRange(1, 2), '', '', ''),
+        CommentLine(SourceRange(2, 3), '        ', '', 'indented_code()'),
+        CommentLine(SourceRange(3, 4), '    ', '', 'Trailing.'),
+    )
+    block = CommentBlock(
+        range=SourceRange(0, 4),
+        lines=lines,
+        form=CommentForm.DOC,
+        placement=CommentPlacement.LEADING_DECLARATION,
+    )
+    assert block.prose().physical_lines == ('Summary.', '', '    indented_code()', 'Trailing.')
+    assert block.prose().flattened == 'Summary. Trailing.'
+
+
+def test_prose_keeps_uniformly_indented_lines_flush() -> None:
+    lines = tuple(CommentLine(SourceRange(i, i + 1), '        ', '# ', text) for i, text in enumerate(('one', 'two')))
+    block = CommentBlock(
+        range=SourceRange(0, 2),
+        lines=lines,
+        form=CommentForm.LINE,
+        placement=CommentPlacement.INLINE_BODY,
+    )
+    assert block.prose().physical_lines == ('one', 'two')
