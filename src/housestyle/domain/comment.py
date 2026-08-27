@@ -37,19 +37,20 @@ class CommentLine:
     indent: str
     marker: str
     payload: str
+    suffix: str = ''
 
     @property
     def physical_width(self) -> int:
-        return len(self.indent) + len(self.marker) + len(self.payload)
+        return len(self.indent) + len(self.marker) + len(self.payload) + len(self.suffix)
 
     @property
     def prefix_width(self) -> int:
         return len(self.indent) + len(self.marker)
 
     def rendered(self) -> str:
-        if not self.payload:
+        if not self.payload and not self.suffix:
             return (self.indent + self.marker).rstrip()
-        return self.indent + self.marker + self.payload
+        return self.indent + self.marker + self.payload + self.suffix
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
