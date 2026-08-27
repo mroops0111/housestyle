@@ -23,6 +23,7 @@ classifiers = [
 dependencies = [
     "tree-sitter>=0.26.0",
     "tree-sitter-language-pack>=1.15.8",
+    "typer>=0.27.1",
 ]
 
 [project.optional-dependencies]
