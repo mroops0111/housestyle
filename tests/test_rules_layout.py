@@ -107,3 +107,21 @@ def test_each_rule_can_be_disabled_independently(rule_id: str) -> None:
     source = 'def f():\n    # cap the size to the limit so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n'
     ids = [item.rule_id for item in lint(source, enabled=ALL_LAYOUT - {rule_id}).diagnostics]
     assert rule_id not in ids
+
+
+def test_a_paragraph_with_no_legal_break_is_left_as_the_author_wrote_it() -> None:
+    source = (
+        'def f():\n'
+        '    """Summary.\n\n'
+        '    No comma appears here:\n'
+        '    and this continuation carries the rest of a very long sentence indeed.\n'
+        '    """\n'
+    )
+    assert fixed(source, width=60) == source
+
+
+def test_a_numbered_list_survives_reflow() -> None:
+    source = 'def f():\n    """Order:\n\n    1. Detect the flows first.\n    2. Pick one per entry, otherwise fall back.\n    """\n'
+    result = fixed(source, width=60)
+    assert '1. Detect the flows first.' in result
+    assert '2. Pick one per entry, otherwise fall back.' in result

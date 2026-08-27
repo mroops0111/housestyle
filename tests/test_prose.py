@@ -161,3 +161,21 @@ def test_prose_without_literal_blocks_is_unchanged() -> None:
     prose = Prose('cap the size to the limit,\nan unbounded value faults')
     assert [segment.is_literal for segment in prose.segments()] == [False]
     assert prose.flattened == 'cap the size to the limit, an unbounded value faults'
+
+
+@pytest.mark.parametrize(
+    'line',
+    ['1. first item here', '2) second item', '- a bullet', '* another bullet', '+ a third', 'a. lettered item'],
+)
+def test_a_list_item_is_literal_structure(line: str) -> None:
+    prose = Prose(f'Lead in.\n\n{line}\n\nTail prose.')
+    assert any(segment.is_literal and line in segment.lines for segment in prose.segments())
+
+
+def test_a_numbered_list_is_not_split_into_marker_and_body() -> None:
+    prose = Prose('Order:\n\n1. Detect the flows.\n2. Pick one per entry.\n\nTail.')
+    assert [sentence.text for sentence in prose.sentences()] == ['Order: Tail.']
+
+
+def test_a_decimal_is_still_not_a_list_marker() -> None:
+    assert len(Prose('the cap is 3.14 percent of the budget').sentences()) == 1

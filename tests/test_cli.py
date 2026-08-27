@@ -32,3 +32,97 @@ def test_stats_exits_non_zero_when_nothing_is_readable(tmp_path: pathlib.Path) -
     with pytest.raises(SystemExit) as exit_info:
         app(['stats', str(tmp_path)])
     assert exit_info.value.code == 1
+
+
+def test_check_reports_findings_and_exits_non_zero(tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]) -> None:
+    target = tmp_path / 'bad.py'
+    target.write_text(
+        'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n',
+        encoding='utf-8',
+    )
+    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 60\n', encoding='utf-8')
+
+    with pytest.raises(SystemExit) as exit_info:
+        app(['check', str(target)])
+    assert exit_info.value.code == 1
+    assert 'wrap-point' in capsys.readouterr().out
+
+
+def test_check_on_clean_input_exits_zero(tmp_path: pathlib.Path) -> None:
+    target = tmp_path / 'good.py'
+    target.write_text('def f():\n    # short and fine.\n    pass\n', encoding='utf-8')
+    with pytest.raises(SystemExit) as exit_info:
+        app(['check', str(target)])
+    assert exit_info.value.code == 0
+
+
+def test_check_rejects_an_unknown_output_format(tmp_path: pathlib.Path) -> None:
+    target = tmp_path / 'a.py'
+    target.write_text('# note\n', encoding='utf-8')
+    with pytest.raises(SystemExit) as exit_info:
+        app(['check', str(target), '--output', 'nonsense'])
+    assert exit_info.value.code == 2
+
+
+def test_fix_prints_a_diff_without_write(tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]) -> None:
+    target = tmp_path / 'bad.py'
+    original = (
+        'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n'
+    )
+    target.write_text(original, encoding='utf-8')
+    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 60\n', encoding='utf-8')
+
+    with pytest.raises(SystemExit):
+        app(['fix', str(target)])
+    assert '---' in capsys.readouterr().out
+    assert target.read_text(encoding='utf-8') == original
+
+
+def test_fix_write_applies_the_change(tmp_path: pathlib.Path) -> None:
+    target = tmp_path / 'bad.py'
+    original = (
+        'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n'
+    )
+    target.write_text(original, encoding='utf-8')
+    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 60\n', encoding='utf-8')
+
+    with pytest.raises(SystemExit):
+        app(['fix', str(target), '--write'])
+    assert target.read_text(encoding='utf-8') != original
+    assert 'does not blow past it,' in target.read_text(encoding='utf-8')
+
+
+def test_the_agent_format_shows_only_findings_needing_an_author(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    target = tmp_path / 'a.py'
+    target.write_text(
+        'def f():\n    # this single sentence has no comma anywhere and runs well past the budget here.\n    pass\n',
+        encoding='utf-8',
+    )
+    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 50\n', encoding='utf-8')
+
+    with pytest.raises(SystemExit):
+        app(['check', str(target), '--output', 'agent'])
+    output = capsys.readouterr().out
+    assert 'unbreakable-sentence' in output
+    assert 'do not add a suppression comment' in output
+
+
+def test_the_json_format_encodes_ranges_and_fix_kind(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import json
+
+    target = tmp_path / 'a.py'
+    target.write_text(
+        'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n',
+        encoding='utf-8',
+    )
+    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 60\n', encoding='utf-8')
+
+    with pytest.raises(SystemExit):
+        app(['check', str(target), '--output', 'json'])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload['diagnostics'][0]['fixKind'] == 'reflow'
+    assert payload['diagnostics'][0]['mechanical'] is True

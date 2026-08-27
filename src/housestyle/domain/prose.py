@@ -24,6 +24,7 @@ _TRAILING_WORD = re.compile(r'([A-Za-z][A-Za-z.]*)$')
 _URL = re.compile(r'\b(?:https?://|www\.)\S+')
 _CODE_SPAN = re.compile(r'`[^`]*`')
 _FENCE = re.compile(r'^\s*(```|~~~)')
+_LIST_MARKER = re.compile(r'^\s*(?:[0-9]+[.)]|[-*+]|[a-zA-Z][.)])\s')
 _LITERAL_MARKER = '\\b'
 
 
@@ -97,7 +98,7 @@ class Prose:
                 flush(next_literal=fenced)
                 current.append(line)
                 continue
-            flush(next_literal=fenced or held or self._is_indented(line))
+            flush(next_literal=fenced or held or self._is_indented(line) or self._is_list_item(line))
             current.append(line)
 
         if current:
@@ -106,6 +107,9 @@ class Prose:
 
     def _is_indented(self, line: str) -> bool:
         return line.startswith(('    ', '\t'))
+
+    def _is_list_item(self, line: str) -> bool:
+        return bool(_LIST_MARKER.match(line))
 
     @property
     def flattened(self) -> str:

@@ -1,0 +1,8 @@
+[housestyle]
+line-width = 120
+
+[rules]
+wrap-point = "error"
+line-width = "error"
+stub-fragment = "error"
+unbreakable-sentence = "error"

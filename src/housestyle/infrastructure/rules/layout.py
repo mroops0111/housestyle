@@ -23,8 +23,7 @@ class WrapPointRule:
 
     def check(self, block: CommentBlock, context: RuleContext) -> typing.Iterable[Diagnostic]:
         reflowed = block.reflow(context.line_width)
-        current = block.render()
-        if reflowed.render() == current:
+        if reflowed.render() == block.render():
             return
         yield Diagnostic(
             rule_id=self.meta.rule_id,
