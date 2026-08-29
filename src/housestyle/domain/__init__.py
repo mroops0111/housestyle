@@ -9,6 +9,7 @@ from .comment import (
 )
 from .diagnostic import Diagnostic, Fix, FixKind, Report, RuleMeta, Severity
 from .document import Document
+from .external import ExternalLinter
 from .ports import SourceParser
 from .position import Encoding, Position, PositionMap, SourceRange
 from .prose import BreakPoint, BreakStrength, Prose, Sentence
@@ -27,6 +28,7 @@ __all__ = [
     'Diagnostic',
     'Document',
     'Encoding',
+    'ExternalLinter',
     'Fix',
     'FixKind',
     'Position',

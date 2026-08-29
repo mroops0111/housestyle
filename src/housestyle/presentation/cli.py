@@ -6,9 +6,9 @@ import typing
 import typer
 
 from .. import __version__
-from ..application import CorpusStatistics, FixDocument, LintDocument, MeasureCorpus, RuleEngine
+from ..application import Aggregator, CorpusStatistics, FixDocument, LintDocument, MeasureCorpus, RuleEngine
 from ..domain.document import Document
-from ..infrastructure import ALL_RULES, DEFAULT_CONFIG, DEFAULT_PARSER, PYTHON
+from ..infrastructure import ALL_RULES, DEFAULT_CONFIG, DEFAULT_PARSER, EXTERNAL_LINTERS, PYTHON
 from . import report as reporters
 
 
@@ -39,6 +39,10 @@ def _lint() -> LintDocument:
     return LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES))
 
 
+def _aggregator(delegate: bool) -> Aggregator:
+    return Aggregator(_lint(), EXTERNAL_LINTERS if delegate else ())
+
+
 def _require(documents: tuple[Document, ...]) -> None:
     if not documents:
         typer.echo('No readable source files found.', err=True)
@@ -49,6 +53,7 @@ def _require(documents: tuple[Document, ...]) -> None:
 def check(
     paths: list[pathlib.Path] = typer.Argument(..., help='Files or directories to check.'),
     output: str = typer.Option('human', '--output', help='human, agent, or json.'),
+    delegate: bool = typer.Option(True, '--delegate/--no-delegate', help='Also run Vale and AutoCorrect.'),
 ) -> None:
     documents = _load(tuple(paths))
     _require(documents)
@@ -57,10 +62,10 @@ def check(
         typer.echo(f'Unknown output format {output!r}. Choose human, agent, or json.', err=True)
         raise typer.Exit(2)
 
-    lint = _lint()
+    aggregator = _aggregator(delegate)
     findings = 0
     for document in documents:
-        result = lint.run(document, DEFAULT_CONFIG.resolve(_fspath(document)))
+        result = aggregator.run(document, DEFAULT_CONFIG.resolve(_fspath(document)))
         findings += len(result.diagnostics)
         rendered = formatter(document, result)
         if rendered:
