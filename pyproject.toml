@@ -36,6 +36,7 @@ dev = [
 [project.scripts]
 housestyle = "housestyle.presentation.cli:main"
 hstyle = "housestyle.presentation.cli:main"
+housestyle-hook = "housestyle.presentation.hook:main"
 
 [project.urls]
 Homepage = "https://github.com/mroops0111/housestyle"

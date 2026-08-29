@@ -109,15 +109,24 @@ def test_each_rule_can_be_disabled_independently(rule_id: str) -> None:
     assert rule_id not in ids
 
 
-def test_a_paragraph_with_no_legal_break_is_left_as_the_author_wrote_it() -> None:
+def test_an_unbreakable_sentence_still_gets_a_canonical_line() -> None:
+    source = 'def f():\n    # first one, with a comma. a second sentence with no comma runs past the budget here.\n    pass\n'
+    result = fixed(source, width=60)
+
+    assert '    # first one, with a comma.\n' in result
+    assert '    # a second sentence with no comma runs past the budget here.\n' in result
+
+
+def test_a_fixable_neighbour_is_repaired_even_beside_an_unbreakable_sentence() -> None:
     source = (
         'def f():\n'
-        '    """Summary.\n\n'
-        '    No comma appears here:\n'
-        '    and this continuation carries the rest of a very long sentence indeed.\n'
-        '    """\n'
+        '    # cap the size to the shared limit so the mmap does not\n'
+        '    # blow past it, an unbounded value faults the runner.\n'
+        '    # this one carries no comma at all and runs a very long way past the budget.\n'
+        '    pass\n'
     )
-    assert fixed(source, width=60) == source
+    result = fixed(source, width=74)
+    assert '# cap the size to the shared limit so the mmap does not blow past it,\n' in result
 
 
 def test_a_numbered_list_survives_reflow() -> None:
