@@ -77,3 +77,43 @@ def test_the_project_config_is_readable_and_enables_every_rule() -> None:
     rules = DEFAULT_CONFIG.resolve(str(SOURCE_ROOT))
     assert rules.enabled == frozenset(rule.meta.rule_id for rule in ALL_RULES)
     assert rules.line_width == 120
+
+
+def test_the_generated_rule_reference_is_in_sync() -> None:
+    from housestyle.infrastructure import ALL_RULES
+    from housestyle.presentation import docs
+
+    reference = REPO_ROOT / 'docs' / 'rules.md'
+    assert reference.is_file(), 'run: housestyle rules --write docs/rules.md'
+    assert reference.read_text(encoding='utf-8') == docs.render(ALL_RULES)
+
+
+def test_every_rule_appears_in_the_reference() -> None:
+    from housestyle.infrastructure import ALL_RULES
+
+    reference = (REPO_ROOT / 'docs' / 'rules.md').read_text(encoding='utf-8')
+    missing = [rule.meta.rule_id for rule in ALL_RULES if f'`{rule.meta.rule_id}`' not in reference]
+    assert not missing, f'rules absent from the reference: {missing}'
+
+
+def test_the_repository_installs_its_own_hook() -> None:
+    import json
+
+    settings = json.loads((REPO_ROOT / '.claude' / 'settings.json').read_text(encoding='utf-8'))
+    commands = [
+        entry['command']
+        for group in settings['hooks']['PostToolUse']
+        for entry in group['hooks']
+        if entry.get('type') == 'command'
+    ]
+    assert any('housestyle-hook' in command for command in commands)
+
+
+def test_the_excluded_fixture_is_actually_excluded() -> None:
+    from housestyle.infrastructure import DEFAULT_CONFIG
+
+    fixture = REPO_ROOT / 'tests' / 'fixtures' / 'vale' / 'violations.py'
+    patterns = DEFAULT_CONFIG.excludes(str(fixture))
+    assert patterns, 'the project config must declare an exclude for deliberate fixtures'
+    assert DEFAULT_CONFIG.is_excluded(fixture, REPO_ROOT, patterns)
+    assert not DEFAULT_CONFIG.is_excluded(REPO_ROOT / 'src' / 'housestyle' / 'domain' / 'prose.py', REPO_ROOT, patterns)

@@ -9,6 +9,7 @@ from .. import __version__
 from ..application import Aggregator, CorpusStatistics, FixDocument, LintDocument, MeasureCorpus, RuleEngine
 from ..domain.document import Document
 from ..infrastructure import ALL_RULES, DEFAULT_CONFIG, DEFAULT_PARSER, EXTERNAL_LINTERS, PYTHON
+from . import docs as rule_docs
 from . import report as reporters
 
 
@@ -27,6 +28,9 @@ def _load(paths: tuple[pathlib.Path, ...]) -> tuple[Document, ...]:
             files.append(path)
     documents: list[Document] = []
     for file in files:
+        root = DEFAULT_CONFIG.root_for(str(file))
+        if DEFAULT_CONFIG.is_excluded(file, root, DEFAULT_CONFIG.excludes(str(file))):
+            continue
         try:
             text = file.read_text(encoding='utf-8')
         except (OSError, UnicodeDecodeError):
@@ -106,6 +110,17 @@ def stats(paths: list[pathlib.Path] = typer.Argument(..., help='Files or directo
     documents = _load(tuple(paths))
     _require(documents)
     typer.echo(_render(MeasureCorpus(DEFAULT_PARSER).run(documents)))
+
+
+@app.command()
+def rules(
+    write: pathlib.Path = typer.Option(None, '--write', help='Write the generated table to this path.'),
+) -> None:
+    rendered = rule_docs.render(ALL_RULES)
+    if write is None:
+        typer.echo(rendered, nl=False)
+        return
+    write.write_text(rendered, encoding='utf-8')
 
 
 @app.command()
