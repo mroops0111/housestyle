@@ -1,3 +1,4 @@
+import fnmatch
 import pathlib
 import tomllib
 import typing
@@ -21,6 +22,27 @@ class TomlConfigSource:
         if found is None:
             return self.defaults()
         return self._parse(tomllib.loads(found.read_text(encoding='utf-8')))
+
+    def excludes(self, path: str) -> tuple[str, ...]:
+        found = self._locate(pathlib.Path(path))
+        if found is None:
+            return ()
+        raw = tomllib.loads(found.read_text(encoding='utf-8')).get('housestyle')
+        patterns = raw.get('exclude') if isinstance(raw, dict) else None
+        if not isinstance(patterns, list):
+            return ()
+        return tuple(str(item) for item in patterns if isinstance(item, str))
+
+    def is_excluded(self, target: pathlib.Path, root: pathlib.Path, patterns: tuple[str, ...]) -> bool:
+        try:
+            relative = target.resolve().relative_to(root.resolve()).as_posix()
+        except ValueError:
+            relative = target.resolve().as_posix()
+        return any(fnmatch.fnmatch(relative, pattern) for pattern in patterns)
+
+    def root_for(self, path: str) -> pathlib.Path:
+        found = self._locate(pathlib.Path(path))
+        return found.parent if found else pathlib.Path.cwd()
 
     def defaults(self) -> RuleSet:
         return RuleSet(enabled=frozenset(self._available), line_width=DEFAULT_WIDTH)

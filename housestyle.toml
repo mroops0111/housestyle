@@ -1,8 +1,13 @@
 [housestyle]
 line-width = 120
+exclude = ["tests/fixtures/**"]
 
 [rules]
 wrap-point = "error"
 line-width = "error"
 stub-fragment = "error"
 unbreakable-sentence = "error"
+no-file-header = "error"
+doc-comment-form = "error"
+no-signature-restating = "error"
+block-too-long = "error"

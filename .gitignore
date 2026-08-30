@@ -1,5 +1,6 @@
-# Design notes stay local, not in git
-docs/
+# Design notes stay local. The generated rule reference is tracked.
+docs/*
+!docs/rules.md
 
 # Python
 __pycache__/
