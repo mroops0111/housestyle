@@ -16,7 +16,11 @@ from . import report as reporters
 app = typer.Typer(add_completion=False, help='A linter and formatter for the prose inside code comments.')
 
 PERCENTILES = (0.5, 0.75, 0.9, 0.95, 0.99)
-FORMATTERS = {'human': reporters.human, 'agent': reporters.agent_verbose, 'json': reporters.as_json}
+FORMATTERS = {
+    'full': reporters.full,
+    'actionable': reporters.actionable,
+    'json': reporters.as_json,
+}
 
 
 def _load(paths: tuple[pathlib.Path, ...]) -> tuple[Document, ...]:
@@ -56,14 +60,14 @@ def _require(documents: tuple[Document, ...]) -> None:
 @app.command()
 def check(
     paths: list[pathlib.Path] = typer.Argument(..., help='Files or directories to check.'),
-    output: str = typer.Option('human', '--output', help='human, agent, or json.'),
+    output: str = typer.Option('full', '--output', help='full, actionable, or json.'),
     delegate: bool = typer.Option(True, '--delegate/--no-delegate', help='Also run Vale and AutoCorrect.'),
 ) -> None:
     documents = _load(tuple(paths))
     _require(documents)
     formatter = FORMATTERS.get(output)
     if formatter is None:
-        typer.echo(f'Unknown output format {output!r}. Choose human, agent, or json.', err=True)
+        typer.echo(f'Unknown output format {output!r}. Choose full, actionable, or json.', err=True)
         raise typer.Exit(2)
 
     aggregator = _aggregator(delegate)
@@ -98,7 +102,7 @@ def fix(
             else:
                 typer.echo(_diff(document, outcome.document))
         if outcome.remaining:
-            typer.echo(reporters.agent(outcome.document, outcome.report))
+            typer.echo(reporters.brief(outcome.document, outcome.report))
 
     verb = 'rewrote' if write else 'would rewrite'
     typer.echo(f'{verb} {changed} of {len(documents)} files, {remaining} findings need an author.', err=True)

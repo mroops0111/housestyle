@@ -43,7 +43,7 @@ Silence on repaired findings is deliberate. Each surfaced message costs agent at
 
 One pure core, `lint(text, path, config) -> Diagnostic[]`, behind several thin adapters.
 
-- **CLI**: `housestyle check` and `housestyle fix`
+- **CLI**: `housestyle check` and `housestyle fix`, reporting `full`, `actionable`, or `json`
 - **LSP**: diagnostics and quick fixes for any editor
 - **Agent hook**: blocking feedback for coding agents
 
