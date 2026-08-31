@@ -41,26 +41,26 @@ class SymbolRef:
 class CommentLine:
     range: SourceRange
     indent: str
-    marker: str
-    payload: str
+    delimiter: str
+    text: str
     suffix: str = ''
 
     @property
     def physical_width(self) -> int:
-        return len(self.indent) + len(self.marker) + len(self.payload) + len(self.suffix)
+        return len(self.indent) + len(self.delimiter) + len(self.text) + len(self.suffix)
 
     @property
     def prefix_width(self) -> int:
-        return len(self.indent) + len(self.marker)
+        return len(self.indent) + len(self.delimiter)
 
     def rendered(self) -> str:
-        if not self.payload and not self.suffix:
-            return (self.indent + self.marker).rstrip()
-        return self.indent + self.marker + self.payload + self.suffix
+        if not self.text and not self.suffix:
+            return (self.indent + self.delimiter).rstrip()
+        return self.indent + self.delimiter + self.text + self.suffix
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class CommentBlock:
+class CommentGroup:
     range: SourceRange
     lines: tuple[CommentLine, ...]
     form: CommentForm
@@ -80,7 +80,7 @@ class CommentBlock:
         return len(self.lines) > 1
 
     @property
-    def widest_line(self) -> int:
+    def longest_line(self) -> int:
         return max(line.physical_width for line in self.lines)
 
     @property
@@ -88,19 +88,19 @@ class CommentBlock:
         return self.attachment is not None and self.attachment.visibility is Visibility.PUBLIC
 
     def prose(self) -> Prose:
-        filled = [line for line in self.lines if line.payload.strip()]
+        filled = [line for line in self.lines if line.text.strip()]
         base = min((len(line.indent) for line in filled), default=0)
         rendered = [
-            ' ' * max(0, len(line.indent) - base) + line.payload.rstrip() if line.payload.strip() else ''
+            ' ' * max(0, len(line.indent) - base) + line.text.rstrip() if line.text.strip() else ''
             for line in self.lines
         ]
         return Prose('\n'.join(rendered))
 
-    def reflow(self, width: int) -> 'CommentBlock':
-        payloads = self._reflowed_payloads(width)
-        if not payloads:
+    def reflow(self, width: int) -> 'CommentGroup':
+        texts = self._reflowed_payloads(width)
+        if not texts:
             return self
-        return self._rebuild(payloads)
+        return self._rebuild(texts)
 
     def _reflowed_payloads(self, width: int) -> tuple[str, ...]:
         budget = max(20, width - self.lines[0].prefix_width)
@@ -117,7 +117,7 @@ class CommentBlock:
         return tuple(out)
 
     def fits(self, width: int) -> bool:
-        return self.widest_line <= width
+        return self.longest_line <= width
 
     def _paragraphs(self) -> tuple[tuple[tuple[str, ...], bool], ...]:
         found: list[tuple[tuple[str, ...], bool]] = []
@@ -133,34 +133,33 @@ class CommentBlock:
                 found.append((tuple(current), segment.is_literal))
         return tuple(found)
 
-    def _rebuild(self, payloads: tuple[str, ...]) -> 'CommentBlock':
+    def _rebuild(self, texts: tuple[str, ...]) -> 'CommentGroup':
         if self.form is not CommentForm.DOC:
-            return self.with_payloads(payloads)
+            return self.with_texts(texts)
         opening, closing = self.lines[0], self.lines[-1]
-        closes_alone = len(self.lines) > 1 and not closing.payload.strip()
-        body = [
-            dataclasses.replace(opening, marker='', suffix='', payload=payload, range=opening.range)
-            for payload in payloads
-        ]
-        body[0] = dataclasses.replace(body[0], marker=opening.marker)
-        if closes_alone or len(payloads) > 1:
-            body.append(dataclasses.replace(closing, marker=closing.marker or opening.marker, payload='', suffix=''))
+        closes_alone = len(self.lines) > 1 and not closing.text.strip()
+        body = [dataclasses.replace(opening, delimiter='', suffix='', text=text, range=opening.range) for text in texts]
+        body[0] = dataclasses.replace(body[0], delimiter=opening.delimiter)
+        if closes_alone or len(texts) > 1:
+            body.append(
+                dataclasses.replace(closing, delimiter=closing.delimiter or opening.delimiter, text='', suffix='')
+            )
             if not closes_alone:
-                body[-1] = dataclasses.replace(body[-1], marker=opening.marker.strip())
+                body[-1] = dataclasses.replace(body[-1], delimiter=opening.delimiter.strip())
         else:
-            body[0] = dataclasses.replace(body[0], suffix=closing.suffix or opening.marker.strip())
+            body[0] = dataclasses.replace(body[0], suffix=closing.suffix or opening.delimiter.strip())
         return dataclasses.replace(self, lines=tuple(body))
 
-    def with_payloads(self, payloads: tuple[str, ...]) -> 'CommentBlock':
-        if not payloads:
+    def with_texts(self, texts: tuple[str, ...]) -> 'CommentGroup':
+        if not texts:
             raise ValueError('A comment block needs at least one line')
         template = self.lines[0]
         rebuilt = tuple(
             dataclasses.replace(
                 self.lines[index] if index < len(self.lines) else template,
-                payload=payload,
+                text=text,
             )
-            for index, payload in enumerate(payloads)
+            for index, text in enumerate(texts)
         )
         return dataclasses.replace(self, lines=rebuilt)
 

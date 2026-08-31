@@ -37,9 +37,9 @@ class ValeAdapter:
             return ()
         return self._decode(document, result.stdout)
 
-    def _decode(self, document: Document, payload: str) -> tuple[Diagnostic, ...]:
+    def _decode(self, document: Document, text: str) -> tuple[Diagnostic, ...]:
         try:
-            parsed = json.loads(payload or '{}')
+            parsed = json.loads(text or '{}')
         except json.JSONDecodeError:
             return ()
         if not isinstance(parsed, dict):

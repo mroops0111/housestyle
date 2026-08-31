@@ -98,6 +98,7 @@ line-ending = "auto"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "S105", "S106", "S603", "S607"]
+"examples/**/*.py" = ["RUF001", "T201"]
 "__init__.py" = ["F401"]
 
 [tool.ruff.lint.isort]

@@ -2,7 +2,7 @@ import pytest
 
 from housestyle.application import LintDocument, RuleEngine
 from housestyle.domain import (
-    CommentBlock,
+    CommentGroup,
     Diagnostic,
     Document,
     Fix,
@@ -23,7 +23,7 @@ class RecordingRule:
         self.meta = RuleMeta(rule_id=rule_id, summary='test rule', fix_kind=fix_kind)
         self.seen: list[str] = []
 
-    def check(self, block: CommentBlock, context: RuleContext):
+    def check(self, block: CommentGroup, context: RuleContext):
         self.seen.append(block.prose().flattened)
         yield Diagnostic(
             rule_id=self.meta.rule_id,
@@ -35,7 +35,7 @@ class RecordingRule:
 class SilentRule:
     meta = RuleMeta(rule_id='silent', summary='never fires', fix_kind=FixKind.REWRITE)
 
-    def check(self, block: CommentBlock, context: RuleContext):
+    def check(self, block: CommentGroup, context: RuleContext):
         return ()
 
 
@@ -125,7 +125,7 @@ def test_a_fix_kind_survives_the_engine() -> None:
     class FixingRule:
         meta = RuleMeta(rule_id='fixer', summary='fixes', fix_kind=FixKind.TARGETED)
 
-        def check(self, block: CommentBlock, context: RuleContext):
+        def check(self, block: CommentGroup, context: RuleContext):
             edit = TextEdit(SourceRange(block.range.start, block.range.start), '!')
             yield Diagnostic(
                 rule_id='fixer',

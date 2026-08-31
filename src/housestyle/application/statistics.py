@@ -1,7 +1,7 @@
 import dataclasses
 import statistics
 
-from ..domain.comment import CommentBlock, CommentForm, CommentPlacement, Visibility
+from ..domain.comment import CommentForm, CommentGroup, CommentPlacement, Visibility
 from ..domain.document import Document
 from ..domain.ports import SourceParser
 
@@ -79,7 +79,7 @@ class MeasureCorpus:
             unbreakable_at=tuple(sorted(unbreakable.items())),
         )
 
-    def _label(self, block: CommentBlock) -> str:
+    def _label(self, block: CommentGroup) -> str:
         if block.form is CommentForm.DOC:
             visibility = Visibility.PUBLIC if block.attaches_to_public_symbol else Visibility.INTERNAL
             return f'doc/{visibility.value}'

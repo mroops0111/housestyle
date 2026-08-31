@@ -123,9 +123,9 @@ def test_the_json_format_encodes_ranges_and_fix_kind(
 
     with pytest.raises(SystemExit):
         app(['check', str(target), '--output', 'json'])
-    payload = json.loads(capsys.readouterr().out)
-    assert payload['diagnostics'][0]['fixKind'] == 'reflow'
-    assert payload['diagnostics'][0]['mechanical'] is True
+    text = json.loads(capsys.readouterr().out)
+    assert text['diagnostics'][0]['fixKind'] == 'reflow'
+    assert text['diagnostics'][0]['mechanical'] is True
 
 
 def test_the_actionable_format_says_so_when_only_mechanical_findings_exist(

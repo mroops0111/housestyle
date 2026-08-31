@@ -1,6 +1,6 @@
 import typing
 
-from ...domain.comment import CommentBlock, CommentForm, CommentPlacement
+from ...domain.comment import CommentForm, CommentGroup, CommentPlacement
 from ...domain.diagnostic import Diagnostic, Fix, FixKind, RuleMeta
 from ...domain.rules import RuleContext
 from ..languages.base import LanguageConventions
@@ -28,7 +28,7 @@ NO_SIGNATURE_RESTATING = RuleMeta(
 class NoFileHeaderRule:
     meta = NO_FILE_HEADER
 
-    def check(self, block: CommentBlock, context: RuleContext) -> typing.Iterable[Diagnostic]:
+    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         if block.placement is not CommentPlacement.FILE_HEADER:
             return
         yield Diagnostic(
@@ -48,19 +48,19 @@ class DocCommentFormRule:
         self._conventions = conventions
         self.meta = DOC_COMMENT_FORM
 
-    def check(self, block: CommentBlock, context: RuleContext) -> typing.Iterable[Diagnostic]:
+    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         if not block.attaches_to_public_symbol or block.form is CommentForm.DOC:
             return
         if block.placement is not CommentPlacement.LEADING_DECLARATION:
             return
-        marker = self._conventions.doc_form_marker
+        delimiter = self._conventions.doc_delimiter
         name = block.attachment.name if block.attachment else 'the symbol'
         yield Diagnostic(
             rule_id=self.meta.rule_id,
             range=block.range,
             message=(
                 f'{name} is public but documented with a plain comment. '
-                f'Move the text into a {marker} doc comment so tooling renders it on hover.'
+                f'Move the text into a {delimiter} doc comment so tooling renders it on hover.'
             ),
             fix=Fix.rewrite(),
         )
@@ -71,11 +71,11 @@ class NoSignatureRestatingRule:
         self._conventions = conventions
         self.meta = NO_SIGNATURE_RESTATING
 
-    def check(self, block: CommentBlock, context: RuleContext) -> typing.Iterable[Diagnostic]:
+    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         if block.form is not CommentForm.DOC:
             return
         for line in block.lines:
-            tag = self._tag(line.payload)
+            tag = self._tag(line.text)
             if tag is None:
                 continue
             yield Diagnostic(
@@ -90,8 +90,8 @@ class NoSignatureRestatingRule:
             )
             return
 
-    def _tag(self, payload: str) -> str | None:
-        stripped = payload.strip()
+    def _tag(self, text: str) -> str | None:
+        stripped = text.strip()
         for tag in self._conventions.signature_tags:
             if stripped.startswith(tag):
                 return tag
@@ -114,7 +114,7 @@ DEFAULT_LIMITS = {
 class BlockTooLongRule:
     meta = BLOCK_TOO_LONG
 
-    def check(self, block: CommentBlock, context: RuleContext) -> typing.Iterable[Diagnostic]:
+    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         group = self._group(block)
         limit = context.settings(self.meta.rule_id).integer(group, DEFAULT_LIMITS[group])
         if block.line_count <= limit:
@@ -130,7 +130,7 @@ class BlockTooLongRule:
             fix=Fix.rewrite(),
         )
 
-    def _group(self, block: CommentBlock) -> str:
+    def _group(self, block: CommentGroup) -> str:
         if block.form is not CommentForm.DOC:
             return 'line'
         return 'doc-public' if block.attaches_to_public_symbol else 'doc-internal'

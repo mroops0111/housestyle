@@ -24,8 +24,8 @@ _TRAILING_WORD = re.compile(r'([A-Za-z][A-Za-z.]*)$')
 _URL = re.compile(r'\b(?:https?://|www\.)\S+')
 _CODE_SPAN = re.compile(r'`[^`]*`')
 _FENCE = re.compile(r'^\s*(```|~~~)')
-_LIST_MARKER = re.compile(r'^\s*(?:[0-9]+[.)]|[-*+]|[a-zA-Z][.)])\s')
-_LITERAL_MARKER = '\\b'
+_LIST_DELIMITER = re.compile(r'^\s*(?:[0-9]+[.)]|[-*+]|[a-zA-Z][.)])\s')
+_LITERAL_DELIMITER = '\\b'
 
 
 class BreakStrength(enum.IntEnum):
@@ -88,8 +88,8 @@ class Prose:
                 flush(next_literal=True)
                 current.append(line)
                 continue
-            if stripped.startswith(_LITERAL_MARKER):
-                held = stripped == _LITERAL_MARKER
+            if stripped.startswith(_LITERAL_DELIMITER):
+                held = stripped == _LITERAL_DELIMITER
                 flush(next_literal=True)
                 current.append(line)
                 continue
@@ -109,7 +109,7 @@ class Prose:
         return line.startswith(('    ', '\t'))
 
     def _is_list_item(self, line: str) -> bool:
-        return bool(_LIST_MARKER.match(line))
+        return bool(_LIST_DELIMITER.match(line))
 
     @property
     def flattened(self) -> str:

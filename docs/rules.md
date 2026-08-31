@@ -6,7 +6,7 @@ The fix kind states who resolves a finding. A mechanical kind is repaired withou
 
 | Rule | Fix kind | Summary |
 | --- | --- | --- |
-| `line-width` | reflow | A physical comment line must fit the configured width, counting indent and marker. |
+| `line-width` | reflow | A physical comment line must fit the configured width, counting indent and delimiter. |
 | `wrap-point` | reflow | A comment block must be laid out one sentence per line, splitting only at commas. |
 | `block-too-long` | rewrite | A comment block long enough to restate the code has stopped earning its place. |
 | `doc-comment-form` | rewrite | A public symbol must be documented in the doc comment form its language renders. |

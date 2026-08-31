@@ -1,6 +1,6 @@
 [housestyle]
 line-width = 120
-exclude = ["tests/fixtures/**"]
+exclude = ["tests/fixtures/**", "examples/probe.py"]
 
 [rules]
 wrap-point = "error"

@@ -1,11 +1,11 @@
 import re
 
 from ...domain.comment import CommentForm, SymbolKind, Visibility
-from .base import MarkerSplit, NodeRole
+from .base import DelimiterSplit, NodeRole
 
 
 _DOC_DELIMITER = re.compile(r'^([rRbBuUfF]{0,2})("""|\'\'\')')
-_HASH_MARKER = re.compile(r'^(#+\s?)')
+_HASH_DELIMITER = re.compile(r'^(#+\s?)')
 
 QUERY = """
 (comment) @comment
@@ -18,7 +18,7 @@ QUERY = """
 class PythonProfile:
     language_id = 'python'
     extensions = frozenset({'.py', '.pyi'})
-    doc_form_marker = '"""'
+    doc_delimiter = '"""'
     signature_tags = ('Args:', 'Returns:', 'Raises:', 'Yields:', ':param', ':return', ':rtype')
     _ROLES = {
         'module': NodeRole.ROOT,
@@ -40,21 +40,21 @@ class PythonProfile:
     def visibility_of(self, name: str) -> Visibility:
         return Visibility.INTERNAL if name.startswith('_') else Visibility.PUBLIC
 
-    def split_marker(self, line: str, form: CommentForm) -> MarkerSplit:
+    def split_delimiter(self, line: str, form: CommentForm) -> DelimiterSplit:
         indent = line[: len(line) - len(line.lstrip())]
         rest = line[len(indent) :]
         if form is CommentForm.DOC:
-            marker, payload, suffix = self._split_doc(rest)
-            return MarkerSplit(indent=indent, marker=marker, payload=payload, suffix=suffix)
-        match = _HASH_MARKER.match(rest)
+            delimiter, text, suffix = self._split_doc(rest)
+            return DelimiterSplit(indent=indent, delimiter=delimiter, text=text, suffix=suffix)
+        match = _HASH_DELIMITER.match(rest)
         if match is None:
-            return MarkerSplit(indent=indent, marker='', payload=rest.rstrip())
-        return MarkerSplit(indent=indent, marker=match.group(1), payload=rest[match.end() :].rstrip())
+            return DelimiterSplit(indent=indent, delimiter='', text=rest.rstrip())
+        return DelimiterSplit(indent=indent, delimiter=match.group(1), text=rest[match.end() :].rstrip())
 
     def _split_doc(self, rest: str) -> tuple[str, str, str]:
         opening = _DOC_DELIMITER.match(rest)
-        marker = opening.group(0) if opening else ''
-        body = rest[len(marker) :]
+        delimiter = opening.group(0) if opening else ''
+        body = rest[len(delimiter) :]
         delimiter = opening.group(2) if opening else ''
         suffix = ''
         for candidate in (delimiter, '"""', "'''"):
@@ -62,7 +62,7 @@ class PythonProfile:
                 suffix = candidate
                 body = body[: -len(candidate)]
                 break
-        return marker, body.rstrip(), suffix
+        return delimiter, body.rstrip(), suffix
 
 
 PYTHON = PythonProfile()

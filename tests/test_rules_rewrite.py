@@ -84,10 +84,10 @@ def test_a_literal_block_is_never_flagged() -> None:
 
 
 def test_the_budget_shrinks_with_indentation() -> None:
-    payload = 'this sentence has no comma and sits at some depth in the file.'
-    shallow = f'def a():\n    # {payload}\n    pass\n'
-    deep = f'def a():\n    def b():\n        def c():\n            # {payload}\n            pass\n'
-    width = len(f'    # {payload}') + 1
+    text = 'this sentence has no comma and sits at some depth in the file.'
+    shallow = f'def a():\n    # {text}\n    pass\n'
+    deep = f'def a():\n    def b():\n        def c():\n            # {text}\n            pass\n'
+    width = len(f'    # {text}') + 1
 
     assert 'unbreakable-sentence' not in ids(shallow, width=width)
     assert 'unbreakable-sentence' in ids(deep, width=width)
