@@ -16,7 +16,7 @@ from . import report as reporters
 app = typer.Typer(add_completion=False, help='A linter and formatter for the prose inside code comments.')
 
 PERCENTILES = (0.5, 0.75, 0.9, 0.95, 0.99)
-FORMATTERS = {'human': reporters.human, 'agent': reporters.agent, 'json': reporters.as_json}
+FORMATTERS = {'human': reporters.human, 'agent': reporters.agent_verbose, 'json': reporters.as_json}
 
 
 def _load(paths: tuple[pathlib.Path, ...]) -> tuple[Document, ...]:

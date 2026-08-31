@@ -126,3 +126,31 @@ def test_the_json_format_encodes_ranges_and_fix_kind(
     payload = json.loads(capsys.readouterr().out)
     assert payload['diagnostics'][0]['fixKind'] == 'reflow'
     assert payload['diagnostics'][0]['mechanical'] is True
+
+
+def test_the_agent_format_says_so_when_only_mechanical_findings_exist(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    target = tmp_path / 'a.py'
+    target.write_text(
+        'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n',
+        encoding='utf-8',
+    )
+    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 60\n', encoding='utf-8')
+
+    with pytest.raises(SystemExit):
+        app(['check', str(target), '--output', 'agent'])
+    output = capsys.readouterr().out
+    assert 'Nothing needs rewriting' in output
+    assert 'repaired mechanically' in output
+
+
+def test_the_agent_format_says_so_when_nothing_is_wrong(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    target = tmp_path / 'a.py'
+    target.write_text('def f():\n    # short and fine.\n    pass\n', encoding='utf-8')
+
+    with pytest.raises(SystemExit):
+        app(['check', str(target), '--output', 'agent'])
+    assert 'No findings' in capsys.readouterr().out
