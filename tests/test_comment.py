@@ -91,13 +91,31 @@ def test_with_payloads_rejects_an_empty_result() -> None:
         group('one').with_texts(())
 
 
-def test_public_attachment_is_reported() -> None:
-    public = group('doc', attachment=SymbolRef('buildProposal', SymbolKind.FUNCTION, Visibility.PUBLIC))
-    internal = group('doc', attachment=SymbolRef('_helper', SymbolKind.FUNCTION, Visibility.INTERNAL))
+def documented(name: str, visibility: Visibility) -> CommentGroup:
+    return group(
+        'doc',
+        placement=CommentPlacement.LEADING_DECLARATION,
+        attachment=SymbolRef(name, SymbolKind.FUNCTION, visibility),
+    )
 
-    assert public.attaches_to_public_symbol
-    assert not internal.attaches_to_public_symbol
+
+def test_public_attachment_is_reported() -> None:
+    assert documented('buildProposal', Visibility.PUBLIC).attaches_to_public_symbol
+    assert not documented('_helper', Visibility.INTERNAL).attaches_to_public_symbol
     assert not group('doc').attaches_to_public_symbol
+
+
+@pytest.mark.parametrize(
+    'placement',
+    [CommentPlacement.FILE_HEADER, CommentPlacement.INLINE_BODY, CommentPlacement.TRAILING],
+)
+def test_only_a_leading_declaration_may_document_a_symbol(placement: CommentPlacement) -> None:
+    with pytest.raises(ValueError, match='Only a leading declaration'):
+        group(
+            'doc',
+            placement=placement,
+            attachment=SymbolRef('build', SymbolKind.FUNCTION, Visibility.PUBLIC),
+        )
 
 
 def test_as_edit_targets_the_block_range() -> None:

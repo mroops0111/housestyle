@@ -69,7 +69,12 @@ class CommentGroup:
 
     def __post_init__(self) -> None:
         if not self.lines:
-            raise ValueError('A comment block needs at least one line')
+            raise ValueError('A comment group needs at least one line')
+        if self.attachment is not None and self.placement is not CommentPlacement.LEADING_DECLARATION:
+            raise ValueError(
+                f'Only a leading declaration comment documents a symbol, '
+                f'but a {self.placement.value} comment carries {self.attachment.name!r}'
+            )
 
     @property
     def line_count(self) -> int:

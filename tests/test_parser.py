@@ -169,3 +169,47 @@ def test_the_profile_satisfies_the_language_profile_port() -> None:
     assert profile.language_id == 'python'
     assert '.py' in profile.extensions
     assert parser.supports('python')
+
+
+@pytest.mark.parametrize(
+    ('source', 'expected'),
+    [
+        ('# note\n@cache\ndef build():\n    pass\n', 'build'),
+        ('# note\n@a\n@b\ndef build():\n    pass\n', 'build'),
+        ('# note\n@app.command(name="x")\ndef build():\n    pass\n', 'build'),
+        ('# note\n@dataclass\nclass Widget:\n    pass\n', 'Widget'),
+        ('def outer():\n    """Doc."""\n', 'outer'),
+    ],
+)
+def test_a_decorated_declaration_still_resolves_its_name(source: str, expected: str) -> None:
+    block = parse(source)[0]
+    assert block.attachment is not None
+    assert block.attachment.name == expected
+
+
+def test_a_decorated_class_is_still_a_class() -> None:
+    block = parse('# note\n@dataclass\nclass Widget:\n    pass\n')[0]
+    assert block.attachment is not None
+    assert block.attachment.kind is SymbolKind.CLASS
+
+
+def test_a_decorated_private_function_is_still_internal() -> None:
+    block = parse('# note\n@cache\ndef _helper():\n    pass\n')[0]
+    assert block.attachment is not None
+    assert block.attachment.visibility is Visibility.INTERNAL
+
+
+@pytest.mark.parametrize(
+    'source',
+    [
+        '# note\ndef build():\n    pass\n',
+        '# note\n@cache\ndef build():\n    pass\n',
+        '# note\nclass Widget:\n    pass\n',
+        '# note\n@dataclass\nclass Widget:\n    pass\n',
+        '# note\nasync def build():\n    pass\n',
+    ],
+)
+def test_a_leading_declaration_comment_always_names_what_it_documents(source: str) -> None:
+    block = parse(source)[0]
+    assert block.placement is CommentPlacement.LEADING_DECLARATION
+    assert block.attachment is not None, 'leading-declaration without an attachment silently disables rules'
