@@ -108,3 +108,12 @@ def test_every_structural_finding_needs_an_author() -> None:
 def test_each_rule_can_be_disabled_independently(rule_id: str) -> None:
     source = '# a banner\ndef build(x):\n    """Build it.\n\n    Args:\n        x: a thing\n    """\n'
     assert rule_id not in ids(source, enabled=STRUCTURAL - {rule_id})
+
+
+@pytest.mark.parametrize(
+    'decorator',
+    ['', '@cache\n', '@a\n@b\n', '@app.command(name="x")\n'],
+)
+def test_doc_comment_form_survives_decorators(decorator: str) -> None:
+    source = f'# documents the public builder\n{decorator}def build(x):\n    return x\n'
+    assert 'doc-comment-form' in ids(source)

@@ -165,12 +165,25 @@ class TreeSitterParser:
         target = self._owning_definition(profile, node) if is_doc else self._next_definition(profile, node)
         if target is None:
             return None
-        named = target.child_by_field_name('name')
+        declared = self._named_declaration(profile, target)
+        if declared is None:
+            return None
+        named = declared.child_by_field_name('name')
         if named is None or named.text is None:
             return None
         name = named.text.decode('utf-8')
         return SymbolRef(
             name=name,
-            kind=profile.symbol_kind(target.type),
+            kind=profile.symbol_kind(declared.type),
             visibility=profile.visibility_of(name),
         )
+
+    def _named_declaration(self, profile: LanguageProfile, node: Node) -> Node | None:
+        if node.child_by_field_name('name') is not None:
+            return node
+        for child in node.named_children:
+            if profile.role_of(child.type) is NodeRole.DEFINITION:
+                found = self._named_declaration(profile, child)
+                if found is not None:
+                    return found
+        return None
