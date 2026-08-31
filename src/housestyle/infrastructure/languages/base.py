@@ -13,10 +13,10 @@ class NodeRole(enum.Enum):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class MarkerSplit:
+class DelimiterSplit:
     indent: str
-    marker: str
-    payload: str
+    delimiter: str
+    text: str
     suffix: str = ''
 
 
@@ -28,14 +28,14 @@ class LanguageConventions(typing.Protocol):
     def extensions(self) -> frozenset[str]: ...
 
     @property
-    def doc_form_marker(self) -> str: ...
+    def doc_delimiter(self) -> str: ...
 
     @property
     def signature_tags(self) -> tuple[str, ...]: ...
 
     def visibility_of(self, name: str) -> Visibility: ...
 
-    def split_marker(self, line: str, form: CommentForm) -> MarkerSplit: ...
+    def split_delimiter(self, line: str, form: CommentForm) -> DelimiterSplit: ...
 
 
 class GrammarAdapter(typing.Protocol):

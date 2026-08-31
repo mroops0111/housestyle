@@ -1,6 +1,6 @@
 import dataclasses
 
-from ..domain.comment import CommentBlock
+from ..domain.comment import CommentGroup
 from ..domain.diagnostic import Diagnostic, Report
 from ..domain.document import Document
 from ..domain.ports import SourceParser
@@ -18,7 +18,7 @@ class RuleEngine:
     def rule_ids(self) -> tuple[str, ...]:
         return tuple(rule.meta.rule_id for rule in self._rules)
 
-    def run(self, document: Document, blocks: tuple[CommentBlock, ...], rules: RuleSet) -> tuple[Diagnostic, ...]:
+    def run(self, document: Document, blocks: tuple[CommentGroup, ...], rules: RuleSet) -> tuple[Diagnostic, ...]:
         context = RuleContext(document=document, rules=rules)
         active = [rule for rule in self._rules if rules.is_enabled(rule.meta.rule_id)]
         found: list[Diagnostic] = []

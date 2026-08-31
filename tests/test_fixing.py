@@ -2,7 +2,7 @@ import pytest
 
 from housestyle.application import FixDocument, LintDocument, RuleEngine
 from housestyle.domain import (
-    CommentBlock,
+    CommentGroup,
     Diagnostic,
     Document,
     Fix,
@@ -87,22 +87,22 @@ def test_targeted_edits_run_before_reflow() -> None:
     class TargetedRule:
         meta = RuleMeta(rule_id='targeted', summary='t', fix_kind=FixKind.TARGETED)
 
-        def check(self, block: CommentBlock, context: RuleContext):
+        def check(self, block: CommentGroup, context: RuleContext):
             order.append('targeted')
             if '!' in block.render():
                 return
-            start = block.lines[0].range.start + len(block.lines[0].indent + block.lines[0].marker)
+            start = block.lines[0].range.start + len(block.lines[0].indent + block.lines[0].delimiter)
             yield Diagnostic(
                 rule_id='targeted',
                 range=block.range,
-                message='insert a marker',
+                message='insert a delimiter',
                 fix=Fix.targeted(TextEdit(SourceRange(start, start), '!')),
             )
 
     class ReflowRule:
         meta = RuleMeta(rule_id='reflowing', summary='r', fix_kind=FixKind.REFLOW)
 
-        def check(self, block: CommentBlock, context: RuleContext):
+        def check(self, block: CommentGroup, context: RuleContext):
             order.append('reflow')
             reflowed = block.reflow(context.line_width)
             if reflowed.render() != block.render():
@@ -126,7 +126,7 @@ def test_overlapping_edits_are_deferred_rather_than_dropped() -> None:
     class DoubleRule:
         meta = RuleMeta(rule_id='double', summary='d', fix_kind=FixKind.TARGETED)
 
-        def check(self, block: CommentBlock, context: RuleContext):
+        def check(self, block: CommentGroup, context: RuleContext):
             if block.render().count('!') >= 2:
                 return
             start = block.range.start

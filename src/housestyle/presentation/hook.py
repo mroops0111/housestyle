@@ -58,7 +58,7 @@ def run(payload: typing.Mapping[str, object], *, write: bool = True) -> HookOutc
         if outcome.changed and write:
             path.write_text(outcome.document.text, encoding='utf-8')
             repaired.append(str(path))
-        rendered = reporters.agent(outcome.document, outcome.report)
+        rendered = reporters.brief(outcome.document, outcome.report)
         if rendered:
             messages.append(rendered)
 

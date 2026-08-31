@@ -2,8 +2,8 @@ from tree_sitter import Node, Query, QueryCursor
 from tree_sitter_language_pack import get_language, get_parser
 
 from ..domain.comment import (
-    CommentBlock,
     CommentForm,
+    CommentGroup,
     CommentLine,
     CommentPlacement,
     SymbolRef,
@@ -20,7 +20,7 @@ class TreeSitterParser:
     def supports(self, language_id: str) -> bool:
         return language_id in self._profiles
 
-    def parse(self, document: Document) -> tuple[CommentBlock, ...]:
+    def parse(self, document: Document) -> tuple[CommentGroup, ...]:
         profile = self._profiles.get(document.language_id)
         if profile is None:
             return ()
@@ -66,9 +66,9 @@ class TreeSitterParser:
         line = document.positions.line_text(node.start_point[0])
         return bool(line[: node.start_point[1]].strip())
 
-    def _line_block(self, profile: LanguageProfile, document: Document, nodes: list[Node]) -> CommentBlock:
+    def _line_block(self, profile: LanguageProfile, document: Document, nodes: list[Node]) -> CommentGroup:
         lines = tuple(self._line(profile, document, node, CommentForm.LINE) for node in nodes)
-        return CommentBlock(
+        return CommentGroup(
             range=SourceRange(lines[0].range.start, lines[-1].range.end),
             lines=lines,
             form=CommentForm.LINE,
@@ -76,20 +76,20 @@ class TreeSitterParser:
             attachment=self._attachment(profile, nodes[-1], is_doc=False),
         )
 
-    def _doc_block(self, profile: LanguageProfile, document: Document, node: Node) -> CommentBlock:
+    def _doc_block(self, profile: LanguageProfile, document: Document, node: Node) -> CommentGroup:
         lines: list[CommentLine] = []
         for row in range(node.start_point[0], node.end_point[0] + 1):
-            split = profile.split_marker(document.positions.line_text(row), CommentForm.DOC)
+            split = profile.split_delimiter(document.positions.line_text(row), CommentForm.DOC)
             lines.append(
                 CommentLine(
                     range=document.positions.line_range(row),
                     indent=split.indent,
-                    marker=split.marker,
-                    payload=split.payload,
+                    delimiter=split.delimiter,
+                    text=split.text,
                     suffix=split.suffix,
                 )
             )
-        return CommentBlock(
+        return CommentGroup(
             range=SourceRange(lines[0].range.start, lines[-1].range.end),
             lines=tuple(lines),
             form=CommentForm.DOC,
@@ -100,12 +100,12 @@ class TreeSitterParser:
     def _line(self, profile: LanguageProfile, document: Document, node: Node, form: CommentForm) -> CommentLine:
         row, column = node.start_point
         text = document.positions.line_text(row)
-        split = profile.split_marker(text[column:], form)
+        split = profile.split_delimiter(text[column:], form)
         return CommentLine(
             range=document.positions.line_range(row),
             indent=text[:column] + split.indent,
-            marker=split.marker,
-            payload=split.payload,
+            delimiter=split.delimiter,
+            text=split.text,
             suffix=split.suffix,
         )
 

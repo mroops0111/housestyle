@@ -1,6 +1,6 @@
 import typing
 
-from ...domain.comment import CommentBlock
+from ...domain.comment import CommentGroup
 from ...domain.diagnostic import Diagnostic, Fix, FixKind, RuleMeta
 from ...domain.prose import Prose, reflow_sentence
 from ...domain.rules import RuleContext
@@ -21,7 +21,7 @@ UNBREAKABLE_SENTENCE = RuleMeta(
 DEFAULT_MINIMUM_CHARACTERS = 24
 
 
-def prose_sentences(block: CommentBlock) -> tuple[str, ...]:
+def prose_sentences(block: CommentGroup) -> tuple[str, ...]:
     return tuple(
         sentence.text
         for segment in block.prose().segments()
@@ -30,14 +30,14 @@ def prose_sentences(block: CommentBlock) -> tuple[str, ...]:
     )
 
 
-def sentence_budget(block: CommentBlock, context: RuleContext) -> int:
+def sentence_budget(block: CommentGroup, context: RuleContext) -> int:
     return max(20, context.line_width - block.lines[0].prefix_width)
 
 
 class StubFragmentRule:
     meta = STUB_FRAGMENT
 
-    def check(self, block: CommentBlock, context: RuleContext) -> typing.Iterable[Diagnostic]:
+    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         budget = sentence_budget(block, context)
         floor = context.settings(self.meta.rule_id).integer('minimum_characters', DEFAULT_MINIMUM_CHARACTERS)
         for sentence in prose_sentences(block):
@@ -63,7 +63,7 @@ class StubFragmentRule:
 class UnbreakableSentenceRule:
     meta = UNBREAKABLE_SENTENCE
 
-    def check(self, block: CommentBlock, context: RuleContext) -> typing.Iterable[Diagnostic]:
+    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         budget = max(20, context.line_width - block.lines[0].prefix_width)
         for sentence in prose_sentences(block):
             if len(sentence) <= budget or ',' in sentence:

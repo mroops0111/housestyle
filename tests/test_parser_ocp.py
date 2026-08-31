@@ -2,10 +2,10 @@ import re
 
 from housestyle.domain import CommentForm, CommentPlacement, Document, SymbolKind, Visibility
 from housestyle.infrastructure import TreeSitterParser
-from housestyle.infrastructure.languages import LanguageProfile, MarkerSplit, NodeRole
+from housestyle.infrastructure.languages import DelimiterSplit, LanguageProfile, NodeRole
 
 
-_TS_MARKER = re.compile(r'^(/\*\*|/\*|//+)\s?')
+_TS_DELIMITER = re.compile(r'^(/\*\*|/\*|//+)\s?')
 
 TYPESCRIPT_QUERY = '(comment) @comment'
 
@@ -13,7 +13,7 @@ TYPESCRIPT_QUERY = '(comment) @comment'
 class TypeScriptProfile:
     language_id = 'typescript'
     extensions = frozenset({'.ts', '.tsx'})
-    doc_form_marker = '/**'
+    doc_delimiter = '/**'
     signature_tags = ('@param', '@returns', '@type')
     _ROLES = {
         'program': NodeRole.ROOT,
@@ -36,17 +36,17 @@ class TypeScriptProfile:
     def visibility_of(self, name: str) -> Visibility:
         return Visibility.INTERNAL if name.startswith('_') else Visibility.PUBLIC
 
-    def split_marker(self, line: str, form: CommentForm) -> MarkerSplit:
+    def split_delimiter(self, line: str, form: CommentForm) -> DelimiterSplit:
         indent = line[: len(line) - len(line.lstrip())]
         rest = line[len(indent) :]
-        match = _TS_MARKER.match(rest)
+        match = _TS_DELIMITER.match(rest)
         if match is None:
-            return MarkerSplit(indent=indent, marker='', payload=rest.rstrip())
-        payload = rest[match.end() :].rstrip()
+            return DelimiterSplit(indent=indent, delimiter='', text=rest.rstrip())
+        text = rest[match.end() :].rstrip()
         suffix = ''
-        if payload.endswith('*/'):
-            payload, suffix = payload[:-2].rstrip(), '*/'
-        return MarkerSplit(indent=indent, marker=match.group(1) + ' ', payload=payload, suffix=suffix)
+        if text.endswith('*/'):
+            text, suffix = text[:-2].rstrip(), '*/'
+        return DelimiterSplit(indent=indent, delimiter=match.group(1) + ' ', text=text, suffix=suffix)
 
 
 def test_a_second_grammar_needs_no_parser_change() -> None:

@@ -1,7 +1,7 @@
 import dataclasses
 import typing
 
-from .comment import CommentBlock
+from .comment import CommentGroup
 from .diagnostic import Diagnostic, RuleMeta, Severity
 from .document import Document
 
@@ -49,7 +49,7 @@ class Rule(typing.Protocol):
     @property
     def meta(self) -> RuleMeta: ...
 
-    def check(self, block: CommentBlock, context: RuleContext) -> typing.Iterable[Diagnostic]: ...
+    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]: ...
 
 
 class ConfigSource(typing.Protocol):

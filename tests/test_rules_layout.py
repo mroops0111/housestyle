@@ -51,11 +51,11 @@ def test_a_sentence_with_no_comma_is_left_alone_by_reflow() -> None:
 
 
 def test_line_width_counts_indent_and_marker() -> None:
-    payload = 'a padded payload here, and a tail clause that follows.'
-    shallow = f'def a():\n    # {payload}\n    pass\n'
-    deep = f'def a():\n    def b():\n        def c():\n            # {payload}\n            pass\n'
+    text = 'a padded text here, and a tail clause that follows.'
+    shallow = f'def a():\n    # {text}\n    pass\n'
+    deep = f'def a():\n    def b():\n        def c():\n            # {text}\n            pass\n'
 
-    width = len(f'    # {payload}') + 1
+    width = len(f'    # {text}') + 1
     assert 'line-width' not in [item.rule_id for item in lint(shallow, width=width).diagnostics]
     assert 'line-width' in [item.rule_id for item in lint(deep, width=width).diagnostics]
 

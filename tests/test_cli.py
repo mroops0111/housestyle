@@ -92,7 +92,7 @@ def test_fix_write_applies_the_change(tmp_path: pathlib.Path) -> None:
     assert 'does not blow past it,' in target.read_text(encoding='utf-8')
 
 
-def test_the_agent_format_shows_only_findings_needing_an_author(
+def test_the_actionable_format_shows_only_findings_needing_an_author(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     target = tmp_path / 'a.py'
@@ -103,7 +103,7 @@ def test_the_agent_format_shows_only_findings_needing_an_author(
     (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 50\n', encoding='utf-8')
 
     with pytest.raises(SystemExit):
-        app(['check', str(target), '--output', 'agent'])
+        app(['check', str(target), '--output', 'actionable'])
     output = capsys.readouterr().out
     assert 'unbreakable-sentence' in output
     assert 'do not add a suppression comment' in output
@@ -123,12 +123,12 @@ def test_the_json_format_encodes_ranges_and_fix_kind(
 
     with pytest.raises(SystemExit):
         app(['check', str(target), '--output', 'json'])
-    payload = json.loads(capsys.readouterr().out)
-    assert payload['diagnostics'][0]['fixKind'] == 'reflow'
-    assert payload['diagnostics'][0]['mechanical'] is True
+    text = json.loads(capsys.readouterr().out)
+    assert text['diagnostics'][0]['fixKind'] == 'reflow'
+    assert text['diagnostics'][0]['mechanical'] is True
 
 
-def test_the_agent_format_says_so_when_only_mechanical_findings_exist(
+def test_the_actionable_format_says_so_when_only_mechanical_findings_exist(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     target = tmp_path / 'a.py'
@@ -139,18 +139,18 @@ def test_the_agent_format_says_so_when_only_mechanical_findings_exist(
     (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 60\n', encoding='utf-8')
 
     with pytest.raises(SystemExit):
-        app(['check', str(target), '--output', 'agent'])
+        app(['check', str(target), '--output', 'actionable'])
     output = capsys.readouterr().out
     assert 'Nothing needs rewriting' in output
     assert 'repaired mechanically' in output
 
 
-def test_the_agent_format_says_so_when_nothing_is_wrong(
+def test_the_actionable_format_says_so_when_nothing_is_wrong(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     target = tmp_path / 'a.py'
     target.write_text('def f():\n    # short and fine.\n    pass\n', encoding='utf-8')
 
     with pytest.raises(SystemExit):
-        app(['check', str(target), '--output', 'agent'])
+        app(['check', str(target), '--output', 'actionable'])
     assert 'No findings' in capsys.readouterr().out

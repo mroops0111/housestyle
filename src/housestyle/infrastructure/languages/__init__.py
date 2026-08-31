@@ -1,13 +1,13 @@
-from .base import GrammarAdapter, LanguageConventions, LanguageProfile, MarkerSplit, NodeRole
+from .base import DelimiterSplit, GrammarAdapter, LanguageConventions, LanguageProfile, NodeRole
 from .python import PYTHON, PythonProfile
 
 
 __all__ = [
     'PYTHON',
+    'DelimiterSplit',
     'GrammarAdapter',
     'LanguageConventions',
     'LanguageProfile',
-    'MarkerSplit',
     'NodeRole',
     'PythonProfile',
 ]

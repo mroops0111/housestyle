@@ -1,10 +1,10 @@
 import pytest
 
-from housestyle.domain import CommentBlock, CommentForm, CommentPlacement, Document, SymbolKind, Visibility
+from housestyle.domain import CommentForm, CommentGroup, CommentPlacement, Document, SymbolKind, Visibility
 from housestyle.infrastructure import DEFAULT_PARSER
 
 
-def parse(source: str) -> tuple[CommentBlock, ...]:
+def parse(source: str) -> tuple[CommentGroup, ...]:
     return DEFAULT_PARSER.parse(Document(uri='file:///a.py', text=source, language_id='python'))
 
 
@@ -133,10 +133,10 @@ def test_single_quoted_docstrings_are_handled() -> None:
 
 
 def test_physical_width_counts_indent_and_marker() -> None:
-    source = 'def a():\n    def b():\n        def c():\n            # payload\n            pass\n'
+    source = 'def a():\n    def b():\n        def c():\n            # text\n            pass\n'
     line = parse(source)[0].lines[0]
-    assert line.payload == 'payload'
-    assert line.physical_width == len('            # payload')
+    assert line.text == 'text'
+    assert line.physical_width == len('            # text')
 
 
 @pytest.mark.parametrize(

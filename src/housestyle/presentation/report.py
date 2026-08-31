@@ -4,7 +4,7 @@ from ..domain.diagnostic import Diagnostic, Report
 from ..domain.document import Document
 
 
-def human(document: Document, report: Report) -> str:
+def full(document: Document, report: Report) -> str:
     if report.is_clean:
         return ''
     lines: list[str] = []
@@ -15,13 +15,13 @@ def human(document: Document, report: Report) -> str:
     return '\n'.join(lines)
 
 
-def agent(document: Document, report: Report) -> str:
+def brief(document: Document, report: Report) -> str:
     if not report.needing_author:
         return ''
     return _rewrite_brief(document, report)
 
 
-def agent_verbose(document: Document, report: Report) -> str:
+def actionable(document: Document, report: Report) -> str:
     if report.needing_author:
         return _rewrite_brief(document, report)
     if report.mechanical:

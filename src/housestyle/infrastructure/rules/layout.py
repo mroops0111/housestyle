@@ -1,6 +1,6 @@
 import typing
 
-from ...domain.comment import CommentBlock
+from ...domain.comment import CommentGroup
 from ...domain.diagnostic import Diagnostic, Fix, FixKind, RuleMeta
 from ...domain.rules import RuleContext
 
@@ -13,7 +13,7 @@ WRAP_POINT = RuleMeta(
 
 LINE_WIDTH = RuleMeta(
     rule_id='line-width',
-    summary='A physical comment line must fit the configured width, counting indent and marker.',
+    summary='A physical comment line must fit the configured width, counting indent and delimiter.',
     fix_kind=FixKind.REFLOW,
 )
 
@@ -21,7 +21,7 @@ LINE_WIDTH = RuleMeta(
 class WrapPointRule:
     meta = WRAP_POINT
 
-    def check(self, block: CommentBlock, context: RuleContext) -> typing.Iterable[Diagnostic]:
+    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         reflowed = block.reflow(context.line_width)
         if reflowed.render() == block.render():
             return
@@ -39,19 +39,19 @@ class WrapPointRule:
 class LineWidthRule:
     meta = LINE_WIDTH
 
-    def check(self, block: CommentBlock, context: RuleContext) -> typing.Iterable[Diagnostic]:
+    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         width = context.line_width
-        if block.widest_line <= width:
+        if block.longest_line <= width:
             return
         reflowed = block.reflow(width)
-        if reflowed.widest_line > width:
+        if reflowed.longest_line > width:
             return
         yield Diagnostic(
             rule_id=self.meta.rule_id,
             range=block.range,
             message=(
-                f'A comment line runs to {block.widest_line} characters against a limit of {width}, '
-                'counting indent and marker.'
+                f'A comment line runs to {block.longest_line} characters against a limit of {width}, '
+                'counting indent and delimiter.'
             ),
             fix=Fix.reflow(reflowed.as_edit()),
         )

@@ -1,6 +1,6 @@
 from .comment import (
-    CommentBlock,
     CommentForm,
+    CommentGroup,
     CommentLine,
     CommentPlacement,
     SymbolKind,
@@ -20,8 +20,8 @@ from .text import TextEdit, apply_edits
 __all__ = [
     'BreakPoint',
     'BreakStrength',
-    'CommentBlock',
     'CommentForm',
+    'CommentGroup',
     'CommentLine',
     'CommentPlacement',
     'ConfigSource',
