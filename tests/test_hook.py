@@ -121,3 +121,10 @@ def test_the_entry_point_blocks_on_a_rewrite_finding(tmp_path: pathlib.Path) -> 
     )
     assert result.returncode == 2
     assert 'unbreakable-sentence' in result.stderr
+
+
+def test_the_hook_stays_silent_on_mechanical_findings_even_now(tmp_path: pathlib.Path) -> None:
+    target = seed(tmp_path, MIS_WRAPPED)
+    outcome = hook.run(payload(target))
+    assert outcome.stderr == '', 'the hook must never narrate a repair it made silently'
+    assert outcome.exit_code == 0

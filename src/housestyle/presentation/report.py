@@ -18,6 +18,23 @@ def human(document: Document, report: Report) -> str:
 def agent(document: Document, report: Report) -> str:
     if not report.needing_author:
         return ''
+    return _rewrite_brief(document, report)
+
+
+def agent_verbose(document: Document, report: Report) -> str:
+    if report.needing_author:
+        return _rewrite_brief(document, report)
+    if report.mechanical:
+        count = len(report.mechanical)
+        return (
+            f'Nothing needs rewriting in {_path(document)}. '
+            f'{count} finding{"s" if count != 1 else ""} can be repaired mechanically, '
+            'so run fix --write rather than editing by hand.'
+        )
+    return f'No findings in {_path(document)}.'
+
+
+def _rewrite_brief(document: Document, report: Report) -> str:
     lines = [
         f'{len(report.needing_author)} comment findings need rewriting in {_path(document)}.',
         'Each states the fix. Apply it in place, do not add a suppression comment.',
