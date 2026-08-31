@@ -21,6 +21,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "pydantic>=2.13.5",
     "tree-sitter>=0.26.0",
     "tree-sitter-language-pack>=1.15.8",
     "typer>=0.27.1",
