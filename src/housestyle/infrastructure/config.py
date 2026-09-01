@@ -1,16 +1,13 @@
 import fnmatch
 import pathlib
 import tomllib
-import typing
 
-from ..domain.diagnostic import Severity
 from ..domain.rules import RuleSet, RuleSettings
+from .schema import ConfigFile, RuleTable
 
 
 CONFIG_NAME = 'housestyle.toml'
 DEFAULT_WIDTH = 120
-
-SEVERITIES = {severity.name.lower(): severity for severity in Severity}
 
 
 class TomlConfigSource:
@@ -18,20 +15,17 @@ class TomlConfigSource:
         self._available = available
 
     def resolve(self, path: str) -> RuleSet:
-        found = self._locate(pathlib.Path(path))
-        if found is None:
+        parsed = self._read(path)
+        if parsed is None:
             return self.defaults()
-        return self._parse(tomllib.loads(found.read_text(encoding='utf-8')))
+        return self._to_rule_set(parsed)
+
+    def defaults(self) -> RuleSet:
+        return RuleSet(enabled=frozenset(self._available), line_width=DEFAULT_WIDTH)
 
     def excludes(self, path: str) -> tuple[str, ...]:
-        found = self._locate(pathlib.Path(path))
-        if found is None:
-            return ()
-        raw = tomllib.loads(found.read_text(encoding='utf-8')).get('housestyle')
-        patterns = raw.get('exclude') if isinstance(raw, dict) else None
-        if not isinstance(patterns, list):
-            return ()
-        return tuple(str(item) for item in patterns if isinstance(item, str))
+        parsed = self._read(path)
+        return parsed.housestyle.exclude if parsed else ()
 
     def is_excluded(self, target: pathlib.Path, root: pathlib.Path, patterns: tuple[str, ...]) -> bool:
         try:
@@ -44,8 +38,15 @@ class TomlConfigSource:
         found = self._locate(pathlib.Path(path))
         return found.parent if found else pathlib.Path.cwd()
 
-    def defaults(self) -> RuleSet:
-        return RuleSet(enabled=frozenset(self._available), line_width=DEFAULT_WIDTH)
+    def _read(self, path: str) -> ConfigFile | None:
+        found = self._locate(pathlib.Path(path))
+        if found is None:
+            return None
+        try:
+            raw = tomllib.loads(found.read_text(encoding='utf-8'))
+        except (OSError, tomllib.TOMLDecodeError):
+            return None
+        return ConfigFile.parse(raw)
 
     def _locate(self, start: pathlib.Path) -> pathlib.Path | None:
         base = start if start.is_dir() else start.parent
@@ -55,32 +56,22 @@ class TomlConfigSource:
                 return found
         return None
 
-    def _parse(self, raw: typing.Mapping[str, object]) -> RuleSet:
-        root = raw.get('housestyle')
-        width = DEFAULT_WIDTH
-        if isinstance(root, dict):
-            candidate = root.get('line-width')
-            if isinstance(candidate, int) and not isinstance(candidate, bool):
-                width = candidate
-
-        section = raw.get('rules')
-        rules = section if isinstance(section, dict) else {}
-        enabled: set[str] = set(self._available)
+    def _to_rule_set(self, parsed: ConfigFile) -> RuleSet:
+        enabled = set(self._available)
         settings: dict[str, RuleSettings] = {}
 
-        for rule_id, value in rules.items():
+        for rule_id, entry in parsed.rules.items():
             if rule_id not in self._available:
                 continue
-            if value is False or value == 'off':
+            if entry is False or entry == 'off':
                 enabled.discard(rule_id)
-                continue
-            if isinstance(value, str):
-                settings[rule_id] = RuleSettings(severity=SEVERITIES.get(value))
-            elif isinstance(value, dict):
-                severity = value.get('severity')
-                options = {key: item for key, item in value.items() if key != 'severity'}
-                settings[rule_id] = RuleSettings(
-                    severity=SEVERITIES.get(severity) if isinstance(severity, str) else None,
-                    options=options,
-                )
-        return RuleSet(enabled=frozenset(enabled), settings=settings, line_width=width)
+            elif isinstance(entry, RuleTable):
+                settings[rule_id] = RuleSettings(severity=entry.resolved_severity, options=entry.options)
+            elif isinstance(entry, str):
+                settings[rule_id] = RuleSettings(severity=RuleTable(severity=entry).resolved_severity)
+
+        return RuleSet(
+            enabled=frozenset(enabled),
+            settings=settings,
+            line_width=parsed.housestyle.line_width,
+        )
