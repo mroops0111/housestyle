@@ -11,9 +11,9 @@ PREAMBLE = (
 
 
 def render(rules: tuple[Rule, ...]) -> str:
-    ordered = sorted(rules, key=lambda rule: (rule.meta.fix_kind.value, rule.meta.rule_id))
+    sorted_rules = sorted(rules, key=lambda rule: (rule.meta.fix_kind.value, rule.meta.rule_id))
     lines = [HEADING, '', PREAMBLE, '', '| Rule | Fix kind | Summary |', '| --- | --- | --- |']
-    lines.extend(_row(rule.meta) for rule in ordered)
+    lines.extend(_row(rule.meta) for rule in sorted_rules)
     return '\n'.join(lines) + '\n'
 
 

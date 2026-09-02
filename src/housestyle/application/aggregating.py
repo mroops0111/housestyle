@@ -12,12 +12,12 @@ class Aggregator:
 
     def run(self, document: Document, rules: RuleSet) -> Report:
         report = self._lint.run(document, rules)
-        unavailable: list[str] = []
+        missing_sources: list[str] = []
         for linter in self._linters:
             if not linter.is_available():
-                unavailable.append(linter.name)
+                missing_sources.append(linter.name)
                 continue
             report = report.merged_with(Report(linter.run(document)))
-        if unavailable:
-            report = report.merged_with(Report(unavailable_sources=tuple(unavailable)))
+        if missing_sources:
+            report = report.merged_with(Report(unavailable_sources=tuple(missing_sources)))
         return report

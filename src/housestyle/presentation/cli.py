@@ -73,11 +73,11 @@ def check(
     aggregator = _aggregator(delegate)
     findings = 0
     for document in documents:
-        result = aggregator.run(document, DEFAULT_CONFIG.resolve(_fspath(document)))
-        findings += len(result.diagnostics)
-        rendered = formatter(document, result)
-        if rendered:
-            typer.echo(rendered)
+        report = aggregator.run(document, DEFAULT_CONFIG.resolve(_fspath(document)))
+        findings += len(report.diagnostics)
+        rendered_report = formatter(document, report)
+        if rendered_report:
+            typer.echo(rendered_report)
     raise typer.Exit(1 if findings else 0)
 
 
@@ -91,22 +91,22 @@ def fix(
 
     fixer = FixDocument(_lint())
     changed = 0
-    remaining = 0
+    unresolved = 0
     for document in documents:
         outcome = fixer.run(document, DEFAULT_CONFIG.resolve(_fspath(document)))
-        remaining += len(outcome.remaining)
+        unresolved += len(outcome.unresolved)
         if outcome.changed:
             changed += 1
             if write:
                 pathlib.Path(_fspath(document)).write_text(outcome.document.text, encoding='utf-8')
             else:
                 typer.echo(_diff(document, outcome.document))
-        if outcome.remaining:
+        if outcome.unresolved:
             typer.echo(reporters.brief(outcome.document, outcome.report))
 
     verb = 'rewrote' if write else 'would rewrite'
-    typer.echo(f'{verb} {changed} of {len(documents)} files, {remaining} findings need an author.', err=True)
-    raise typer.Exit(1 if remaining else 0)
+    typer.echo(f'{verb} {changed} of {len(documents)} files, {unresolved} findings need an author.', err=True)
+    raise typer.Exit(1 if unresolved else 0)
 
 
 @app.command()
@@ -120,11 +120,11 @@ def stats(paths: list[pathlib.Path] = typer.Argument(..., help='Files or directo
 def rules(
     write: pathlib.Path = typer.Option(None, '--write', help='Write the generated table to this path.'),
 ) -> None:
-    rendered = rule_docs.render(ALL_RULES)
+    rendered_report = rule_docs.render(ALL_RULES)
     if write is None:
-        typer.echo(rendered, nl=False)
+        typer.echo(rendered_report, nl=False)
         return
-    write.write_text(rendered, encoding='utf-8')
+    write.write_text(rendered_report, encoding='utf-8')
 
 
 @app.command()

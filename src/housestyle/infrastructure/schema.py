@@ -64,7 +64,7 @@ class ValeReport(pydantic.RootModel[dict[str, list[ValeAlert]]]):
     @classmethod
     def parse(cls, payload: str) -> tuple[ValeAlert, ...]:
         try:
-            parsed = cls.model_validate_json(payload or '{}')
+            report = cls.model_validate_json(payload or '{}')
         except pydantic.ValidationError:
             return ()
-        return tuple(alert for alerts in parsed.root.values() for alert in alerts)
+        return tuple(alert for alerts in report.root.values() for alert in alerts)

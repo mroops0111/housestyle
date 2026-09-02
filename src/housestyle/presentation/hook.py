@@ -29,14 +29,14 @@ def targets(payload: typing.Mapping[str, object]) -> tuple[pathlib.Path, ...]:
     tool = payload.get('tool_name')
     if isinstance(tool, str) and tool not in EDIT_TOOLS:
         return ()
-    raw = payload.get('tool_input')
-    fields = raw if isinstance(raw, dict) else {}
-    found: list[pathlib.Path] = []
+    tool_input = payload.get('tool_input')
+    fields = tool_input if isinstance(tool_input, dict) else {}
+    paths: list[pathlib.Path] = []
     for key in ('file_path', 'notebook_path'):
-        value = fields.get(key)
-        if isinstance(value, str) and value:
-            found.append(pathlib.Path(value))
-    return tuple(path for path in found if path.suffix in PYTHON.extensions and path.is_file())
+        candidate = fields.get(key)
+        if isinstance(candidate, str) and candidate:
+            paths.append(pathlib.Path(candidate))
+    return tuple(path for path in paths if path.suffix in PYTHON.extensions and path.is_file())
 
 
 def run(payload: typing.Mapping[str, object], *, write: bool = True) -> HookOutcome:
@@ -58,9 +58,9 @@ def run(payload: typing.Mapping[str, object], *, write: bool = True) -> HookOutc
         if outcome.changed and write:
             path.write_text(outcome.document.text, encoding='utf-8')
             repaired.append(str(path))
-        rendered = reporters.brief(outcome.document, outcome.report)
-        if rendered:
-            messages.append(rendered)
+        rendered_report = reporters.brief(outcome.document, outcome.report)
+        if rendered_report:
+            messages.append(rendered_report)
 
     if not messages:
         return HookOutcome(exit_code=0, repaired=tuple(repaired))

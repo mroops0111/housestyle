@@ -96,13 +96,6 @@ def test_a_sentence_without_a_comma_offers_no_internal_break() -> None:
     assert prose.break_candidates() == ()
 
 
-def test_break_legality_is_exact() -> None:
-    prose = Prose('alpha, beta')
-    assert prose.is_break_legal(len('alpha,'))
-    assert not prose.is_break_legal(len('alpha'))
-    assert not prose.is_break_legal(3)
-
-
 def test_urls_offer_no_break_candidates_inside_themselves() -> None:
     prose = Prose('see https://example.com/a,b,c now')
     assert prose.break_candidates() == ()

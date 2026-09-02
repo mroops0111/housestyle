@@ -44,17 +44,17 @@ class StubFragmentRule:
             pieces = reflow_sentence(sentence, budget)
             if len(pieces) < 2:
                 continue
-            shortest = min(pieces, key=len)
-            if len(shortest) >= floor:
+            shortest_piece = min(pieces, key=len)
+            if len(shortest_piece) >= floor:
                 continue
             yield Diagnostic(
                 rule_id=self.meta.rule_id,
                 range=block.range,
                 message=(
-                    f'Breaking this sentence leaves a {len(shortest)} character line, below the '
+                    f'Breaking this sentence leaves a {len(shortest_piece)} character line, below the '
                     f'{floor} character floor, so the layout reads as a stub rather than a clause. '
                     f'Rewrite it to fit one line, or split it into two complete sentences. '
-                    f'The fragment is "{shortest.strip()}".'
+                    f'The fragment is "{shortest_piece.strip()}".'
                 ),
                 fix=Fix.rewrite(),
             )

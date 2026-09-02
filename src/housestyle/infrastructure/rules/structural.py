@@ -91,9 +91,9 @@ class NoSignatureRestatingRule:
             return
 
     def _tag(self, text: str) -> str | None:
-        stripped = text.strip()
+        stripped_text = text.strip()
         for tag in self._conventions.signature_tags:
-            if stripped.startswith(tag):
+            if stripped_text.startswith(tag):
                 return tag
         return None
 

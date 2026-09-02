@@ -68,42 +68,42 @@ class Prose:
         return tuple(self.text.split('\n'))
 
     def segments(self) -> tuple[Segment, ...]:
-        found: list[Segment] = []
-        current: list[str] = []
+        segments: list[Segment] = []
+        current_lines: list[str] = []
         literal = False
         fenced = False
         held = False
 
         def flush(next_literal: bool) -> None:
-            nonlocal current, literal
-            if current and next_literal != literal:
-                found.append(Segment(tuple(current), literal))
-                current = []
+            nonlocal current_lines, literal
+            if current_lines and next_literal != literal:
+                segments.append(Segment(tuple(current_lines), literal))
+                current_lines = []
             literal = next_literal
 
         for line in self.physical_lines:
-            stripped = line.strip()
+            stripped_line = line.strip()
             if _FENCE.match(line):
                 fenced = not fenced
                 flush(next_literal=True)
-                current.append(line)
+                current_lines.append(line)
                 continue
-            if stripped.startswith(_LITERAL_DELIMITER):
-                held = stripped == _LITERAL_DELIMITER
+            if stripped_line.startswith(_LITERAL_DELIMITER):
+                held = stripped_line == _LITERAL_DELIMITER
                 flush(next_literal=True)
-                current.append(line)
+                current_lines.append(line)
                 continue
-            if not stripped:
+            if not stripped_line:
                 held = False
                 flush(next_literal=fenced)
-                current.append(line)
+                current_lines.append(line)
                 continue
             flush(next_literal=fenced or held or self._is_indented(line) or self._is_list_item(line))
-            current.append(line)
+            current_lines.append(line)
 
-        if current:
-            found.append(Segment(tuple(current), literal))
-        return tuple(found)
+        if current_lines:
+            segments.append(Segment(tuple(current_lines), literal))
+        return tuple(segments)
 
     def _is_indented(self, line: str) -> bool:
         return line.startswith(('    ', '\t'))
@@ -126,7 +126,7 @@ class Prose:
         if not text:
             return ()
         protected = self._protected_spans(text)
-        found: list[Sentence] = []
+        segments: list[Sentence] = []
         start = 0
         for match in _SENTENCE_END.finditer(text):
             end = match.end()
@@ -134,13 +134,13 @@ class Prose:
                 continue
             if not self._terminates_a_sentence(text, match.start()):
                 continue
-            found.append(Sentence(text[start:end].strip(), start))
+            segments.append(Sentence(text[start:end].strip(), start))
             start = end
             while start < len(text) and text[start] == ' ':
                 start += 1
         if start < len(text):
-            found.append(Sentence(text[start:].strip(), start))
-        return tuple(item for item in found if item.text)
+            segments.append(Sentence(text[start:].strip(), start))
+        return tuple(sentence for sentence in segments if sentence.text)
 
     def break_candidates(self) -> tuple[BreakPoint, ...]:
         text = self.flattened
@@ -154,9 +154,6 @@ class Prose:
             elif self._terminates_a_sentence(text, match.start()):
                 points.append(BreakPoint(match.end(), BreakStrength.SENTENCE))
         return tuple(points)
-
-    def is_break_legal(self, offset: int) -> bool:
-        return any(point.offset == offset for point in self.break_candidates())
 
     def _protected_spans(self, text: str) -> tuple[tuple[int, int], ...]:
         spans = [(match.start(), match.end()) for match in _URL.finditer(text)]
@@ -212,14 +209,14 @@ def _comma_pieces(sentence: str) -> tuple[str, ...]:
 
 def _pack(pieces: tuple[str, ...], width: int) -> tuple[str, ...]:
     lines: list[str] = []
-    current = ''
+    current_lines = ''
     for piece in pieces:
-        candidate = f'{current} {piece}'.strip() if current else piece
-        if current and len(candidate) > width:
-            lines.append(current)
-            current = piece
+        candidate = f'{current_lines} {piece}'.strip() if current_lines else piece
+        if current_lines and len(candidate) > width:
+            lines.append(current_lines)
+            current_lines = piece
         else:
-            current = candidate
-    if current:
-        lines.append(current)
+            current_lines = candidate
+    if current_lines:
+        lines.append(current_lines)
     return tuple(lines)

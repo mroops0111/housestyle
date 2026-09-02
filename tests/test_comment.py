@@ -51,12 +51,6 @@ def test_widest_line_is_measured_across_the_block() -> None:
     assert subject.longest_line == len('  // ') + len('a much longer text here')
 
 
-def test_multiline_detection() -> None:
-    assert not group('only').is_multiline
-    assert group('first', 'second').is_multiline
-    assert group('first', 'second').line_count == 2
-
-
 def test_prose_strips_markers_and_joins_lines() -> None:
     subject = group('cap the size to the limit,', 'an unbounded value faults')
     assert subject.prose().physical_lines == ('cap the size to the limit,', 'an unbounded value faults')

@@ -12,8 +12,8 @@ class RuleSettings:
     options: typing.Mapping[str, object] = dataclasses.field(default_factory=dict)
 
     def integer(self, name: str, fallback: int) -> int:
-        value = self.options.get(name, fallback)
-        return value if isinstance(value, int) and not isinstance(value, bool) else fallback
+        option = self.options.get(name, fallback)
+        return option if isinstance(option, int) and not isinstance(option, bool) else fallback
 
 
 @dataclasses.dataclass(frozen=True, slots=True)

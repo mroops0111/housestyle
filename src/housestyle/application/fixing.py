@@ -22,7 +22,7 @@ class FixOutcome:
         return self.applied > 0
 
     @property
-    def remaining(self) -> tuple[Diagnostic, ...]:
+    def unresolved(self) -> tuple[Diagnostic, ...]:
         return self.report.needing_author
 
 
@@ -32,21 +32,21 @@ class FixDocument:
         self._max_rounds = max_rounds
 
     def run(self, document: Document, rules: RuleSet) -> FixOutcome:
-        current = document
+        document_now = document
         applied = 0
         rounds = 0
-        report = self._lint.run(current, rules)
+        report = self._lint.run(document_now, rules)
 
         while rounds < self._max_rounds:
             edits = self._next_edits(report)
             if not edits:
                 break
-            current = current.with_text(apply_edits(current.text, edits))
+            document_now = document_now.with_text(apply_edits(document_now.text, edits))
             applied += len(edits)
             rounds += 1
-            report = self._lint.run(current, rules)
+            report = self._lint.run(document_now, rules)
 
-        return FixOutcome(document=current, report=report, rounds=rounds, applied=applied)
+        return FixOutcome(document=document_now, report=report, rounds=rounds, applied=applied)
 
     def _next_edits(self, report: Report) -> tuple[TextEdit, ...]:
         for kind in (FixKind.TARGETED, FixKind.REFLOW):
@@ -56,11 +56,11 @@ class FixDocument:
         return ()
 
     def _compatible(self, diagnostics: tuple[Diagnostic, ...]) -> tuple[TextEdit, ...]:
-        candidates = [edit for item in diagnostics if item.fix for edit in item.fix.edits]
+        candidates = [edit for diagnostic in diagnostics if diagnostic.fix for edit in diagnostic.fix.edits]
         candidates.sort(key=lambda edit: (edit.range.start, edit.range.end))
-        chosen: list[TextEdit] = []
+        accepted_edits: list[TextEdit] = []
         for edit in candidates:
-            if chosen and chosen[-1].range.overlaps(edit.range):
+            if accepted_edits and accepted_edits[-1].range.overlaps(edit.range):
                 continue
-            chosen.append(edit)
-        return tuple(chosen)
+            accepted_edits.append(edit)
+        return tuple(accepted_edits)

@@ -24,8 +24,8 @@ class TreeSitterParser:
         profile = self._profiles.get(document.language_id)
         if profile is None:
             return ()
-        data = document.text.encode('utf-8')
-        tree = get_parser(document.language_id).parse(data)  # pyright: ignore[reportArgumentType]
+        source_bytes = document.text.encode('utf-8')
+        tree = get_parser(document.language_id).parse(source_bytes)  # pyright: ignore[reportArgumentType]
         captures = self._capture(profile, document.language_id, tree.root_node)
         blocks = [self._doc_block(profile, document, node) for node in captures['docstring']]
         blocks.extend(
@@ -36,15 +36,15 @@ class TreeSitterParser:
 
     def _capture(self, profile: LanguageProfile, language_id: str, root: Node) -> dict[str, list[Node]]:
         query = Query(get_language(language_id), profile.query())  # pyright: ignore[reportArgumentType]
-        raw = QueryCursor(query).captures(root)
-        found: dict[str, list[Node]] = {'comment': [], 'docstring': []}
-        for name, nodes in raw.items():
-            found.setdefault(name, []).extend(nodes)
-        for name, nodes in found.items():
+        raw_captures = QueryCursor(query).captures(root)
+        captures: dict[str, list[Node]] = {'comment': [], 'docstring': []}
+        for name, nodes in raw_captures.items():
+            captures.setdefault(name, []).extend(nodes)
+        for name, nodes in captures.items():
             seen: set[int] = set()
-            unique = [node for node in nodes if not (node.start_byte in seen or seen.add(node.start_byte))]
-            found[name] = sorted(unique, key=lambda node: node.start_byte)
-        return found
+            unique_nodes = [node for node in nodes if not (node.start_byte in seen or seen.add(node.start_byte))]
+            captures[name] = sorted(unique_nodes, key=lambda node: node.start_byte)
+        return captures
 
     def _group_lines(self, profile: LanguageProfile, document: Document, nodes: list[Node]) -> list[list[Node]]:
         groups: list[list[Node]] = []
@@ -165,16 +165,16 @@ class TreeSitterParser:
         target = self._owning_definition(profile, node) if is_doc else self._next_definition(profile, node)
         if target is None:
             return None
-        declared = self._named_declaration(profile, target)
-        if declared is None:
+        declaration = self._named_declaration(profile, target)
+        if declaration is None:
             return None
-        named = declared.child_by_field_name('name')
-        if named is None or named.text is None:
+        name_node = declaration.child_by_field_name('name')
+        if name_node is None or name_node.text is None:
             return None
-        name = named.text.decode('utf-8')
+        name = name_node.text.decode('utf-8')
         return SymbolRef(
             name=name,
-            kind=profile.symbol_kind(declared.type),
+            kind=profile.symbol_kind(declaration.type),
             visibility=profile.visibility_of(name),
         )
 
@@ -183,7 +183,7 @@ class TreeSitterParser:
             return node
         for child in node.named_children:
             if profile.role_of(child.type) is NodeRole.DEFINITION:
-                found = self._named_declaration(profile, child)
-                if found is not None:
-                    return found
+                captures = self._named_declaration(profile, child)
+                if captures is not None:
+                    return captures
         return None

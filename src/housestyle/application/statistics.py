@@ -9,26 +9,26 @@ from ..domain.ports import SourceParser
 @dataclasses.dataclass(frozen=True, slots=True)
 class Distribution:
     label: str
-    values: tuple[int, ...]
+    measurements: tuple[int, ...]
 
     @property
     def count(self) -> int:
-        return len(self.values)
+        return len(self.measurements)
 
     def percentile(self, fraction: float) -> int:
-        if not self.values:
+        if not self.measurements:
             return 0
-        ordered = sorted(self.values)
-        index = min(len(ordered) - 1, max(0, round(fraction * (len(ordered) - 1))))
-        return ordered[index]
+        sorted_values = sorted(self.measurements)
+        index = min(len(sorted_values) - 1, max(0, round(fraction * (len(sorted_values) - 1))))
+        return sorted_values[index]
 
     @property
     def maximum(self) -> int:
-        return max(self.values, default=0)
+        return max(self.measurements, default=0)
 
     @property
     def median(self) -> int:
-        return round(statistics.median(self.values)) if self.values else 0
+        return round(statistics.median(self.measurements)) if self.measurements else 0
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -39,12 +39,6 @@ class CorpusStatistics:
     physical_widths: Distribution
     sentence_lengths: Distribution
     unbreakable_at: tuple[tuple[int, int], ...]
-
-    def line_counts_for(self, label: str) -> Distribution:
-        for distribution in self.line_counts:
-            if distribution.label == label:
-                return distribution
-        return Distribution(label, ())
 
 
 class MeasureCorpus:
@@ -73,7 +67,9 @@ class MeasureCorpus:
         return CorpusStatistics(
             documents=len(documents),
             blocks=blocks,
-            line_counts=tuple(Distribution(label, tuple(values)) for label, values in sorted(grouped.items())),
+            line_counts=tuple(
+                Distribution(label, tuple(measurements)) for label, measurements in sorted(grouped.items())
+            ),
             physical_widths=Distribution('physical-width', tuple(widths)),
             sentence_lengths=Distribution('sentence-length', tuple(lengths)),
             unbreakable_at=tuple(sorted(unbreakable.items())),

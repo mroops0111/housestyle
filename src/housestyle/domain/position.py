@@ -59,10 +59,6 @@ class PositionMap:
     def line_count(self) -> int:
         return len(self._line_starts)
 
-    @property
-    def byte_length(self) -> int:
-        return len(self._data)
-
     def line_range(self, line: int) -> SourceRange:
         self._require_line(line)
         start = self._line_starts[line]

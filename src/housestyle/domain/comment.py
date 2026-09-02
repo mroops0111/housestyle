@@ -53,7 +53,7 @@ class CommentLine:
     def prefix_width(self) -> int:
         return len(self.indent) + len(self.delimiter)
 
-    def rendered(self) -> str:
+    def rendered_lines(self) -> str:
         if not self.text and not self.suffix:
             return (self.indent + self.delimiter).rstrip()
         return self.indent + self.delimiter + self.text + self.suffix
@@ -81,10 +81,6 @@ class CommentGroup:
         return len(self.lines)
 
     @property
-    def is_multiline(self) -> bool:
-        return len(self.lines) > 1
-
-    @property
     def longest_line(self) -> int:
         return max(line.physical_width for line in self.lines)
 
@@ -93,13 +89,13 @@ class CommentGroup:
         return self.attachment is not None and self.attachment.visibility is Visibility.PUBLIC
 
     def prose(self) -> Prose:
-        filled = [line for line in self.lines if line.text.strip()]
-        base = min((len(line.indent) for line in filled), default=0)
-        rendered = [
+        filled_lines = [line for line in self.lines if line.text.strip()]
+        base = min((len(line.indent) for line in filled_lines), default=0)
+        rendered_lines = [
             ' ' * max(0, len(line.indent) - base) + line.text.rstrip() if line.text.strip() else ''
             for line in self.lines
         ]
-        return Prose('\n'.join(rendered))
+        return Prose('\n'.join(rendered_lines))
 
     def reflow(self, width: int) -> 'CommentGroup':
         texts = self._reflowed_payloads(width)
@@ -116,27 +112,24 @@ class CommentGroup:
             if is_literal:
                 out.extend(paragraph)
                 continue
-            joined = ' '.join(line.strip() for line in paragraph if line.strip())
-            for sentence in Prose(joined).sentences():
+            joined_text = ' '.join(line.strip() for line in paragraph if line.strip())
+            for sentence in Prose(joined_text).sentences():
                 out.extend(reflow_sentence(sentence.text, budget))
         return tuple(out)
 
-    def fits(self, width: int) -> bool:
-        return self.longest_line <= width
-
     def _paragraphs(self) -> tuple[tuple[tuple[str, ...], bool], ...]:
-        found: list[tuple[tuple[str, ...], bool]] = []
+        paragraphs: list[tuple[tuple[str, ...], bool]] = []
         for segment in self.prose().segments():
-            current: list[str] = []
+            current_lines: list[str] = []
             for line in segment.lines:
                 if line.strip():
-                    current.append(line)
-                elif current:
-                    found.append((tuple(current), segment.is_literal))
-                    current = []
-            if current:
-                found.append((tuple(current), segment.is_literal))
-        return tuple(found)
+                    current_lines.append(line)
+                elif current_lines:
+                    paragraphs.append((tuple(current_lines), segment.is_literal))
+                    current_lines = []
+            if current_lines:
+                paragraphs.append((tuple(current_lines), segment.is_literal))
+        return tuple(paragraphs)
 
     def _rebuild(self, texts: tuple[str, ...]) -> 'CommentGroup':
         if self.form is not CommentForm.DOC:
@@ -169,7 +162,7 @@ class CommentGroup:
         return dataclasses.replace(self, lines=rebuilt)
 
     def render(self) -> str:
-        return '\n'.join(line.rendered() for line in self.lines)
+        return '\n'.join(line.rendered_lines() for line in self.lines)
 
     def as_edit(self) -> TextEdit:
         return TextEdit(self.range, self.render())
