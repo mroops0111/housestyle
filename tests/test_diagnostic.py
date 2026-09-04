@@ -67,8 +67,8 @@ def test_report_partitions_by_who_can_fix() -> None:
 
     assert report.mechanical == (mechanical,)
     assert report.needing_author == (authored,)
-    assert report.by_kind(FixKind.REFLOW) == (mechanical,)
-    assert report.by_kind(FixKind.TARGETED) == ()
+    assert report.by_fix_kind(FixKind.REFLOW) == (mechanical,)
+    assert report.by_fix_kind(FixKind.TARGETED) == ()
     assert not report.is_clean
 
 

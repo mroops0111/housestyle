@@ -49,8 +49,8 @@ class FixDocument:
         return FixOutcome(document=document_now, report=report, rounds=rounds, applied=applied)
 
     def _next_edits(self, report: Report) -> tuple[TextEdit, ...]:
-        for kind in (FixKind.TARGETED, FixKind.REFLOW):
-            edits = self._compatible(report.by_kind(kind))
+        for mechanical_kind in (FixKind.TARGETED, FixKind.REFLOW):
+            edits = self._compatible(report.by_fix_kind(mechanical_kind))
             if edits:
                 return edits
         return ()

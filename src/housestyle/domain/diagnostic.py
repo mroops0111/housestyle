@@ -97,9 +97,11 @@ class Report:
     def is_clean(self) -> bool:
         return not self.diagnostics
 
-    def by_kind(self, kind: FixKind) -> tuple[Diagnostic, ...]:
+    def by_fix_kind(self, wanted: FixKind) -> tuple[Diagnostic, ...]:
         return tuple(
-            diagnostic for diagnostic in self.diagnostics if diagnostic.fix is not None and diagnostic.fix.kind is kind
+            diagnostic
+            for diagnostic in self.diagnostics
+            if diagnostic.fix is not None and diagnostic.fix.kind is wanted
         )
 
     def merged_with(self, other: 'Report') -> 'Report':

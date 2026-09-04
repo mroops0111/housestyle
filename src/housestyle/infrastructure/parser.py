@@ -68,12 +68,15 @@ class TreeSitterParser:
 
     def _line_block(self, profile: LanguageProfile, document: Document, nodes: list[Node]) -> CommentGroup:
         lines = tuple(self._line(profile, document, node, CommentForm.LINE) for node in nodes)
+        placement = self._placement(profile, document, nodes[-1], is_doc=False)
         return CommentGroup(
             range=SourceRange(lines[0].range.start, lines[-1].range.end),
             lines=lines,
             form=CommentForm.LINE,
-            placement=self._placement(profile, document, nodes[-1], is_doc=False),
-            attachment=self._attachment(profile, nodes[-1], is_doc=False),
+            placement=placement,
+            attachment=self._attachment(profile, nodes[-1], is_doc=False)
+            if placement is CommentPlacement.LEADING_DECLARATION
+            else None,
         )
 
     def _doc_block(self, profile: LanguageProfile, document: Document, node: Node) -> CommentGroup:
