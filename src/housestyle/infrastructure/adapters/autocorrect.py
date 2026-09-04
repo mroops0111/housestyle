@@ -34,7 +34,7 @@ class AutoCorrectAdapter:
 
     def _corrected(self, path: pathlib.Path) -> str | None:
         try:
-            result = subprocess.run(  # noqa: S603
+            completed = subprocess.run(  # noqa: S603
                 [self._executable, '--stdin', str(path)],
                 capture_output=True,
                 text=True,
@@ -44,20 +44,20 @@ class AutoCorrectAdapter:
             )
         except (OSError, UnicodeDecodeError, subprocess.TimeoutExpired):
             return None
-        return result.stdout if result.stdout else None
+        return completed.stdout if completed.stdout else None
 
     def _diff(self, document: Document, corrected: str) -> tuple[Diagnostic, ...]:
         before = document.text.splitlines(keepends=True)
         after = corrected.splitlines(keepends=True)
         if len(before) != len(after):
             return ()
-        found: list[Diagnostic] = []
+        diagnostics: list[Diagnostic] = []
         for index, (original, fixed) in enumerate(zip(before, after, strict=True)):
             if original == fixed:
                 continue
             start = document.positions.to_offset(Position(index, 0))
             end = start + len(original.rstrip('\n').encode('utf-8'))
-            found.append(
+            diagnostics.append(
                 Diagnostic(
                     rule_id=RULE_ID,
                     range=SourceRange(start, end),
@@ -67,4 +67,4 @@ class AutoCorrectAdapter:
                     source=self.name,
                 )
             )
-        return tuple(found)
+        return tuple(diagnostics)

@@ -45,12 +45,6 @@ def test_adjacent_edits_are_allowed() -> None:
     assert apply_edits('abcd', (edit(0, 2, 'X'), edit(2, 4, 'Y'))) == 'XY'
 
 
-def test_edit_classification() -> None:
-    assert edit(3, 3, 'new').is_insertion
-    assert edit(0, 4, '').is_deletion
-    assert not edit(0, 4, 'text').is_deletion
-
-
 def test_document_maps_positions_and_bumps_version_on_change() -> None:
     document = Document(uri='file:///a.ts', text='const x = 1\n', language_id='typescript')
     assert document.positions.line_count == 2

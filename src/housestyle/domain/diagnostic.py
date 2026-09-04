@@ -87,30 +87,34 @@ class Report:
 
     @property
     def mechanical(self) -> tuple[Diagnostic, ...]:
-        return tuple(item for item in self.diagnostics if item.is_mechanical)
+        return tuple(diagnostic for diagnostic in self.diagnostics if diagnostic.is_mechanical)
 
     @property
     def needing_author(self) -> tuple[Diagnostic, ...]:
-        return tuple(item for item in self.diagnostics if item.needs_author)
+        return tuple(diagnostic for diagnostic in self.diagnostics if diagnostic.needs_author)
 
     @property
     def is_clean(self) -> bool:
         return not self.diagnostics
 
-    def by_kind(self, kind: FixKind) -> tuple[Diagnostic, ...]:
-        return tuple(item for item in self.diagnostics if item.fix is not None and item.fix.kind is kind)
+    def by_fix_kind(self, wanted: FixKind) -> tuple[Diagnostic, ...]:
+        return tuple(
+            diagnostic
+            for diagnostic in self.diagnostics
+            if diagnostic.fix is not None and diagnostic.fix.kind is wanted
+        )
 
     def merged_with(self, other: 'Report') -> 'Report':
         seen: set[tuple[str, int, int]] = set()
-        combined: list[Diagnostic] = []
-        for item in (*self.diagnostics, *other.diagnostics):
-            key = (item.rule_id, item.range.start, item.range.end)
+        merged_diagnostics: list[Diagnostic] = []
+        for diagnostic in (*self.diagnostics, *other.diagnostics):
+            key = (diagnostic.rule_id, diagnostic.range.start, diagnostic.range.end)
             if key in seen:
                 continue
             seen.add(key)
-            combined.append(item)
-        combined.sort(key=lambda item: (item.range.start, item.rule_id))
+            merged_diagnostics.append(diagnostic)
+        merged_diagnostics.sort(key=lambda diagnostic: (diagnostic.range.start, diagnostic.rule_id))
         return Report(
-            tuple(combined),
+            tuple(merged_diagnostics),
             tuple(dict.fromkeys((*self.unavailable_sources, *other.unavailable_sources))),
         )

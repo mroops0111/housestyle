@@ -213,3 +213,25 @@ def test_a_leading_declaration_comment_always_names_what_it_documents(source: st
     block = parse(source)[0]
     assert block.placement is CommentPlacement.LEADING_DECLARATION
     assert block.attachment is not None, 'leading-declaration without an attachment silently disables rules'
+
+
+def test_a_trailing_comment_never_documents_the_declaration_below_it() -> None:
+    source = 'TOKEN = 1  # noqa: S105\n\n\nclass TokenSource:\n    pass\n'
+    trailing = parse(source)[0]
+
+    assert trailing.placement is CommentPlacement.TRAILING
+    assert trailing.attachment is None, 'a trailing comment describes the code to its left'
+
+
+@pytest.mark.parametrize(
+    'source',
+    [
+        'x = 1  # tail\ndef build():\n    pass\n',
+        'x = 1  # tail\nclass Widget:\n    pass\n',
+        'import os  # tail\n\n\n@cache\ndef build():\n    pass\n',
+    ],
+)
+def test_only_a_leading_comment_attaches_to_what_follows(source: str) -> None:
+    for group in parse(source):
+        if group.placement is not CommentPlacement.LEADING_DECLARATION:
+            assert group.attachment is None

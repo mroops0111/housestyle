@@ -14,19 +14,15 @@ class RuleEngine:
             raise ValueError(f'Duplicate rule ids registered: {sorted(duplicates)}')
         self._rules = rules
 
-    @property
-    def rule_ids(self) -> tuple[str, ...]:
-        return tuple(rule.meta.rule_id for rule in self._rules)
-
     def run(self, document: Document, blocks: tuple[CommentGroup, ...], rules: RuleSet) -> tuple[Diagnostic, ...]:
         context = RuleContext(document=document, rules=rules)
-        active = [rule for rule in self._rules if rules.is_enabled(rule.meta.rule_id)]
-        found: list[Diagnostic] = []
+        enabled_rules = [rule for rule in self._rules if rules.is_enabled(rule.meta.rule_id)]
+        diagnostics: list[Diagnostic] = []
         for block in blocks:
-            for rule in active:
+            for rule in enabled_rules:
                 for diagnostic in rule.check(block, context):
-                    found.append(self._with_severity(diagnostic, rule, rules))
-        return tuple(found)
+                    diagnostics.append(self._with_severity(diagnostic, rule, rules))
+        return tuple(diagnostics)
 
     def _with_severity(self, diagnostic: Diagnostic, rule: Rule, rules: RuleSet) -> Diagnostic:
         severity = rules.severity_for(rule.meta)
@@ -54,5 +50,5 @@ class LintDocument:
             return Report()
         blocks = self._parser.parse(document)
         diagnostics = self._engine.run(document, blocks, rules)
-        ordered = sorted(diagnostics, key=lambda item: (item.range.start, item.rule_id))
-        return Report(tuple(ordered))
+        sorted_diagnostics = sorted(diagnostics, key=lambda item: (item.range.start, item.rule_id))
+        return Report(tuple(sorted_diagnostics))

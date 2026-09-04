@@ -61,7 +61,7 @@ def test_rewrite_findings_survive_fixing_and_are_reported() -> None:
         'def f():\n    # this single sentence has no comma anywhere and runs well past the budget here.\n    pass\n'
     )
     outcome = run(source, width=50)
-    assert [item.rule_id for item in outcome.remaining] == ['unbreakable-sentence']
+    assert [item.rule_id for item in outcome.unresolved] == ['unbreakable-sentence']
     assert outcome.document.text == source
 
 

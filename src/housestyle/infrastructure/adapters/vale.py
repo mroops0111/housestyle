@@ -25,7 +25,7 @@ class ValeAdapter:
         if not self.is_available() or not path.is_file():
             return ()
         try:
-            result = subprocess.run(  # noqa: S603
+            completed = subprocess.run(  # noqa: S603
                 [self._executable, '--no-exit', '--output=JSON', str(path)],
                 capture_output=True,
                 text=True,
@@ -34,15 +34,15 @@ class ValeAdapter:
             )
         except (OSError, subprocess.TimeoutExpired):
             return ()
-        return self._decode(document, result.stdout)
+        return self._decode(document, completed.stdout)
 
     def _decode(self, document: Document, payload: str) -> tuple[Diagnostic, ...]:
-        found: list[Diagnostic] = []
+        diagnostics: list[Diagnostic] = []
         for alert in ValeReport.parse(payload):
             diagnostic = self._one(document, alert)
             if diagnostic is not None:
-                found.append(diagnostic)
-        return tuple(found)
+                diagnostics.append(diagnostic)
+        return tuple(diagnostics)
 
     def _one(self, document: Document, alert: ValeAlert) -> Diagnostic | None:
         start_column, end_column = alert.span

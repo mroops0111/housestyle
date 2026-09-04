@@ -55,7 +55,6 @@ def test_duplicate_rule_ids_are_rejected() -> None:
 def test_a_new_rule_needs_no_engine_change() -> None:
     rule = RecordingRule('brand-new')
     engine = RuleEngine((rule,))
-    assert engine.rule_ids == ('brand-new',)
 
     report = LintDocument(DEFAULT_PARSER, engine).run(document('# a note\n'), rule_set('brand-new'))
     assert [item.rule_id for item in report.diagnostics] == ['brand-new']
