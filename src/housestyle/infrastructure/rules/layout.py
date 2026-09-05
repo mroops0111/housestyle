@@ -5,21 +5,21 @@ from ...domain.diagnostic import Diagnostic, Fix, FixKind, RuleMeta
 from ...domain.rules import RuleContext
 
 
-WRAP_POINT = RuleMeta(
-    rule_id='wrap-point',
+MID_CLAUSE_BREAK = RuleMeta(
+    rule_id='mid-clause-break',
     summary='A comment block must be laid out one sentence per line, splitting only at commas.',
     fix_kind=FixKind.REFLOW,
 )
 
-LINE_WIDTH = RuleMeta(
-    rule_id='line-width',
+LINE_TOO_LONG = RuleMeta(
+    rule_id='line-too-long',
     summary='A physical comment line must fit the configured width, counting indent and delimiter.',
     fix_kind=FixKind.REFLOW,
 )
 
 
-class WrapPointRule:
-    meta = WRAP_POINT
+class MidClauseBreakRule:
+    meta = MID_CLAUSE_BREAK
 
     def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         reflowed = block.reflow(context.line_width)
@@ -36,8 +36,8 @@ class WrapPointRule:
         )
 
 
-class LineWidthRule:
-    meta = LINE_WIDTH
+class LineTooLongRule:
+    meta = LINE_TOO_LONG
 
     def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         width = context.line_width
