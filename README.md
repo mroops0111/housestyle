@@ -39,6 +39,22 @@ The hook reads the tool payload on stdin, repairs every mechanical finding in pl
 
 Silence on repaired findings is deliberate. Each surfaced message costs agent attention, and attention is the scarce resource this tool exists to protect.
 
+## Configuration
+
+Settings come from `housestyle.toml`, or from `[tool.housestyle]` in `pyproject.toml`, whichever is found first walking upward from the file being checked. A dedicated file wins over `pyproject.toml` in the same directory.
+
+```toml
+[housestyle]
+line-width = 120
+exclude = ["tests/fixtures/**"]
+
+[rules]
+mid-clause-break = "error"
+block-too-long = { severity = "warning", line = 3, doc-public = 20 }
+```
+
+Rule names describe the problem they report, following the convention ruff uses. Every rule is listed in `docs/rules.md`, which is generated from the rules themselves.
+
 ## Frontends
 
 One pure core, `lint(text, path, config) -> Diagnostic[]`, behind several thin adapters.

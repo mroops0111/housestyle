@@ -45,7 +45,7 @@ def test_check_reports_findings_and_exits_non_zero(tmp_path: pathlib.Path, capsy
     with pytest.raises(SystemExit) as exit_info:
         app(['check', str(target)])
     assert exit_info.value.code == 1
-    assert 'wrap-point' in capsys.readouterr().out
+    assert 'mid-clause-break' in capsys.readouterr().out
 
 
 def test_check_on_clean_input_exits_zero(tmp_path: pathlib.Path) -> None:

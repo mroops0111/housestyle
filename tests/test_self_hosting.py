@@ -59,7 +59,7 @@ def test_housestyle_lints_itself_clean() -> None:
     [
         (
             'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n',
-            'wrap-point',
+            'mid-clause-break',
         ),
         (
             'def f():\n    # this single sentence carries no comma at all and runs a very long way past any '

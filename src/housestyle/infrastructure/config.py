@@ -7,6 +7,7 @@ from .schema import ConfigFile, RuleTable
 
 
 CONFIG_NAME = 'housestyle.toml'
+PYPROJECT_NAME = 'pyproject.toml'
 DEFAULT_WIDTH = 120
 
 
@@ -46,15 +47,39 @@ class TomlConfigSource:
             raw_table = tomllib.loads(config_path.read_text(encoding='utf-8'))
         except (OSError, tomllib.TOMLDecodeError):
             return None
+        if config_path.name == PYPROJECT_NAME:
+            raw_table = self._reshape_pyproject(raw_table)
+            if raw_table is None:
+                return None
         return ConfigFile.parse(raw_table)
+
+    def _reshape_pyproject(self, raw_table: dict[str, object]) -> dict[str, object] | None:
+        tools = raw_table.get('tool')
+        section = tools.get('housestyle') if isinstance(tools, dict) else None
+        if not isinstance(section, dict):
+            return None
+        return {
+            'housestyle': {key: value for key, value in section.items() if key != 'rules'},
+            'rules': section.get('rules', {}),
+        }
 
     def _locate(self, start: pathlib.Path) -> pathlib.Path | None:
         base = start if start.is_dir() else start.parent
         for candidate in (base.resolve(), *base.resolve().parents):
-            config_path = candidate / CONFIG_NAME
-            if config_path.is_file():
-                return config_path
+            for name in (CONFIG_NAME, PYPROJECT_NAME):
+                config_path = candidate / name
+                if config_path.is_file() and self._carries_settings(config_path):
+                    return config_path
         return None
+
+    def _carries_settings(self, config_path: pathlib.Path) -> bool:
+        if config_path.name != PYPROJECT_NAME:
+            return True
+        try:
+            tools = tomllib.loads(config_path.read_text(encoding='utf-8')).get('tool')
+        except (OSError, tomllib.TOMLDecodeError):
+            return False
+        return isinstance(tools, dict) and 'housestyle' in tools
 
     def _to_rule_set(self, config_file: ConfigFile) -> RuleSet:
         enabled = set(self._available)

@@ -6,27 +6,27 @@ from ...domain.rules import RuleContext
 from ..languages.base import LanguageConventions
 
 
-NO_FILE_HEADER = RuleMeta(
-    rule_id='no-file-header',
+FILE_HEADER_COMMENT = RuleMeta(
+    rule_id='file-header-comment',
     summary='A file must not open with a banner comment before its first declaration.',
     fix_kind=FixKind.REWRITE,
 )
 
-DOC_COMMENT_FORM = RuleMeta(
-    rule_id='doc-comment-form',
+PLAIN_COMMENT_ON_PUBLIC = RuleMeta(
+    rule_id='plain-comment-on-public',
     summary='A public symbol must be documented in the doc comment form its language renders.',
     fix_kind=FixKind.REWRITE,
 )
 
-NO_SIGNATURE_RESTATING = RuleMeta(
-    rule_id='no-signature-restating',
+SIGNATURE_RESTATING_TAG = RuleMeta(
+    rule_id='signature-restating-tag',
     summary='A doc comment must not restate what the type signature already carries.',
     fix_kind=FixKind.REWRITE,
 )
 
 
-class NoFileHeaderRule:
-    meta = NO_FILE_HEADER
+class FileHeaderCommentRule:
+    meta = FILE_HEADER_COMMENT
 
     def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         if block.placement is not CommentPlacement.FILE_HEADER:
@@ -43,10 +43,10 @@ class NoFileHeaderRule:
         )
 
 
-class DocCommentFormRule:
+class PlainCommentOnPublicRule:
     def __init__(self, conventions: LanguageConventions) -> None:
         self._conventions = conventions
-        self.meta = DOC_COMMENT_FORM
+        self.meta = PLAIN_COMMENT_ON_PUBLIC
 
     def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         if not block.attaches_to_public_symbol or block.form is CommentForm.DOC:
@@ -66,10 +66,10 @@ class DocCommentFormRule:
         )
 
 
-class NoSignatureRestatingRule:
+class SignatureRestatingTagRule:
     def __init__(self, conventions: LanguageConventions) -> None:
         self._conventions = conventions
-        self.meta = NO_SIGNATURE_RESTATING
+        self.meta = SIGNATURE_RESTATING_TAG
 
     def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         if block.form is not CommentForm.DOC:
