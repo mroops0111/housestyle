@@ -21,12 +21,12 @@ class ValeAdapter:
         return shutil.which(self._executable) is not None
 
     def run(self, document: Document) -> tuple[Diagnostic, ...]:
-        path = pathlib.Path(document.uri.removeprefix('file://'))
-        if not self.is_available() or not path.is_file():
+        source_path = pathlib.Path(document.uri.removeprefix('file://'))
+        if not self.is_available() or not source_path.is_file():
             return ()
         try:
-            completed = subprocess.run(  # noqa: S603
-                [self._executable, '--no-exit', '--output=JSON', str(path)],
+            process = subprocess.run(  # noqa: S603
+                [self._executable, '--no-exit', '--output=JSON', str(source_path)],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -34,7 +34,7 @@ class ValeAdapter:
             )
         except (OSError, subprocess.TimeoutExpired):
             return ()
-        return self._decode(document, completed.stdout)
+        return self._decode(document, process.stdout)
 
     def _decode(self, document: Document, payload: str) -> tuple[Diagnostic, ...]:
         diagnostics: list[Diagnostic] = []
@@ -47,13 +47,13 @@ class ValeAdapter:
     def _one(self, document: Document, alert: ValeAlert) -> Diagnostic | None:
         start_column, end_column = alert.span
         try:
-            start = document.positions.to_offset(Position(alert.line - 1, start_column - 1))
-            end = document.positions.to_offset(Position(alert.line - 1, end_column))
+            start_offset = document.positions.to_offset(Position(alert.line - 1, start_column - 1))
+            end_offset = document.positions.to_offset(Position(alert.line - 1, end_column))
         except ValueError:
             return None
         return Diagnostic(
             rule_id=alert.check,
-            range=SourceRange(start, max(start, end)),
+            range=SourceRange(start_offset, max(start_offset, end_offset)),
             message=alert.message,
             severity=alert.resolved_severity,
             fix=Fix.rewrite(),

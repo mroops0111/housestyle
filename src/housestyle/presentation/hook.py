@@ -15,34 +15,34 @@ EDIT_TOOLS = frozenset({'Edit', 'Write', 'MultiEdit', 'NotebookEdit'})
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class HookOutcome:
+class HookResult:
     exit_code: int
     stderr: str = ''
     repaired: tuple[str, ...] = ()
 
     @property
-    def blocks(self) -> bool:
+    def is_blocking(self) -> bool:
         return self.exit_code == BLOCK_EXIT
 
 
 def targets(payload: typing.Mapping[str, object]) -> tuple[pathlib.Path, ...]:
-    tool = payload.get('tool_name')
-    if isinstance(tool, str) and tool not in EDIT_TOOLS:
+    tool_name = payload.get('tool_name')
+    if isinstance(tool_name, str) and tool_name not in EDIT_TOOLS:
         return ()
     tool_input = payload.get('tool_input')
-    fields = tool_input if isinstance(tool_input, dict) else {}
+    tool_fields = tool_input if isinstance(tool_input, dict) else {}
     paths: list[pathlib.Path] = []
     for key in ('file_path', 'notebook_path'):
-        candidate = fields.get(key)
-        if isinstance(candidate, str) and candidate:
-            paths.append(pathlib.Path(candidate))
+        path_value = tool_fields.get(key)
+        if isinstance(path_value, str) and path_value:
+            paths.append(pathlib.Path(path_value))
     return tuple(path for path in paths if path.suffix in PYTHON.extensions and path.is_file())
 
 
-def run(payload: typing.Mapping[str, object], *, write: bool = True) -> HookOutcome:
+def run(payload: typing.Mapping[str, object], *, write: bool = True) -> HookResult:
     paths = targets(payload)
     if not paths:
-        return HookOutcome(exit_code=0)
+        return HookResult(exit_code=0)
 
     fixer = FixDocument(LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES)))
     messages: list[str] = []
@@ -50,10 +50,10 @@ def run(payload: typing.Mapping[str, object], *, write: bool = True) -> HookOutc
 
     for path in paths:
         try:
-            text = path.read_text(encoding='utf-8')
+            source = path.read_text(encoding='utf-8')
         except (OSError, UnicodeDecodeError):
             continue
-        document = Document(uri=path.resolve().as_uri(), text=text, language_id=PYTHON.language_id)
+        document = Document(uri=path.resolve().as_uri(), text=source, language_id=PYTHON.language_id)
         outcome = fixer.run(document, DEFAULT_CONFIG.resolve(str(path)))
         if outcome.has_changes and write:
             path.write_text(outcome.document.text, encoding='utf-8')
@@ -63,8 +63,8 @@ def run(payload: typing.Mapping[str, object], *, write: bool = True) -> HookOutc
             messages.append(rendered_report)
 
     if not messages:
-        return HookOutcome(exit_code=0, repaired=tuple(repaired))
-    return HookOutcome(exit_code=BLOCK_EXIT, stderr='\n\n'.join(messages), repaired=tuple(repaired))
+        return HookResult(exit_code=0, repaired=tuple(repaired))
+    return HookResult(exit_code=BLOCK_EXIT, stderr='\n\n'.join(messages), repaired=tuple(repaired))
 
 
 def main() -> int:

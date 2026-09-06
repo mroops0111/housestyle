@@ -26,27 +26,29 @@ class TreeSitterParser:
             return ()
         source_bytes = document.text.encode('utf-8')
         tree = get_parser(document.language_id).parse(source_bytes)  # pyright: ignore[reportArgumentType]
-        captures = self._capture(profile, document.language_id, tree.root_node)
-        blocks = [self._doc_block(profile, document, node) for node in captures['docstring']]
-        blocks.extend(
+        grouped_captures = self._capture(profile, document.language_id, tree.root_node)
+        comment_groups = [self._doc_block(profile, document, node) for node in grouped_captures['docstring']]
+        comment_groups.extend(
             self._line_block(profile, document, group)
-            for group in self._group_lines(profile, document, captures['comment'])
+            for group in self._group_by_adjacency(profile, document, grouped_captures['comment'])
         )
-        return tuple(sorted(blocks, key=lambda block: block.range.start))
+        return tuple(sorted(comment_groups, key=lambda block: block.range.start))
 
     def _capture(self, profile: LanguageProfile, language_id: str, root: Node) -> dict[str, list[Node]]:
         query = Query(get_language(language_id), profile.query())  # pyright: ignore[reportArgumentType]
-        raw_captures = QueryCursor(query).captures(root)
-        captures: dict[str, list[Node]] = {'comment': [], 'docstring': []}
-        for name, nodes in raw_captures.items():
-            captures.setdefault(name, []).extend(nodes)
-        for name, nodes in captures.items():
-            seen: set[int] = set()
-            unique_nodes = [node for node in nodes if not (node.start_byte in seen or seen.add(node.start_byte))]
-            captures[name] = sorted(unique_nodes, key=lambda node: node.start_byte)
-        return captures
+        captures_by_name = QueryCursor(query).captures(root)
+        grouped_captures: dict[str, list[Node]] = {'comment': [], 'docstring': []}
+        for name, nodes in captures_by_name.items():
+            grouped_captures.setdefault(name, []).extend(nodes)
+        for name, nodes in grouped_captures.items():
+            seen_offsets: set[int] = set()
+            unique_nodes = [
+                node for node in nodes if not (node.start_byte in seen_offsets or seen_offsets.add(node.start_byte))
+            ]
+            grouped_captures[name] = sorted(unique_nodes, key=lambda node: node.start_byte)
+        return grouped_captures
 
-    def _group_lines(self, profile: LanguageProfile, document: Document, nodes: list[Node]) -> list[list[Node]]:
+    def _group_by_adjacency(self, profile: LanguageProfile, document: Document, nodes: list[Node]) -> list[list[Node]]:
         groups: list[list[Node]] = []
         for node in nodes:
             if groups and self._continues(profile, document, groups[-1][-1], node):
@@ -81,15 +83,15 @@ class TreeSitterParser:
 
     def _doc_block(self, profile: LanguageProfile, document: Document, node: Node) -> CommentGroup:
         lines: list[CommentLine] = []
-        for row in range(node.start_point[0], node.end_point[0] + 1):
-            split = profile.split_delimiter(document.positions.line_text(row), CommentForm.DOC)
+        for line_number in range(node.start_point[0], node.end_point[0] + 1):
+            marker_split = profile.split_delimiter(document.positions.line_text(line_number), CommentForm.DOC)
             lines.append(
                 CommentLine(
-                    range=document.positions.line_range(row),
-                    indent=split.indent,
-                    delimiter=split.delimiter,
-                    text=split.text,
-                    suffix=split.suffix,
+                    range=document.positions.line_range(line_number),
+                    indent=marker_split.indent,
+                    delimiter=marker_split.delimiter,
+                    text=marker_split.text,
+                    suffix=marker_split.suffix,
                 )
             )
         return CommentGroup(
@@ -101,15 +103,15 @@ class TreeSitterParser:
         )
 
     def _line(self, profile: LanguageProfile, document: Document, node: Node, form: CommentForm) -> CommentLine:
-        row, column = node.start_point
-        text = document.positions.line_text(row)
-        split = profile.split_delimiter(text[column:], form)
+        line_number, column = node.start_point
+        line_text = document.positions.line_text(line_number)
+        marker_split = profile.split_delimiter(line_text[column:], form)
         return CommentLine(
-            range=document.positions.line_range(row),
-            indent=text[:column] + split.indent,
-            delimiter=split.delimiter,
-            text=split.text,
-            suffix=split.suffix,
+            range=document.positions.line_range(line_number),
+            indent=line_text[:column] + marker_split.indent,
+            delimiter=marker_split.delimiter,
+            text=marker_split.text,
+            suffix=marker_split.suffix,
         )
 
     def _placement(
@@ -154,21 +156,21 @@ class TreeSitterParser:
         return None
 
     def _owning_definition(self, profile: LanguageProfile, node: Node) -> Node | None:
-        cursor = node.parent
-        while cursor is not None:
-            role = profile.role_of(cursor.type)
+        ancestor = node.parent
+        while ancestor is not None:
+            role = profile.role_of(ancestor.type)
             if role is NodeRole.DEFINITION:
-                return cursor
+                return ancestor
             if role is NodeRole.ROOT:
                 return None
-            cursor = cursor.parent
+            ancestor = ancestor.parent
         return None
 
     def _attachment(self, profile: LanguageProfile, node: Node, *, is_doc: bool) -> SymbolRef | None:
-        target = self._owning_definition(profile, node) if is_doc else self._next_definition(profile, node)
-        if target is None:
+        definition_node = self._owning_definition(profile, node) if is_doc else self._next_definition(profile, node)
+        if definition_node is None:
             return None
-        declaration = self._named_declaration(profile, target)
+        declaration = self._named_declaration(profile, definition_node)
         if declaration is None:
             return None
         name_node = declaration.child_by_field_name('name')
@@ -184,9 +186,9 @@ class TreeSitterParser:
     def _named_declaration(self, profile: LanguageProfile, node: Node) -> Node | None:
         if node.child_by_field_name('name') is not None:
             return node
-        for child in node.named_children:
-            if profile.role_of(child.type) is NodeRole.DEFINITION:
-                captures = self._named_declaration(profile, child)
-                if captures is not None:
-                    return captures
+        for child_node in node.named_children:
+            if profile.role_of(child_node.type) is NodeRole.DEFINITION:
+                grouped_captures = self._named_declaration(profile, child_node)
+                if grouped_captures is not None:
+                    return grouped_captures
         return None

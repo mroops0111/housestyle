@@ -55,7 +55,7 @@ def test_mechanical_findings_are_repaired_silently(tmp_path: pathlib.Path) -> No
     outcome = hook.run(payload(target))
 
     assert outcome.exit_code == 0
-    assert not outcome.blocks
+    assert not outcome.is_blocking
     assert outcome.stderr == ''
     assert str(target) in outcome.repaired
     assert 'does not blow past it,\n' in target.read_text(encoding='utf-8')
@@ -66,7 +66,7 @@ def test_a_rewrite_finding_blocks_with_exit_two(tmp_path: pathlib.Path) -> None:
     outcome = hook.run(payload(target))
 
     assert outcome.exit_code == 2
-    assert outcome.blocks
+    assert outcome.is_blocking
     assert 'unbreakable-sentence' in outcome.stderr
     assert 'Add a comma' in outcome.stderr
 
@@ -87,7 +87,7 @@ def test_a_fixable_neighbour_is_repaired_even_when_the_run_blocks(tmp_path: path
     target = seed(tmp_path, body)
     outcome = hook.run(payload(target))
 
-    assert outcome.blocks
+    assert outcome.is_blocking
     assert 'does not blow past it,\n' in target.read_text(encoding='utf-8')
 
 

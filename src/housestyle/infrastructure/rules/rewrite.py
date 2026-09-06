@@ -39,20 +39,20 @@ class StubFragmentRule:
 
     def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         budget = sentence_budget(block, context)
-        floor = context.settings(self.meta.rule_id).integer('minimum_characters', DEFAULT_MINIMUM_CHARACTERS)
+        minimum_length = context.settings(self.meta.rule_id).integer('minimum_characters', DEFAULT_MINIMUM_CHARACTERS)
         for sentence in prose_sentences(block):
-            pieces = reflow_sentence(sentence, budget)
-            if len(pieces) < 2:
+            split_pieces = reflow_sentence(sentence, budget)
+            if len(split_pieces) < 2:
                 continue
-            shortest_piece = min(pieces, key=len)
-            if len(shortest_piece) >= floor:
+            shortest_piece = min(split_pieces, key=len)
+            if len(shortest_piece) >= minimum_length:
                 continue
             yield Diagnostic(
                 rule_id=self.meta.rule_id,
                 range=block.range,
                 message=(
                     f'Breaking this sentence leaves a {len(shortest_piece)} character line, below the '
-                    f'{floor} character floor, so the layout reads as a stub rather than a clause. '
+                    f'{minimum_length} character minimum_length, so the layout reads as a stub rather than a clause. '
                     f'Rewrite it to fit one line, or split it into two complete sentences. '
                     f'The fragment is "{shortest_piece.strip()}".'
                 ),

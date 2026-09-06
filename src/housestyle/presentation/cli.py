@@ -24,36 +24,38 @@ FORMATTERS = {
 
 
 def _load(paths: tuple[pathlib.Path, ...]) -> tuple[Document, ...]:
-    files: list[pathlib.Path] = []
+    source_paths: list[pathlib.Path] = []
     for path in paths:
         if path.is_dir():
-            files.extend(sorted(candidate for candidate in path.rglob('*') if candidate.suffix in PYTHON.extensions))
+            source_paths.extend(
+                sorted(candidate for candidate in path.rglob('*') if candidate.suffix in PYTHON.extensions)
+            )
         elif path.suffix in PYTHON.extensions:
-            files.append(path)
+            source_paths.append(path)
     documents: list[Document] = []
-    for file in files:
-        root = DEFAULT_CONFIG.root_for(str(file))
-        if DEFAULT_CONFIG.is_excluded(file, root, DEFAULT_CONFIG.excludes(str(file))):
+    for source_path in source_paths:
+        root = DEFAULT_CONFIG.root_for(str(source_path))
+        if DEFAULT_CONFIG.is_excluded(source_path, root, DEFAULT_CONFIG.excludes(str(source_path))):
             continue
         try:
-            text = file.read_text(encoding='utf-8')
+            text = source_path.read_text(encoding='utf-8')
         except (OSError, UnicodeDecodeError):
             continue
-        documents.append(Document(uri=file.resolve().as_uri(), text=text, language_id=PYTHON.language_id))
+        documents.append(Document(uri=source_path.resolve().as_uri(), text=text, language_id=PYTHON.language_id))
     return tuple(documents)
 
 
-def _lint() -> LintDocument:
+def _lint_document() -> LintDocument:
     return LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES))
 
 
-def _aggregator(delegate: bool) -> AggregateReport:
-    return AggregateReport(_lint(), EXTERNAL_LINTERS if delegate else ())
+def _aggregate_report(delegate: bool) -> AggregateReport:
+    return AggregateReport(_lint_document(), EXTERNAL_LINTERS if delegate else ())
 
 
 def _require(documents: tuple[Document, ...]) -> None:
     if not documents:
-        typer.echo('No readable source files found.', err=True)
+        typer.echo('No readable source source_paths found.', err=True)
         raise typer.Exit(1)
 
 
@@ -70,15 +72,15 @@ def check(
         typer.echo(f'Unknown output format {output!r}. Choose full, actionable, or json.', err=True)
         raise typer.Exit(2)
 
-    aggregator = _aggregator(delegate)
-    findings = 0
+    aggregator = _aggregate_report(delegate)
+    finding_count = 0
     for document in documents:
         report = aggregator.run(document, DEFAULT_CONFIG.resolve(_fspath(document)))
-        findings += len(report.diagnostics)
+        finding_count += len(report.diagnostics)
         rendered_report = formatter(document, report)
         if rendered_report:
             typer.echo(rendered_report)
-    raise typer.Exit(1 if findings else 0)
+    raise typer.Exit(1 if finding_count else 0)
 
 
 @app.command()
@@ -89,14 +91,14 @@ def fix(
     documents = _load(tuple(paths))
     _require(documents)
 
-    fixer = FixDocument(_lint())
-    changed = 0
-    unresolved = 0
+    fixer = FixDocument(_lint_document())
+    changed_count = 0
+    unresolved_count = 0
     for document in documents:
         outcome = fixer.run(document, DEFAULT_CONFIG.resolve(_fspath(document)))
-        unresolved += len(outcome.unresolved_findings)
+        unresolved_count += len(outcome.unresolved_findings)
         if outcome.has_changes:
-            changed += 1
+            changed_count += 1
             if write:
                 pathlib.Path(_fspath(document)).write_text(outcome.document.text, encoding='utf-8')
             else:
@@ -104,9 +106,12 @@ def fix(
         if outcome.unresolved_findings:
             typer.echo(reporters.brief(outcome.document, outcome.report))
 
-    verb = 'rewrote' if write else 'would rewrite'
-    typer.echo(f'{verb} {changed} of {len(documents)} files, {unresolved} findings need an author.', err=True)
-    raise typer.Exit(1 if unresolved else 0)
+    action_word = 'rewrote' if write else 'would rewrite'
+    typer.echo(
+        f'{action_word} {changed_count} of {len(documents)} source_paths, {unresolved_count} finding_count need an author.',
+        err=True,
+    )
+    raise typer.Exit(1 if unresolved_count else 0)
 
 
 @app.command()
@@ -149,7 +154,11 @@ def _diff(before: Document, after: Document) -> str:
 
 
 def _render(report: CorpusStatistics) -> str:
-    heading = f'{"group":24s} {"n":>6s} {"med":>5s} ' + ' '.join(f'p{int(p * 100):<3d}' for p in PERCENTILES) + '  max'
+    heading = (
+        f'{"group":24s} {"n":>6s} {"med":>5s} '
+        + ' '.join(f'p{int(fraction * 100):<3d}' for fraction in PERCENTILES)
+        + '  max'
+    )
     lines = [f'{report.documents} documents, {report.blocks} comment blocks', '', 'block line counts', heading]
     lines.extend(_row(distribution.label, distribution) for distribution in report.line_counts)
     for distribution in (report.physical_widths, report.sentence_lengths):
@@ -162,7 +171,7 @@ def _render(report: CorpusStatistics) -> str:
 
 
 def _row(label: str, distribution: typing.Any) -> str:
-    cells = ' '.join(f'{distribution.percentile(p):<4d}' for p in PERCENTILES)
+    cells = ' '.join(f'{distribution.percentile(fraction):<4d}' for fraction in PERCENTILES)
     return f'{label:24s} {distribution.count:6d} {distribution.median:5d} {cells} {distribution.maximum:4d}'
 
 

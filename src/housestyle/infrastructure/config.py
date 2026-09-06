@@ -55,19 +55,19 @@ class TomlConfigSource:
 
     def _reshape_pyproject(self, raw_table: dict[str, object]) -> dict[str, object] | None:
         tools = raw_table.get('tool')
-        section = tools.get('housestyle') if isinstance(tools, dict) else None
-        if not isinstance(section, dict):
+        tool_section = tools.get('housestyle') if isinstance(tools, dict) else None
+        if not isinstance(tool_section, dict):
             return None
         return {
-            'housestyle': {key: value for key, value in section.items() if key != 'rules'},
-            'rules': section.get('rules', {}),
+            'housestyle': {name: setting for name, setting in tool_section.items() if name != 'rules'},
+            'rules': tool_section.get('rules', {}),
         }
 
     def _locate(self, start: pathlib.Path) -> pathlib.Path | None:
         base = start if start.is_dir() else start.parent
-        for candidate in (base.resolve(), *base.resolve().parents):
+        for directory in (base.resolve(), *base.resolve().parents):
             for name in (CONFIG_NAME, PYPROJECT_NAME):
-                config_path = candidate / name
+                config_path = directory / name
                 if config_path.is_file() and self._carries_settings(config_path):
                     return config_path
         return None
@@ -85,15 +85,15 @@ class TomlConfigSource:
         enabled = set(self._available)
         settings: dict[str, RuleSettings] = {}
 
-        for rule_id, entry in config_file.rules.items():
+        for rule_id, rule_entry in config_file.rules.items():
             if rule_id not in self._available:
                 continue
-            if entry is False or entry == 'off':
+            if rule_entry is False or rule_entry == 'off':
                 enabled.discard(rule_id)
-            elif isinstance(entry, RuleTable):
-                settings[rule_id] = RuleSettings(severity=entry.resolved_severity, options=entry.options)
-            elif isinstance(entry, str):
-                settings[rule_id] = RuleSettings(severity=RuleTable(severity=entry).resolved_severity)
+            elif isinstance(rule_entry, RuleTable):
+                settings[rule_id] = RuleSettings(severity=rule_entry.resolved_severity, options=rule_entry.options)
+            elif isinstance(rule_entry, str):
+                settings[rule_id] = RuleSettings(severity=RuleTable(severity=rule_entry).resolved_severity)
 
         return RuleSet(
             enabled=frozenset(enabled),

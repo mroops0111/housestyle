@@ -59,8 +59,8 @@ def as_json(document: Document, report: Report) -> str:
 
 
 def _encode(document: Document, diagnostic: Diagnostic) -> dict[str, object]:
-    start = document.positions.to_position(diagnostic.range.start)
-    end = document.positions.to_position(diagnostic.range.end)
+    start_position = document.positions.to_position(diagnostic.range.start)
+    end_position = document.positions.to_position(diagnostic.range.end)
     return {
         'rule': diagnostic.rule_id,
         'severity': diagnostic.severity.name.lower(),
@@ -68,8 +68,8 @@ def _encode(document: Document, diagnostic: Diagnostic) -> dict[str, object]:
         'fixKind': diagnostic.fix.kind.value if diagnostic.fix else None,
         'mechanical': diagnostic.is_mechanical,
         'range': {
-            'start': {'line': start.line, 'character': start.character},
-            'end': {'line': end.line, 'character': end.character},
+            'start': {'line': start_position.line, 'character': start_position.character},
+            'end': {'line': end_position.line, 'character': end_position.character},
         },
     }
 
