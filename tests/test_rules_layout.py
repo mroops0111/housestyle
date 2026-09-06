@@ -5,7 +5,7 @@ from housestyle.domain import Document, FixKind, RuleSet, apply_edits
 from housestyle.infrastructure import DEFAULT_PARSER, LAYOUT_RULES
 
 
-ALL_LAYOUT = frozenset({'wrap-point', 'line-width'})
+ALL_LAYOUT = frozenset({'mid-clause-break', 'line-too-long'})
 
 
 def lint(source: str, width: int = 60, enabled: frozenset[str] = ALL_LAYOUT):
@@ -28,7 +28,7 @@ def test_already_correct_layout_is_clean() -> None:
 def test_a_mid_clause_break_is_reported_and_reflowed() -> None:
     source = 'def f():\n    # cap the size to the limit so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n'
     report = lint(source)
-    assert 'wrap-point' in [item.rule_id for item in report.diagnostics]
+    assert 'mid-clause-break' in [item.rule_id for item in report.diagnostics]
     assert '# cap the size to the limit so the mmap does not blow past it,\n' in fixed(source)
 
 
@@ -56,19 +56,19 @@ def test_line_width_counts_indent_and_marker() -> None:
     deep = f'def a():\n    def b():\n        def c():\n            # {text}\n            pass\n'
 
     width = len(f'    # {text}') + 1
-    assert 'line-width' not in [item.rule_id for item in lint(shallow, width=width).diagnostics]
-    assert 'line-width' in [item.rule_id for item in lint(deep, width=width).diagnostics]
+    assert 'line-too-long' not in [item.rule_id for item in lint(shallow, width=width).diagnostics]
+    assert 'line-too-long' in [item.rule_id for item in lint(deep, width=width).diagnostics]
 
 
 def test_line_width_stays_silent_when_the_block_already_fits() -> None:
     source = 'def f():\n    # short.\n    pass\n'
-    assert 'line-width' not in [item.rule_id for item in lint(source, width=80).diagnostics]
+    assert 'line-too-long' not in [item.rule_id for item in lint(source, width=80).diagnostics]
 
 
 def test_line_width_stays_silent_when_reflow_cannot_help() -> None:
     long_word = 'a' * 90
     source = f'def f():\n    # {long_word}.\n    pass\n'
-    assert 'line-width' not in [item.rule_id for item in lint(source, width=40).diagnostics]
+    assert 'line-too-long' not in [item.rule_id for item in lint(source, width=40).diagnostics]
 
 
 def test_layout_fixes_are_reflow_kind() -> None:

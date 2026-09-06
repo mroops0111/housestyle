@@ -1,15 +1,15 @@
 from ..languages import PYTHON
-from .layout import LineWidthRule, WrapPointRule
+from .layout import LineTooLongRule, MidClauseBreakRule
 from .rewrite import StubFragmentRule, UnbreakableSentenceRule
-from .structural import BlockTooLongRule, DocCommentFormRule, NoFileHeaderRule, NoSignatureRestatingRule
+from .structural import BlockTooLongRule, FileHeaderCommentRule, PlainCommentOnPublicRule, SignatureRestatingTagRule
 
 
-LAYOUT_RULES = (WrapPointRule(), LineWidthRule())
+LAYOUT_RULES = (MidClauseBreakRule(), LineTooLongRule())
 REWRITE_RULES = (StubFragmentRule(), UnbreakableSentenceRule())
 STRUCTURAL_RULES = (
-    NoFileHeaderRule(),
-    DocCommentFormRule(PYTHON),
-    NoSignatureRestatingRule(PYTHON),
+    FileHeaderCommentRule(),
+    PlainCommentOnPublicRule(PYTHON),
+    SignatureRestatingTagRule(PYTHON),
     BlockTooLongRule(),
 )
 ALL_RULES = LAYOUT_RULES + REWRITE_RULES + STRUCTURAL_RULES
@@ -20,11 +20,11 @@ __all__ = [
     'REWRITE_RULES',
     'STRUCTURAL_RULES',
     'BlockTooLongRule',
-    'DocCommentFormRule',
-    'LineWidthRule',
-    'NoFileHeaderRule',
-    'NoSignatureRestatingRule',
+    'FileHeaderCommentRule',
+    'LineTooLongRule',
+    'MidClauseBreakRule',
+    'PlainCommentOnPublicRule',
+    'SignatureRestatingTagRule',
     'StubFragmentRule',
     'UnbreakableSentenceRule',
-    'WrapPointRule',
 ]

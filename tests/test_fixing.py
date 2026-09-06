@@ -16,7 +16,7 @@ from housestyle.domain import (
 from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER
 
 
-LAYOUT = frozenset({'wrap-point', 'line-width', 'stub-fragment', 'unbreakable-sentence'})
+LAYOUT = frozenset({'mid-clause-break', 'line-too-long', 'stub-fragment', 'unbreakable-sentence'})
 
 
 def fixer(rules=ALL_RULES, max_rounds: int = 10) -> FixDocument:

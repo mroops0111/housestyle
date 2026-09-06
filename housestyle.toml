@@ -3,11 +3,11 @@ line-width = 120
 exclude = ["tests/fixtures/**", "examples/probe.py"]
 
 [rules]
-wrap-point = "error"
-line-width = "error"
+mid-clause-break = "error"
+line-too-long = "error"
 stub-fragment = "error"
 unbreakable-sentence = "error"
-no-file-header = "error"
-doc-comment-form = "error"
-no-signature-restating = "error"
+file-header-comment = "error"
+plain-comment-on-public = "error"
+signature-restating-tag = "error"
 block-too-long = "error"

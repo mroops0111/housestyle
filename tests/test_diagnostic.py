@@ -7,7 +7,7 @@ def edit(start: int = 0, end: int = 1, new_text: str = 'x') -> TextEdit:
     return TextEdit(SourceRange(start, end), new_text)
 
 
-def diagnostic(rule_id: str = 'wrap-point', start: int = 0, fix: Fix | None = None) -> Diagnostic:
+def diagnostic(rule_id: str = 'mid-clause-break', start: int = 0, fix: Fix | None = None) -> Diagnostic:
     return Diagnostic(rule_id=rule_id, range=SourceRange(start, start + 1), message='something', fix=fix)
 
 
@@ -55,13 +55,13 @@ def test_a_rule_needs_an_id() -> None:
 
 
 def test_rule_meta_defaults_to_error() -> None:
-    meta = RuleMeta(rule_id='wrap-point', summary='s', fix_kind=FixKind.REFLOW)
+    meta = RuleMeta(rule_id='mid-clause-break', summary='s', fix_kind=FixKind.REFLOW)
     assert meta.default_severity is Severity.ERROR
     assert meta.source == 'housestyle'
 
 
 def test_report_partitions_by_who_can_fix() -> None:
-    mechanical = diagnostic('line-width', 0, Fix.reflow(edit()))
+    mechanical = diagnostic('line-too-long', 0, Fix.reflow(edit()))
     authored = diagnostic('stub-fragment', 5, Fix.rewrite())
     report = Report((mechanical, authored))
 
