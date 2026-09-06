@@ -3,7 +3,7 @@ import shutil
 
 import pytest
 
-from housestyle.application import Aggregator, LintDocument, RuleEngine
+from housestyle.application import AggregateReport, LintDocument, RuleEngine
 from housestyle.domain import Diagnostic, Document, Fix, FixKind, RuleSet, SourceRange
 from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER, AutoCorrectAdapter, ValeAdapter
 
@@ -45,7 +45,7 @@ def document(text: str = MIS_WRAPPED) -> Document:
 
 def aggregate(linters, text: str = MIS_WRAPPED, width: int = 60):
     core = LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES))
-    return Aggregator(core, linters).run(document(text), RuleSet(enabled=ENABLED, line_width=width))
+    return AggregateReport(core, linters).run(document(text), RuleSet(enabled=ENABLED, line_width=width))
 
 
 def test_native_findings_survive_with_no_linters() -> None:

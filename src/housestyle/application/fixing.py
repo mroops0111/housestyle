@@ -11,18 +11,18 @@ MAX_ROUNDS = 10
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class FixOutcome:
+class FixResult:
     document: Document
     report: Report
-    rounds: int
-    applied: int
+    round_count: int
+    applied_edit_count: int
 
     @property
-    def changed(self) -> bool:
-        return self.applied > 0
+    def has_changes(self) -> bool:
+        return self.applied_edit_count > 0
 
     @property
-    def unresolved(self) -> tuple[Diagnostic, ...]:
+    def unresolved_findings(self) -> tuple[Diagnostic, ...]:
         return self.report.needing_author
 
 
@@ -31,35 +31,37 @@ class FixDocument:
         self._lint = lint
         self._max_rounds = max_rounds
 
-    def run(self, document: Document, rules: RuleSet) -> FixOutcome:
-        document_now = document
-        applied = 0
-        rounds = 0
-        report = self._lint.run(document_now, rules)
+    def run(self, document: Document, rules: RuleSet) -> FixResult:
+        working_document = document
+        applied_edit_count = 0
+        round_count = 0
+        report = self._lint.run(working_document, rules)
 
-        while rounds < self._max_rounds:
+        while round_count < self._max_rounds:
             edits = self._next_edits(report)
             if not edits:
                 break
-            document_now = document_now.with_text(apply_edits(document_now.text, edits))
-            applied += len(edits)
-            rounds += 1
-            report = self._lint.run(document_now, rules)
+            working_document = working_document.with_text(apply_edits(working_document.text, edits))
+            applied_edit_count += len(edits)
+            round_count += 1
+            report = self._lint.run(working_document, rules)
 
-        return FixOutcome(document=document_now, report=report, rounds=rounds, applied=applied)
+        return FixResult(
+            document=working_document, report=report, round_count=round_count, applied_edit_count=applied_edit_count
+        )
 
     def _next_edits(self, report: Report) -> tuple[TextEdit, ...]:
         for mechanical_kind in (FixKind.TARGETED, FixKind.REFLOW):
-            edits = self._compatible(report.by_fix_kind(mechanical_kind))
+            edits = self._without_overlaps(report.by_fix_kind(mechanical_kind))
             if edits:
                 return edits
         return ()
 
-    def _compatible(self, diagnostics: tuple[Diagnostic, ...]) -> tuple[TextEdit, ...]:
-        candidates = [edit for diagnostic in diagnostics if diagnostic.fix for edit in diagnostic.fix.edits]
-        candidates.sort(key=lambda edit: (edit.range.start, edit.range.end))
+    def _without_overlaps(self, diagnostics: tuple[Diagnostic, ...]) -> tuple[TextEdit, ...]:
+        candidate_edits = [edit for diagnostic in diagnostics if diagnostic.fix for edit in diagnostic.fix.edits]
+        candidate_edits.sort(key=lambda edit: (edit.range.start, edit.range.end))
         accepted_edits: list[TextEdit] = []
-        for edit in candidates:
+        for edit in candidate_edits:
             if accepted_edits and accepted_edits[-1].range.overlaps(edit.range):
                 continue
             accepted_edits.append(edit)

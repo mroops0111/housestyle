@@ -32,8 +32,8 @@ def test_clean_input_is_left_alone() -> None:
     source = 'def f():\n    # short and fine.\n    pass\n'
     outcome = run(source)
     assert outcome.document.text == source
-    assert not outcome.changed
-    assert outcome.rounds == 0
+    assert not outcome.has_changes
+    assert outcome.round_count == 0
 
 
 def test_a_mis_wrapped_block_is_repaired() -> None:
@@ -41,7 +41,7 @@ def test_a_mis_wrapped_block_is_repaired() -> None:
         'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n'
     )
     outcome = run(source)
-    assert outcome.changed
+    assert outcome.has_changes
     assert '# cap the size so the mmap does not blow past it,\n' in outcome.document.text
 
 
@@ -53,7 +53,7 @@ def test_fixing_reaches_a_fixpoint() -> None:
 
 def test_the_round_cap_is_honoured() -> None:
     source = 'def f():\n    # one. two. three.\n    pass\n'
-    assert run(source, max_rounds=1).rounds <= 1
+    assert run(source, max_rounds=1).round_count <= 1
 
 
 def test_rewrite_findings_survive_fixing_and_are_reported() -> None:
@@ -61,7 +61,7 @@ def test_rewrite_findings_survive_fixing_and_are_reported() -> None:
         'def f():\n    # this single sentence has no comma anywhere and runs well past the budget here.\n    pass\n'
     )
     outcome = run(source, width=50)
-    assert [item.rule_id for item in outcome.unresolved] == ['unbreakable-sentence']
+    assert [item.rule_id for item in outcome.unresolved_findings] == ['unbreakable-sentence']
     assert outcome.document.text == source
 
 
@@ -70,7 +70,7 @@ def test_a_rewrite_never_contributes_an_edit() -> None:
         'def f():\n    # this single sentence has no comma anywhere and runs well past the budget here.\n    pass\n'
     )
     outcome = run(source, width=50)
-    assert outcome.applied == 0
+    assert outcome.applied_edit_count == 0
 
 
 def test_the_document_version_advances_with_each_applied_round() -> None:
@@ -78,7 +78,7 @@ def test_the_document_version_advances_with_each_applied_round() -> None:
         'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n'
     )
     outcome = run(source)
-    assert outcome.document.version == outcome.rounds
+    assert outcome.document.version == outcome.round_count
 
 
 def test_targeted_edits_run_before_reflow() -> None:
@@ -147,8 +147,8 @@ def test_overlapping_edits_are_deferred_rather_than_dropped() -> None:
     outcome = FixDocument(LintDocument(DEFAULT_PARSER, RuleEngine((DoubleRule(),))), max_rounds=3).run(
         document, RuleSet(enabled=frozenset({'double'}), line_width=60)
     )
-    assert outcome.rounds >= 1
-    assert outcome.applied >= 1
+    assert outcome.round_count >= 1
+    assert outcome.applied_edit_count >= 1
 
 
 @pytest.mark.parametrize('width', [40, 60, 80, 120])

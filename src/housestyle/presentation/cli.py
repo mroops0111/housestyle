@@ -6,7 +6,7 @@ import typing
 import typer
 
 from .. import __version__
-from ..application import Aggregator, CorpusStatistics, FixDocument, LintDocument, MeasureCorpus, RuleEngine
+from ..application import AggregateReport, CorpusStatistics, FixDocument, LintDocument, MeasureCorpus, RuleEngine
 from ..domain.document import Document
 from ..infrastructure import ALL_RULES, DEFAULT_CONFIG, DEFAULT_PARSER, EXTERNAL_LINTERS, PYTHON
 from . import docs as rule_docs
@@ -47,8 +47,8 @@ def _lint() -> LintDocument:
     return LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES))
 
 
-def _aggregator(delegate: bool) -> Aggregator:
-    return Aggregator(_lint(), EXTERNAL_LINTERS if delegate else ())
+def _aggregator(delegate: bool) -> AggregateReport:
+    return AggregateReport(_lint(), EXTERNAL_LINTERS if delegate else ())
 
 
 def _require(documents: tuple[Document, ...]) -> None:
@@ -94,14 +94,14 @@ def fix(
     unresolved = 0
     for document in documents:
         outcome = fixer.run(document, DEFAULT_CONFIG.resolve(_fspath(document)))
-        unresolved += len(outcome.unresolved)
-        if outcome.changed:
+        unresolved += len(outcome.unresolved_findings)
+        if outcome.has_changes:
             changed += 1
             if write:
                 pathlib.Path(_fspath(document)).write_text(outcome.document.text, encoding='utf-8')
             else:
                 typer.echo(_diff(document, outcome.document))
-        if outcome.unresolved:
+        if outcome.unresolved_findings:
             typer.echo(reporters.brief(outcome.document, outcome.report))
 
     verb = 'rewrote' if write else 'would rewrite'

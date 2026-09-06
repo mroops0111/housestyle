@@ -42,46 +42,46 @@ class CorpusStatistics:
 
 
 class MeasureCorpus:
-    def __init__(self, parser: SourceParser, widths: tuple[int, ...] = (72, 80, 88, 100, 120)) -> None:
+    def __init__(self, parser: SourceParser, physical_widths: tuple[int, ...] = (72, 80, 88, 100, 120)) -> None:
         self._parser = parser
-        self._widths = widths
+        self._widths = physical_widths
 
     def run(self, documents: tuple[Document, ...]) -> CorpusStatistics:
-        grouped: dict[str, list[int]] = {}
-        widths: list[int] = []
-        lengths: list[int] = []
-        unbreakable = dict.fromkeys(self._widths, 0)
-        blocks = 0
+        grouped_line_counts: dict[str, list[int]] = {}
+        physical_widths: list[int] = []
+        sentence_lengths: list[int] = []
+        unbreakable_counts = dict.fromkeys(self._widths, 0)
+        group_count = 0
 
         for document in documents:
-            for block in self._parser.parse(document):
-                blocks += 1
-                grouped.setdefault(self._label(block), []).append(block.line_count)
-                widths.extend(line.physical_width for line in block.lines)
-                for sentence in block.prose().sentences():
-                    lengths.append(len(sentence.text))
+            for group in self._parser.parse(document):
+                group_count += 1
+                grouped_line_counts.setdefault(self._label(group), []).append(group.line_count)
+                physical_widths.extend(line.physical_width for line in group.lines)
+                for sentence in group.prose().sentences():
+                    sentence_lengths.append(len(sentence.text))
                     for width in self._widths:
                         if self._is_unbreakable(sentence.text, width):
-                            unbreakable[width] += 1
+                            unbreakable_counts[width] += 1
 
         return CorpusStatistics(
             documents=len(documents),
-            blocks=blocks,
+            blocks=group_count,
             line_counts=tuple(
-                Distribution(label, tuple(measurements)) for label, measurements in sorted(grouped.items())
+                Distribution(label, tuple(measurements)) for label, measurements in sorted(grouped_line_counts.items())
             ),
-            physical_widths=Distribution('physical-width', tuple(widths)),
-            sentence_lengths=Distribution('sentence-length', tuple(lengths)),
-            unbreakable_at=tuple(sorted(unbreakable.items())),
+            physical_widths=Distribution('physical-width', tuple(physical_widths)),
+            sentence_lengths=Distribution('sentence-length', tuple(sentence_lengths)),
+            unbreakable_at=tuple(sorted(unbreakable_counts.items())),
         )
 
-    def _label(self, block: CommentGroup) -> str:
-        if block.form is CommentForm.DOC:
-            visibility = Visibility.PUBLIC if block.attaches_to_public_symbol else Visibility.INTERNAL
+    def _label(self, group: CommentGroup) -> str:
+        if group.form is CommentForm.DOC:
+            visibility = Visibility.PUBLIC if group.attaches_to_public_symbol else Visibility.INTERNAL
             return f'doc/{visibility.value}'
-        if block.placement is CommentPlacement.FILE_HEADER:
+        if group.placement is CommentPlacement.FILE_HEADER:
             return 'line/file-header'
-        return f'line/{block.placement.value}'
+        return f'line/{group.placement.value}'
 
     def _is_unbreakable(self, sentence: str, width: int) -> bool:
         return len(sentence) > width and ',' not in sentence

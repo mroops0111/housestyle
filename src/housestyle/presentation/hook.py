@@ -55,7 +55,7 @@ def run(payload: typing.Mapping[str, object], *, write: bool = True) -> HookOutc
             continue
         document = Document(uri=path.resolve().as_uri(), text=text, language_id=PYTHON.language_id)
         outcome = fixer.run(document, DEFAULT_CONFIG.resolve(str(path)))
-        if outcome.changed and write:
+        if outcome.has_changes and write:
             path.write_text(outcome.document.text, encoding='utf-8')
             repaired.append(str(path))
         rendered_report = reporters.brief(outcome.document, outcome.report)
