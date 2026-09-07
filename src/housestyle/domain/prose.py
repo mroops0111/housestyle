@@ -125,7 +125,7 @@ class Prose:
         text = self.flattened
         if not text:
             return ()
-        protected = self._protected_spans(text)
+        protected = self._find_protected_spans(text)
         segments: list[Sentence] = []
         start = 0
         for match in _SENTENCE_END.finditer(text):
@@ -144,7 +144,7 @@ class Prose:
 
     def break_candidates(self) -> tuple[BreakPoint, ...]:
         text = self.flattened
-        protected = self._protected_spans(text)
+        protected = self._find_protected_spans(text)
         points: list[BreakPoint] = []
         for match in re.finditer(r'[.!?,]', text):
             if self._is_protected(match.start(), protected):
@@ -155,7 +155,7 @@ class Prose:
                 points.append(BreakPoint(match.end(), BreakStrength.SENTENCE))
         return tuple(points)
 
-    def _protected_spans(self, text: str) -> tuple[tuple[int, int], ...]:
+    def _find_protected_spans(self, text: str) -> tuple[tuple[int, int], ...]:
         spans = [(match.start(), match.end()) for match in _URL.finditer(text)]
         spans.extend((match.start(), match.end()) for match in _CODE_SPAN.finditer(text))
         return tuple(spans)

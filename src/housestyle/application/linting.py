@@ -9,7 +9,7 @@ from ..domain.rules import Rule, RuleContext, RuleSet
 
 class RuleEngine:
     def __init__(self, rules: tuple[Rule, ...]) -> None:
-        duplicate_ids = self._duplicate_ids(rules)
+        duplicate_ids = self._find_duplicate_ids(rules)
         if duplicate_ids:
             raise ValueError(f'Duplicate rule ids registered: {sorted(duplicate_ids)}')
         self._rules = rules
@@ -30,7 +30,7 @@ class RuleEngine:
             return diagnostic
         return dataclasses.replace(diagnostic, severity=severity)
 
-    def _duplicate_ids(self, rules: tuple[Rule, ...]) -> set[str]:
+    def _find_duplicate_ids(self, rules: tuple[Rule, ...]) -> set[str]:
         seen_ids: set[str] = set()
         duplicate_ids: set[str] = set()
         for rule in rules:

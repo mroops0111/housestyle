@@ -26,15 +26,15 @@ class TreeSitterParser:
             return ()
         source_bytes = document.text.encode('utf-8')
         tree = get_parser(document.language_id).parse(source_bytes)  # pyright: ignore[reportArgumentType]
-        grouped_captures = self._capture(profile, document.language_id, tree.root_node)
-        comment_groups = [self._doc_block(profile, document, node) for node in grouped_captures['docstring']]
+        grouped_captures = self._run_query(profile, document.language_id, tree.root_node)
+        comment_groups = [self._build_doc_group(profile, document, node) for node in grouped_captures['docstring']]
         comment_groups.extend(
-            self._line_block(profile, document, group)
-            for group in self._group_by_adjacency(profile, document, grouped_captures['comment'])
+            self._build_line_group(profile, document, group)
+            for group in self._group_adjacent_comments(profile, document, grouped_captures['comment'])
         )
-        return tuple(sorted(comment_groups, key=lambda block: block.range.start))
+        return tuple(sorted(comment_groups, key=lambda group: group.range.start))
 
-    def _capture(self, profile: LanguageProfile, language_id: str, root: Node) -> dict[str, list[Node]]:
+    def _run_query(self, profile: LanguageProfile, language_id: str, root: Node) -> dict[str, list[Node]]:
         query = Query(get_language(language_id), profile.query())  # pyright: ignore[reportArgumentType]
         captures_by_name = QueryCursor(query).captures(root)
         grouped_captures: dict[str, list[Node]] = {'comment': [], 'docstring': []}
@@ -48,40 +48,42 @@ class TreeSitterParser:
             grouped_captures[name] = sorted(unique_nodes, key=lambda node: node.start_byte)
         return grouped_captures
 
-    def _group_by_adjacency(self, profile: LanguageProfile, document: Document, nodes: list[Node]) -> list[list[Node]]:
+    def _group_adjacent_comments(
+        self, profile: LanguageProfile, document: Document, nodes: list[Node]
+    ) -> list[list[Node]]:
         groups: list[list[Node]] = []
         for node in nodes:
-            if groups and self._continues(profile, document, groups[-1][-1], node):
+            if groups and self._joins_previous_group(profile, document, groups[-1][-1], node):
                 groups[-1].append(node)
             else:
                 groups.append([node])
         return groups
 
-    def _continues(self, profile: LanguageProfile, document: Document, previous: Node, node: Node) -> bool:
+    def _joins_previous_group(self, profile: LanguageProfile, document: Document, previous: Node, node: Node) -> bool:
         if previous.start_point[0] != node.start_point[0] - 1:
             return False
-        if self._is_trailing(document, previous) or self._is_trailing(document, node):
+        if self._is_trailing_comment(document, previous) or self._is_trailing_comment(document, node):
             return False
         return previous.start_point[1] == node.start_point[1]
 
-    def _is_trailing(self, document: Document, node: Node) -> bool:
+    def _is_trailing_comment(self, document: Document, node: Node) -> bool:
         line = document.positions.line_text(node.start_point[0])
         return bool(line[: node.start_point[1]].strip())
 
-    def _line_block(self, profile: LanguageProfile, document: Document, nodes: list[Node]) -> CommentGroup:
-        lines = tuple(self._line(profile, document, node, CommentForm.LINE) for node in nodes)
-        placement = self._placement(profile, document, nodes[-1], is_doc=False)
+    def _build_line_group(self, profile: LanguageProfile, document: Document, nodes: list[Node]) -> CommentGroup:
+        lines = tuple(self._build_comment_line(profile, document, node, CommentForm.LINE) for node in nodes)
+        placement = self._classify_placement(profile, document, nodes[-1], is_doc=False)
         return CommentGroup(
             range=SourceRange(lines[0].range.start, lines[-1].range.end),
             lines=lines,
             form=CommentForm.LINE,
             placement=placement,
-            attachment=self._attachment(profile, nodes[-1], is_doc=False)
+            attachment=self._resolve_attachment(profile, nodes[-1], is_doc=False)
             if placement is CommentPlacement.LEADING_DECLARATION
             else None,
         )
 
-    def _doc_block(self, profile: LanguageProfile, document: Document, node: Node) -> CommentGroup:
+    def _build_doc_group(self, profile: LanguageProfile, document: Document, node: Node) -> CommentGroup:
         lines: list[CommentLine] = []
         for line_number in range(node.start_point[0], node.end_point[0] + 1):
             marker_split = profile.split_delimiter(document.positions.line_text(line_number), CommentForm.DOC)
@@ -98,11 +100,13 @@ class TreeSitterParser:
             range=SourceRange(lines[0].range.start, lines[-1].range.end),
             lines=tuple(lines),
             form=CommentForm.DOC,
-            placement=self._placement(profile, document, node, is_doc=True),
-            attachment=self._attachment(profile, node, is_doc=True),
+            placement=self._classify_placement(profile, document, node, is_doc=True),
+            attachment=self._resolve_attachment(profile, node, is_doc=True),
         )
 
-    def _line(self, profile: LanguageProfile, document: Document, node: Node, form: CommentForm) -> CommentLine:
+    def _build_comment_line(
+        self, profile: LanguageProfile, document: Document, node: Node, form: CommentForm
+    ) -> CommentLine:
         line_number, column = node.start_point
         line_text = document.positions.line_text(line_number)
         marker_split = profile.split_delimiter(line_text[column:], form)
@@ -114,7 +118,7 @@ class TreeSitterParser:
             suffix=marker_split.suffix,
         )
 
-    def _placement(
+    def _classify_placement(
         self,
         profile: LanguageProfile,
         document: Document,
@@ -123,11 +127,11 @@ class TreeSitterParser:
         is_doc: bool,
     ) -> CommentPlacement:
         if is_doc:
-            owner = self._owning_definition(profile, node)
+            owner = self._find_owning_definition(profile, node)
             return CommentPlacement.FILE_HEADER if owner is None else CommentPlacement.LEADING_DECLARATION
-        if self._is_trailing(document, node):
+        if self._is_trailing_comment(document, node):
             return CommentPlacement.TRAILING
-        if self._next_definition(profile, node) is not None:
+        if self._find_next_definition(profile, node) is not None:
             return CommentPlacement.LEADING_DECLARATION
         parent = node.parent
         is_root = parent is not None and profile.role_of(parent.type) is NodeRole.ROOT
@@ -144,7 +148,7 @@ class TreeSitterParser:
             for sibling in parent.named_children
         )
 
-    def _next_definition(self, profile: LanguageProfile, node: Node) -> Node | None:
+    def _find_next_definition(self, profile: LanguageProfile, node: Node) -> Node | None:
         candidate = node.next_named_sibling
         while candidate is not None:
             role = profile.role_of(candidate.type)
@@ -155,7 +159,7 @@ class TreeSitterParser:
             candidate = candidate.next_named_sibling
         return None
 
-    def _owning_definition(self, profile: LanguageProfile, node: Node) -> Node | None:
+    def _find_owning_definition(self, profile: LanguageProfile, node: Node) -> Node | None:
         ancestor = node.parent
         while ancestor is not None:
             role = profile.role_of(ancestor.type)
@@ -166,11 +170,13 @@ class TreeSitterParser:
             ancestor = ancestor.parent
         return None
 
-    def _attachment(self, profile: LanguageProfile, node: Node, *, is_doc: bool) -> SymbolRef | None:
-        definition_node = self._owning_definition(profile, node) if is_doc else self._next_definition(profile, node)
+    def _resolve_attachment(self, profile: LanguageProfile, node: Node, *, is_doc: bool) -> SymbolRef | None:
+        definition_node = (
+            self._find_owning_definition(profile, node) if is_doc else self._find_next_definition(profile, node)
+        )
         if definition_node is None:
             return None
-        declaration = self._named_declaration(profile, definition_node)
+        declaration = self._find_named_declaration(profile, definition_node)
         if declaration is None:
             return None
         name_node = declaration.child_by_field_name('name')
@@ -183,12 +189,12 @@ class TreeSitterParser:
             visibility=profile.visibility_of(name),
         )
 
-    def _named_declaration(self, profile: LanguageProfile, node: Node) -> Node | None:
+    def _find_named_declaration(self, profile: LanguageProfile, node: Node) -> Node | None:
         if node.child_by_field_name('name') is not None:
             return node
         for child_node in node.named_children:
             if profile.role_of(child_node.type) is NodeRole.DEFINITION:
-                grouped_captures = self._named_declaration(profile, child_node)
+                grouped_captures = self._find_named_declaration(profile, child_node)
                 if grouped_captures is not None:
                     return grouped_captures
         return None

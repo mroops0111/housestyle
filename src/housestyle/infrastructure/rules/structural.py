@@ -75,7 +75,7 @@ class SignatureRestatingTagRule:
         if block.form is not CommentForm.DOC:
             return
         for line in block.lines:
-            matched_tag = self._tag(line.text)
+            matched_tag = self._first_matching_tag(line.text)
             if matched_tag is None:
                 continue
             yield Diagnostic(
@@ -90,7 +90,7 @@ class SignatureRestatingTagRule:
             )
             return
 
-    def _tag(self, text: str) -> str | None:
+    def _first_matching_tag(self, text: str) -> str | None:
         stripped_text = text.strip()
         for matched_tag in self._conventions.signature_tags:
             if stripped_text.startswith(matched_tag):
