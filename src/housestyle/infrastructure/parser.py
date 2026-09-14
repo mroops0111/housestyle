@@ -13,6 +13,12 @@ from ..domain.position import SourceRange
 from .languages import LanguageProfile, NodeRole
 
 
+# Every profile must spell its captures this way, and the type system cannot check it.
+# A query that names them otherwise yields nothing, silently.
+COMMENT_CAPTURE = 'comment'
+DOC_CAPTURE = 'doc'
+
+
 class TreeSitterParser:
     def __init__(self, profiles: tuple[LanguageProfile, ...]) -> None:
         self._profiles = {profile.language_id: profile for profile in profiles}
@@ -21,23 +27,34 @@ class TreeSitterParser:
         return language_id in self._profiles
 
     def parse(self, document: Document) -> tuple[CommentGroup, ...]:
+        """Turn source text into the comment groups the rules read.
+
+        1. Look up the profile. An unknown language yields nothing rather than raising.
+        2. Encode to bytes, because every offset this package stores is a byte offset.
+        3. Parse with tree-sitter and run the profile query over the tree.
+        4. Build one group per doc comment, since each already arrives as a single node.
+        5. Group adjacent line comments first,
+           because three consecutive hashes are three nodes sharing one sentence.
+        6. Sort by position, so a caller reading the result walks the file in order.
+        """
         profile = self._profiles.get(document.language_id)
         if profile is None:
             return ()
         source_bytes = document.text.encode('utf-8')
         tree = get_parser(document.language_id).parse(source_bytes)  # pyright: ignore[reportArgumentType]
         grouped_captures = self._run_query(profile, document.language_id, tree.root_node)
-        comment_groups = [self._build_doc_group(profile, document, node) for node in grouped_captures['docstring']]
+        comment_groups = [self._build_doc_group(profile, document, node) for node in grouped_captures[DOC_CAPTURE]]
         comment_groups.extend(
             self._build_line_group(profile, document, group)
-            for group in self._group_adjacent_comments(profile, document, grouped_captures['comment'])
+            for group in self._group_adjacent_comments(profile, document, grouped_captures[COMMENT_CAPTURE])
         )
         return tuple(sorted(comment_groups, key=lambda group: group.range.start))
 
     def _run_query(self, profile: LanguageProfile, language_id: str, root: Node) -> dict[str, list[Node]]:
         query = Query(get_language(language_id), profile.query())  # pyright: ignore[reportArgumentType]
         captures_by_name = QueryCursor(query).captures(root)
-        grouped_captures: dict[str, list[Node]] = {'comment': [], 'docstring': []}
+        # A node can match several patterns at once, so the same byte offset arrives twice.
+        grouped_captures: dict[str, list[Node]] = {COMMENT_CAPTURE: [], DOC_CAPTURE: []}
         for name, nodes in captures_by_name.items():
             grouped_captures.setdefault(name, []).extend(nodes)
         for name, nodes in grouped_captures.items():
@@ -59,6 +76,8 @@ class TreeSitterParser:
                 groups.append([node])
         return groups
 
+    # Same column, next line, and neither one trailing.
+    # A trailing comment describes the code to its left, so it never joins what sits below it.
     def _joins_previous_group(self, profile: LanguageProfile, document: Document, previous: Node, node: Node) -> bool:
         if previous.start_point[0] != node.start_point[0] - 1:
             return False
@@ -104,6 +123,8 @@ class TreeSitterParser:
             attachment=self._resolve_attachment(profile, node, is_doc=True),
         )
 
+    # Width is measured across indent, delimiter, and text together.
+    # Vale measures the extracted content alone, which is why a deeply indented comment passes there.
     def _build_comment_line(
         self, profile: LanguageProfile, document: Document, node: Node, form: CommentForm
     ) -> CommentLine:
@@ -170,6 +191,7 @@ class TreeSitterParser:
             ancestor = ancestor.parent
         return None
 
+    # Only a leading declaration documents a symbol, and CommentGroup rejects any other pairing.
     def _resolve_attachment(self, profile: LanguageProfile, node: Node, *, is_doc: bool) -> SymbolRef | None:
         definition_node = (
             self._find_owning_definition(profile, node) if is_doc else self._find_next_definition(profile, node)
@@ -189,6 +211,8 @@ class TreeSitterParser:
             visibility=profile.visibility_of(name),
         )
 
+    # A decorated definition wraps the real one and carries no name field of its own,
+    # so the search descends until it reaches whichever node actually names something.
     def _find_named_declaration(self, profile: LanguageProfile, node: Node) -> Node | None:
         if node.child_by_field_name('name') is not None:
             return node
