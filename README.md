@@ -1,22 +1,50 @@
 # housestyle
 
-A linter and formatter for the prose inside code comments, across languages.
+Your house style, enforced in the places prose hides inside a codebase.
 
-Linters check your code. Almost nothing checks your comments. `housestyle` extracts comment blocks with
-tree-sitter and enforces prose rules on them, covering the layout and position rules that markup-aware prose
-linters structurally cannot reach.
+Linters check your code. Almost nothing checks the sentences you write around it. `housestyle` extracts prose with tree-sitter and enforces layout and structure rules on it, delegating the rules other tools already do well.
 
-## Status
+## Surfaces
 
-Planning. The name is reserved and the architecture is being designed. Nothing works yet.
+| Surface | Status | What it enforces here |
+| --- | --- | --- |
+| Code comments and docstrings | working | layout, mostly. One sentence per line, physical width, and the wrap faults neither Vale nor a formatter can reach |
+| Markdown | planned | structure, mostly. Heading case and form, a lead sentence before a list, bold bullet labels |
+| Markdown based slides | planned | Markdown plus front matter, which the extractor already treats as literal |
 
-## Scope
+The two surfaces need opposite things. Code comments sit inside a column limit, so layout dominates and structure is incidental. Markdown is soft wrapped, so layout barely applies and structure is the whole point.
 
-Rules fall into three tiers. Most of them are shared across every language.
+## What It Does Not Do
 
-- **Universal prose**: line wrap points, line width, fragment stacking, forbidden punctuation
-- **Structural, per-language binding**: doc comment form, file header comments, signature-restating tags
-- **Genuinely per-language**: module docstrings, framework-specific description fields
+Delegated rather than reimplemented, verified by measurement rather than assumed:
+
+- **Vale** for punctuation, banned phrasing, and anything a markup aware prose linter already handles
+- **AutoCorrect** for spacing and punctuation width between CJK and Latin text
+
+`housestyle` normalises their findings into its own report, so a mechanical fix is applied silently and only what needs rewriting is surfaced.
+
+## Fix Kinds
+
+Every finding says who can resolve it, which is the axis the whole design turns on.
+
+| Kind | Resolved by | Reaches an agent |
+| --- | --- | --- |
+| `TARGETED` | the tool, silently | no |
+| `REFLOW` | the tool, silently | no |
+| `REWRITE` | only the author | yes |
+
+Rewriting a sentence needs meaning, and a deterministic process cannot supply it. Everything else is repaired without saying so, because each surfaced message costs the reader attention.
+
+## Usage
+
+```bash
+uv tool install git+https://github.com/mroops0111/housestyle
+
+housestyle check src/                    # every finding
+housestyle check src/ --output=actionable  # only what you must rewrite
+housestyle fix src/ --write              # repair what can be repaired
+housestyle stats src/                    # measure, to set thresholds from data
+```
 
 ## Agent Hook
 
@@ -37,8 +65,6 @@ Wire it into Claude Code so mechanical findings are repaired on write and only t
 
 The hook reads the tool payload on stdin, repairs every mechanical finding in place without saying anything, and exits 2 only when a finding needs rewriting. Exit 2 sends the message back to the model, which is the one path by which anything reaches it.
 
-Silence on repaired findings is deliberate. Each surfaced message costs agent attention, and attention is the scarce resource this tool exists to protect.
-
 ## Configuration
 
 Settings come from `housestyle.toml`, or from `[tool.housestyle]` in `pyproject.toml`, whichever is found first walking upward from the file being checked. A dedicated file wins over `pyproject.toml` in the same directory.
@@ -55,13 +81,17 @@ block-too-long = { severity = "warning", line = 3, doc-public = 20 }
 
 Rule names describe the problem they report, following the convention ruff uses. Every rule is listed in `docs/rules.md`, which is generated from the rules themselves.
 
-## Frontends
+## Where It Sits
 
-One pure core, `lint(text, path, config) -> Diagnostic[]`, behind several thin adapters.
+`housestyle` is one tool among three, split by what each analyses rather than by language.
 
-- **CLI**: `housestyle check` and `housestyle fix`, reporting `full`, `actionable`, or `json`
-- **LSP**: diagnostics and quick fixes for any editor
-- **Agent hook**: blocking feedback for coding agents
+| Tool | Analyses | Knowledge it needs |
+| --- | --- | --- |
+| ruff | code structure | Python syntax and semantics |
+| basedpyright | types | the type system |
+| **housestyle** | **natural language inside source** | English prose and layout |
+
+`ruff` cannot judge where a sentence should break, and `housestyle` cannot judge whether a variable is unused. Run both, through pre-commit or CI.
 
 ## License
 
