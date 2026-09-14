@@ -105,13 +105,13 @@ class Report:
         )
 
     def merged_with(self, other: 'Report') -> 'Report':
-        seen: set[tuple[str, int, int]] = set()
+        seen_keys: set[tuple[str, int, int]] = set()
         merged_diagnostics: list[Diagnostic] = []
         for diagnostic in (*self.diagnostics, *other.diagnostics):
             key = (diagnostic.rule_id, diagnostic.range.start, diagnostic.range.end)
-            if key in seen:
+            if key in seen_keys:
                 continue
-            seen.add(key)
+            seen_keys.add(key)
             merged_diagnostics.append(diagnostic)
         merged_diagnostics.sort(key=lambda diagnostic: (diagnostic.range.start, diagnostic.rule_id))
         return Report(

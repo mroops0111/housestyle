@@ -5,7 +5,7 @@ from ..domain.rules import RuleSet
 from .linting import LintDocument
 
 
-class Aggregator:
+class AggregateReport:
     def __init__(self, lint: LintDocument, linters: tuple[ExternalLinter, ...] = ()) -> None:
         self._lint = lint
         self._linters = linters

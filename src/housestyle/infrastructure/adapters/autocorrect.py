@@ -9,7 +9,7 @@ from ...domain.position import Position, SourceRange
 from ...domain.text import TextEdit
 
 
-LOCATION = re.compile(r'^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+)$')
+LOCATION = re.compile(r'^(?P<source_path>.+?):(?P<line>\d+):(?P<column>\d+)$')
 TIMEOUT_SECONDS = 30
 RULE_ID = 'autocorrect/spacing'
 
@@ -24,46 +24,46 @@ class AutoCorrectAdapter:
         return shutil.which(self._executable) is not None
 
     def run(self, document: Document) -> tuple[Diagnostic, ...]:
-        path = pathlib.Path(document.uri.removeprefix('file://'))
-        if not self.is_available() or not path.is_file():
+        source_path = pathlib.Path(document.uri.removeprefix('file://'))
+        if not self.is_available() or not source_path.is_file():
             return ()
-        corrected = self._corrected(path)
-        if corrected is None or corrected == document.text:
+        corrected_text = self._corrected_text(source_path)
+        if corrected_text is None or corrected_text == document.text:
             return ()
-        return self._diff(document, corrected)
+        return self._diff(document, corrected_text)
 
-    def _corrected(self, path: pathlib.Path) -> str | None:
+    def _corrected_text(self, source_path: pathlib.Path) -> str | None:
         try:
-            completed = subprocess.run(  # noqa: S603
-                [self._executable, '--stdin', str(path)],
+            process = subprocess.run(  # noqa: S603
+                [self._executable, '--stdin', str(source_path)],
                 capture_output=True,
                 text=True,
                 check=False,
                 timeout=TIMEOUT_SECONDS,
-                input=path.read_text(encoding='utf-8'),
+                input=source_path.read_text(encoding='utf-8'),
             )
         except (OSError, UnicodeDecodeError, subprocess.TimeoutExpired):
             return None
-        return completed.stdout if completed.stdout else None
+        return process.stdout if process.stdout else None
 
-    def _diff(self, document: Document, corrected: str) -> tuple[Diagnostic, ...]:
-        before = document.text.splitlines(keepends=True)
-        after = corrected.splitlines(keepends=True)
-        if len(before) != len(after):
+    def _diff(self, document: Document, corrected_text: str) -> tuple[Diagnostic, ...]:
+        original_lines = document.text.splitlines(keepends=True)
+        corrected_lines = corrected_text.splitlines(keepends=True)
+        if len(original_lines) != len(corrected_lines):
             return ()
         diagnostics: list[Diagnostic] = []
-        for index, (original, fixed) in enumerate(zip(before, after, strict=True)):
+        for index, (original, fixed) in enumerate(zip(original_lines, corrected_lines, strict=True)):
             if original == fixed:
                 continue
-            start = document.positions.to_offset(Position(index, 0))
-            end = start + len(original.rstrip('\n').encode('utf-8'))
+            start_offset = document.positions.to_offset(Position(index, 0))
+            end_offset = start_offset + len(original.rstrip('\n').encode('utf-8'))
             diagnostics.append(
                 Diagnostic(
                     rule_id=RULE_ID,
-                    range=SourceRange(start, end),
+                    range=SourceRange(start_offset, end_offset),
                     message='Spacing or punctuation between CJK and Latin text needs correcting.',
                     severity=Severity.ERROR,
-                    fix=Fix.targeted(TextEdit(SourceRange(start, end), fixed.rstrip('\n'))),
+                    fix=Fix.targeted(TextEdit(SourceRange(start_offset, end_offset), fixed.rstrip('\n'))),
                     source=self.name,
                 )
             )

@@ -75,15 +75,15 @@ class SignatureRestatingTagRule:
         if block.form is not CommentForm.DOC:
             return
         for line in block.lines:
-            tag = self._tag(line.text)
-            if tag is None:
+            matched_tag = self._tag(line.text)
+            if matched_tag is None:
                 continue
             yield Diagnostic(
                 rule_id=self.meta.rule_id,
                 range=block.range,
                 message=(
-                    f'The tag "{tag}" restates the signature, which the annotations already carry. '
-                    'Delete the tag and its block. '
+                    f'The matched_tag "{matched_tag}" restates the signature, which the annotations already carry. '
+                    'Delete the matched_tag and its block. '
                     'If a parameter needs explaining, say why it matters in prose instead.'
                 ),
                 fix=Fix.rewrite(),
@@ -92,9 +92,9 @@ class SignatureRestatingTagRule:
 
     def _tag(self, text: str) -> str | None:
         stripped_text = text.strip()
-        for tag in self._conventions.signature_tags:
-            if stripped_text.startswith(tag):
-                return tag
+        for matched_tag in self._conventions.signature_tags:
+            if stripped_text.startswith(matched_tag):
+                return matched_tag
         return None
 
 
