@@ -23,15 +23,15 @@ classifiers = [
 dependencies = [
     "pydantic>=2.13.5",
     "tree-sitter>=0.26.0",
-    "tree-sitter-language-pack>=1.15.8",
-    "typer>=0.27.1",
+    "tree-sitter-language-pack>=1.17.0",
+    "typer>=0.27.2",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=9.0.0",
-    "basedpyright>=1.39.0",
-    "ruff>=0.15.0",
+    "basedpyright>=1.40.1",
+    "ruff>=0.16.7",
 ]
 
 [project.scripts]
