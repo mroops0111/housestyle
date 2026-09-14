@@ -25,7 +25,7 @@ class CodexHarness:
     def __init__(self, extensions: frozenset[str]) -> None:
         self._extensions = extensions
 
-    def targets(self, payload: Payload) -> tuple[pathlib.Path, ...] | None:
+    def edited_files(self, payload: Payload) -> tuple[pathlib.Path, ...] | None:
         tool_name = payload.get('tool_name')
         if not isinstance(tool_name, str) or tool_name not in EDIT_TOOLS:
             return None

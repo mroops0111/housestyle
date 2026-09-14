@@ -25,7 +25,7 @@ def name_of(payload: typing.Mapping[str, object]) -> str:
     return resolved[0].meta.name
 
 
-def targets_of(payload: typing.Mapping[str, object]) -> tuple[pathlib.Path, ...]:
+def edited_files_of(payload: typing.Mapping[str, object]) -> tuple[pathlib.Path, ...]:
     resolved = resolve(payload)
     return resolved[1] if resolved else ()
 
@@ -34,7 +34,7 @@ def test_claude_code_reads_the_named_file(source: pathlib.Path) -> None:
     payload = {'tool_name': 'Edit', 'tool_input': {'file_path': str(source)}}
 
     assert name_of(payload) == 'claude-code'
-    assert targets_of(payload) == (source,)
+    assert edited_files_of(payload) == (source,)
 
 
 @pytest.mark.parametrize(
@@ -49,12 +49,12 @@ def test_codex_recovers_the_path_from_the_patch_body(source: pathlib.Path, patch
     payload = {'tool_name': 'apply_patch', 'tool_input': {'command': patch.format(path=source)}}
 
     assert name_of(payload) == 'codex'
-    assert targets_of(payload) == (source,)
+    assert edited_files_of(payload) == (source,)
 
 
 def test_codex_ignores_the_dev_null_side_of_an_addition(source: pathlib.Path) -> None:
     payload = {'tool_name': 'apply_patch', 'tool_input': {'command': f'--- /dev/null\n+++ {source}\n'}}
-    assert targets_of(payload) == (source,)
+    assert edited_files_of(payload) == (source,)
 
 
 def test_declining_differs_from_finding_nothing(tmp_path: pathlib.Path) -> None:
@@ -76,19 +76,19 @@ def test_a_payload_no_harness_recognises_resolves_to_nothing() -> None:
 
 def test_a_missing_file_is_dropped(tmp_path: pathlib.Path) -> None:
     payload = {'tool_name': 'Edit', 'tool_input': {'file_path': str(tmp_path / 'gone.py')}}
-    assert targets_of(payload) == ()
+    assert edited_files_of(payload) == ()
 
 
 def test_a_file_of_another_language_is_dropped(tmp_path: pathlib.Path) -> None:
     other = tmp_path / 'notes.md'
     other.write_text('# heading\n', encoding='utf-8')
     payload = {'tool_name': 'Edit', 'tool_input': {'file_path': str(other)}}
-    assert targets_of(payload) == ()
+    assert edited_files_of(payload) == ()
 
 
 def test_the_same_path_named_twice_is_visited_once(source: pathlib.Path) -> None:
     payload = {'tool_name': 'apply_patch', 'tool_input': {'command': f'--- {source}\n+++ {source}\n'}}
-    assert targets_of(payload) == (source,)
+    assert edited_files_of(payload) == (source,)
 
 
 def test_every_harness_describes_itself() -> None:

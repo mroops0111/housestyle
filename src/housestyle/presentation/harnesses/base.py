@@ -24,7 +24,7 @@ class HarnessMeta:
 class AgentHarness(typing.Protocol):
     meta: HarnessMeta
 
-    def targets(self, payload: Payload) -> tuple[pathlib.Path, ...] | None:
+    def edited_files(self, payload: Payload) -> tuple[pathlib.Path, ...] | None:
         """Return the files this payload edited, or None when it came from another agent.
 
         An empty tuple and None mean different things.

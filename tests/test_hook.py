@@ -39,11 +39,11 @@ def test_a_non_edit_tool_is_ignored(tmp_path: pathlib.Path) -> None:
 def test_a_non_python_file_is_ignored(tmp_path: pathlib.Path) -> None:
     target = tmp_path / 'notes.md'
     target.write_text('# heading\n', encoding='utf-8')
-    assert hook.targets(payload(target)) == ()
+    assert hook.edited_files(payload(target)) == ()
 
 
 def test_a_missing_file_is_ignored(tmp_path: pathlib.Path) -> None:
-    assert hook.targets(payload(tmp_path / 'gone.py')) == ()
+    assert hook.edited_files(payload(tmp_path / 'gone.py')) == ()
 
 
 def test_a_payload_without_a_path_is_ignored() -> None:

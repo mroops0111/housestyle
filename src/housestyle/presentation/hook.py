@@ -22,7 +22,7 @@ class HookResult:
         return self.exit_code == BLOCK_EXIT
 
 
-def targets(payload: Payload) -> tuple[pathlib.Path, ...]:
+def edited_files(payload: Payload) -> tuple[pathlib.Path, ...]:
     resolved = resolve(payload)
     return resolved[1] if resolved else ()
 

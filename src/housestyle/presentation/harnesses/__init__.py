@@ -22,7 +22,7 @@ def resolve(payload: Payload) -> tuple[AgentHarness, tuple[pathlib.Path, ...]] |
     A harness that declines returns None, so declining and finding nothing stay distinct.
     """
     for harness in ALL_HARNESSES:
-        found = harness.targets(payload)
+        found = harness.edited_files(payload)
         if found is not None:
             return harness, found
     return None
