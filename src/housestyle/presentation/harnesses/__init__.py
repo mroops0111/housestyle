@@ -1,5 +1,7 @@
+import pathlib
+
 from ...infrastructure import PYTHON
-from .base import BLOCK_EXIT, AgentHarness, Payload
+from .base import BLOCK_EXIT, AgentHarness, HarnessMeta, Payload
 from .claude_code import ClaudeCodeHarness
 from .codex import CodexHarness
 
@@ -14,8 +16,16 @@ ALL_HARNESSES: tuple[AgentHarness, ...] = (
 )
 
 
-def harness_for(payload: Payload) -> AgentHarness | None:
-    return next((harness for harness in ALL_HARNESSES if harness.handles(payload)), None)
+def resolve(payload: Payload) -> tuple[AgentHarness, tuple[pathlib.Path, ...]] | None:
+    """Hand the payload to each harness until one recognises it.
+
+    A harness that declines returns None, so declining and finding nothing stay distinct.
+    """
+    for harness in ALL_HARNESSES:
+        found = harness.targets(payload)
+        if found is not None:
+            return harness, found
+    return None
 
 
 __all__ = [
@@ -24,6 +34,7 @@ __all__ = [
     'AgentHarness',
     'ClaudeCodeHarness',
     'CodexHarness',
+    'HarnessMeta',
     'Payload',
-    'harness_for',
+    'resolve',
 ]

@@ -1,4 +1,3 @@
-import json
 import pathlib
 import typing
 
@@ -6,7 +5,10 @@ import pytest
 
 from housestyle.presentation.harnesses import (
     ALL_HARNESSES,
-    harness_for,
+    ClaudeCodeHarness,
+    CodexHarness,
+    HarnessMeta,
+    resolve,
 )
 
 
@@ -17,19 +19,22 @@ def source(tmp_path: pathlib.Path) -> pathlib.Path:
     return target
 
 
+def name_of(payload: typing.Mapping[str, object]) -> str:
+    resolved = resolve(payload)
+    assert resolved is not None, 'no harness recognised the payload'
+    return resolved[0].meta.name
+
+
+def targets_of(payload: typing.Mapping[str, object]) -> tuple[pathlib.Path, ...]:
+    resolved = resolve(payload)
+    return resolved[1] if resolved else ()
+
+
 def test_claude_code_reads_the_named_file(source: pathlib.Path) -> None:
     payload = {'tool_name': 'Edit', 'tool_input': {'file_path': str(source)}}
 
     assert name_of(payload) == 'claude-code'
     assert targets_of(payload) == (source,)
-
-
-def test_claude_code_also_reads_a_notebook_path(tmp_path: pathlib.Path) -> None:
-    notebook = tmp_path / 'a.ipynb'
-    notebook.write_text('{}', encoding='utf-8')
-    payload = {'tool_name': 'NotebookEdit', 'tool_input': {'notebook_path': str(notebook)}}
-
-    assert name_of(payload) == 'claude-code'
 
 
 @pytest.mark.parametrize(
@@ -48,58 +53,61 @@ def test_codex_recovers_the_path_from_the_patch_body(source: pathlib.Path, patch
 
 
 def test_codex_ignores_the_dev_null_side_of_an_addition(source: pathlib.Path) -> None:
-    patch = f'--- /dev/null\n+++ {source}\n'
-    payload = {'tool_name': 'apply_patch', 'tool_input': {'command': patch}}
-
+    payload = {'tool_name': 'apply_patch', 'tool_input': {'command': f'--- /dev/null\n+++ {source}\n'}}
     assert targets_of(payload) == (source,)
 
 
-def test_a_payload_no_harness_claims_selects_nothing() -> None:
-    assert harness_for({'tool_name': 'Bash', 'tool_input': {'command': 'ls'}}) is None
-    assert harness_for({}) is None
+def test_declining_differs_from_finding_nothing(tmp_path: pathlib.Path) -> None:
+    notebook = tmp_path / 'a.ipynb'
+    notebook.write_text('{}', encoding='utf-8')
+    ours = {'tool_name': 'NotebookEdit', 'tool_input': {'notebook_path': str(notebook)}}
+    not_ours = {'tool_name': 'Bash', 'tool_input': {'command': 'ls'}}
+
+    recognised = resolve(ours)
+    assert recognised is not None, 'a notebook edit came from Claude Code even when we check nothing in it'
+    assert recognised[1] == ()
+    assert resolve(not_ours) is None, 'a shell call was never ours to read'
 
 
-def test_a_read_only_tool_is_not_claimed(source: pathlib.Path) -> None:
-    assert harness_for({'tool_name': 'Read', 'tool_input': {'file_path': str(source)}}) is None
+def test_a_payload_no_harness_recognises_resolves_to_nothing() -> None:
+    assert resolve({}) is None
+    assert resolve({'tool_name': 'Read', 'tool_input': {'file_path': 'a.py'}}) is None
 
 
 def test_a_missing_file_is_dropped(tmp_path: pathlib.Path) -> None:
-    payload = {'paths': [str(tmp_path / 'gone.py')]}
+    payload = {'tool_name': 'Edit', 'tool_input': {'file_path': str(tmp_path / 'gone.py')}}
     assert targets_of(payload) == ()
 
 
 def test_a_file_of_another_language_is_dropped(tmp_path: pathlib.Path) -> None:
     other = tmp_path / 'notes.md'
     other.write_text('# heading\n', encoding='utf-8')
-    assert targets_of({'paths': [str(other)]}) == ()
+    payload = {'tool_name': 'Edit', 'tool_input': {'file_path': str(other)}}
+    assert targets_of(payload) == ()
 
 
 def test_the_same_path_named_twice_is_visited_once(source: pathlib.Path) -> None:
-    patch = f'--- {source}\n+++ {source}\n'
-    payload = {'tool_name': 'apply_patch', 'tool_input': {'command': patch}}
+    payload = {'tool_name': 'apply_patch', 'tool_input': {'command': f'--- {source}\n+++ {source}\n'}}
     assert targets_of(payload) == (source,)
 
 
-def targets_of(payload: typing.Mapping[str, object]) -> tuple[pathlib.Path, ...]:
-    harness = harness_for(payload)
-    return harness.targets(payload) if harness else ()
-
-
-def name_of(payload: typing.Mapping[str, object]) -> str:
-    harness = harness_for(payload)
-    assert harness is not None, 'no harness claimed the payload'
-    return harness.name
-
-
-def test_every_harness_can_describe_itself() -> None:
+def test_every_harness_describes_itself() -> None:
     for harness in ALL_HARNESSES:
-        assert harness.summary, f'{harness.name} has no summary'
-        assert harness.example, f'{harness.name} has no example'
+        assert harness.meta.summary
+        assert harness.meta.example
 
 
-def test_each_example_is_claimed_by_the_harness_that_published_it() -> None:
+def test_each_example_is_recognised_by_the_harness_that_published_it() -> None:
     for harness in ALL_HARNESSES:
-        payload = json.loads(harness.example)
-        assert name_of(payload) == harness.name, (
-            f'the {harness.name} example is documentation nobody checks unless it round trips'
+        assert name_of(harness.meta.example) == harness.meta.name, (
+            'a published example nobody feeds back is documentation that can rot'
         )
+
+
+def test_a_harness_must_name_itself() -> None:
+    with pytest.raises(ValueError, match='names itself'):
+        HarnessMeta(name='', summary='something', example={})
+
+
+def test_the_registry_holds_both_agents() -> None:
+    assert [type(harness) for harness in ALL_HARNESSES] == [ClaudeCodeHarness, CodexHarness]

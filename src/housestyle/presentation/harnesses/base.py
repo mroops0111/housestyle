@@ -1,3 +1,4 @@
+import dataclasses
 import pathlib
 import typing
 
@@ -9,14 +10,28 @@ BLOCK_EXIT = 2
 Payload = typing.Mapping[str, object]
 
 
-class AgentHarness(typing.Protocol):
+@dataclasses.dataclass(frozen=True, slots=True)
+class HarnessMeta:
     name: str
     summary: str
-    example: str
+    example: Payload
 
-    def handles(self, payload: Payload) -> bool: ...
+    def __post_init__(self) -> None:
+        if not self.name or not self.summary:
+            raise ValueError('A harness names itself and says what it recognises')
 
-    def targets(self, payload: Payload) -> tuple[pathlib.Path, ...]: ...
+
+class AgentHarness(typing.Protocol):
+    meta: HarnessMeta
+
+    def targets(self, payload: Payload) -> tuple[pathlib.Path, ...] | None:
+        """Return the files this payload edited, or None when it came from another agent.
+
+        An empty tuple and None mean different things.
+        Empty says the payload was ours and touched nothing we check.
+        None says it was never ours to read.
+        """
+        ...
 
 
 def existing_source_files(

@@ -7,7 +7,7 @@ from ..application import FixDocument, LintDocument, RuleEngine
 from ..domain.document import Document
 from ..infrastructure import ALL_RULES, DEFAULT_CONFIG, DEFAULT_PARSER, PYTHON
 from . import report as reporters
-from .harnesses import ALL_HARNESSES, BLOCK_EXIT, AgentHarness, Payload, harness_for
+from .harnesses import ALL_HARNESSES, BLOCK_EXIT, Payload, resolve
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -23,17 +23,17 @@ class HookResult:
 
 
 def targets(payload: Payload) -> tuple[pathlib.Path, ...]:
-    harness = harness_for(payload)
-    return harness.targets(payload) if harness else ()
+    resolved = resolve(payload)
+    return resolved[1] if resolved else ()
 
 
-def run(payload: Payload, *, write: bool = True, harness: AgentHarness | None = None) -> HookResult:
-    chosen = harness or harness_for(payload)
-    if chosen is None:
+def run(payload: Payload, *, write: bool = True) -> HookResult:
+    resolved = resolve(payload)
+    if resolved is None:
         return HookResult(exit_code=0)
-    paths = chosen.targets(payload)
+    chosen, paths = resolved
     if not paths:
-        return HookResult(exit_code=0, harness=chosen.name)
+        return HookResult(exit_code=0, harness=chosen.meta.name)
 
     fixer = FixDocument(LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES)))
     messages: list[str] = []
@@ -54,12 +54,12 @@ def run(payload: Payload, *, write: bool = True, harness: AgentHarness | None = 
             messages.append(rendered_report)
 
     if not messages:
-        return HookResult(exit_code=0, repaired=tuple(repaired), harness=chosen.name)
+        return HookResult(exit_code=0, repaired=tuple(repaired), harness=chosen.meta.name)
     return HookResult(
         exit_code=BLOCK_EXIT,
         stderr='\n\n'.join(messages),
         repaired=tuple(repaired),
-        harness=chosen.name,
+        harness=chosen.meta.name,
     )
 
 
@@ -71,7 +71,8 @@ def describe_harnesses() -> str:
     """
     lines = ['housestyle-hook reads one agent payload on stdin.', '']
     for harness in ALL_HARNESSES:
-        lines.extend([f'{harness.name}', f'  {harness.summary}', f'  {harness.example}', ''])
+        meta = harness.meta
+        lines.extend([meta.name, f'  {meta.summary}', f'  {json.dumps(meta.example)}', ''])
     lines.extend(
         [
             'A payload no harness claims exits 0 and changes nothing.',
