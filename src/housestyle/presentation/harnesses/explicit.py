@@ -11,6 +11,8 @@ class ExplicitPathsHarness:
     """
 
     name = 'explicit'
+    summary = 'Anything that can write JSON names the files outright.'
+    example = '{"paths": ["src/module.py"]}'
 
     def __init__(self, extensions: frozenset[str]) -> None:
         self._extensions = extensions

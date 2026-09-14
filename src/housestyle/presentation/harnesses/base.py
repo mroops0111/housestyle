@@ -11,6 +11,8 @@ Payload = typing.Mapping[str, object]
 
 class AgentHarness(typing.Protocol):
     name: str
+    summary: str
+    example: str
 
     def handles(self, payload: Payload) -> bool: ...
 

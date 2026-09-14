@@ -154,3 +154,12 @@ def test_an_unclaimed_payload_does_nothing(tmp_path: pathlib.Path) -> None:
 
     assert outcome.exit_code == 0
     assert outcome.harness == ''
+
+
+def test_the_hook_can_list_the_shapes_it_accepts() -> None:
+    described = hook.describe_harnesses()
+
+    assert 'claude-code' in described
+    assert 'codex' in described
+    assert '"paths"' in described
+    assert 'exits 0' in described

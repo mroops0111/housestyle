@@ -15,6 +15,8 @@ _STRIP_PREFIX = re.compile(r'^[ab]/')
 
 class CodexHarness:
     name = 'codex'
+    summary = 'Codex sends a patch, and the path is read from its header.'
+    example = '{"tool_name": "apply_patch", "tool_input": {"command": "*** Update File: src/module.py"}}'
 
     def __init__(self, extensions: frozenset[str]) -> None:
         self._extensions = extensions

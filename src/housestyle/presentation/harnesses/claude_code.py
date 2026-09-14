@@ -10,6 +10,8 @@ PATH_FIELDS = ('file_path', 'notebook_path')
 
 class ClaudeCodeHarness:
     name = 'claude-code'
+    summary = 'Claude Code names the edited file in tool_input.'
+    example = '{"tool_name": "Edit", "tool_input": {"file_path": "src/module.py"}}'
 
     def __init__(self, extensions: frozenset[str]) -> None:
         self._extensions = extensions

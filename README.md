@@ -83,6 +83,8 @@ A caller with no harness of its own sends the paths directly, which covers pre-c
 echo '{"paths": ["src/module.py"]}' | housestyle-hook
 ```
 
+Run `housestyle-hook --help` to print the shapes it accepts, rather than reading them from here. Each harness publishes its own example, and a test feeds every example back through the selector, so the printed contract cannot drift from the code.
+
 ### How a payload finds its harness
 
 The two agents differ in how they name the edited file, and agree on how to block.
@@ -93,7 +95,9 @@ The two agents differ in how they name the edited file, and agree on how to bloc
 | Path | `tool_input.file_path` | parsed back out of the patch header |
 | Blocking | exit 2 with stderr | exit 2 with stderr |
 
-Each harness answers whether it recognises a payload, and the first to claim it handles the run. Supporting a third agent means adding one file that answers the same two questions, with nothing else in the codebase changing.
+Each harness answers whether it recognises a payload and which files that payload names. The runner asks the registry and uses the first to claim it, so supporting a third agent is one file and no change anywhere else.
+
+A payload no harness claims exits 0 in silence, because an agent sends many that are none of our business. That silence is why the accepted shapes have to be askable for.
 
 ## Configuration
 

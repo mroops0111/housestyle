@@ -1,3 +1,4 @@
+import json
 import pathlib
 import typing
 
@@ -104,3 +105,17 @@ def name_of(payload: typing.Mapping[str, object]) -> str:
     harness = harness_for(payload)
     assert harness is not None, 'no harness claimed the payload'
     return harness.name
+
+
+def test_every_harness_can_describe_itself() -> None:
+    for harness in ALL_HARNESSES:
+        assert harness.summary, f'{harness.name} has no summary'
+        assert harness.example, f'{harness.name} has no example'
+
+
+def test_each_example_is_claimed_by_the_harness_that_published_it() -> None:
+    for harness in ALL_HARNESSES:
+        payload = json.loads(harness.example)
+        assert name_of(payload) == harness.name, (
+            f'the {harness.name} example is documentation nobody checks unless it round trips'
+        )

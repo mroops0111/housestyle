@@ -7,7 +7,7 @@ from ..application import FixDocument, LintDocument, RuleEngine
 from ..domain.document import Document
 from ..infrastructure import ALL_RULES, DEFAULT_CONFIG, DEFAULT_PARSER, PYTHON
 from . import report as reporters
-from .harnesses import BLOCK_EXIT, AgentHarness, Payload, harness_for
+from .harnesses import ALL_HARNESSES, BLOCK_EXIT, AgentHarness, Payload, harness_for
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -63,7 +63,23 @@ def run(payload: Payload, *, write: bool = True, harness: AgentHarness | None = 
     )
 
 
+def describe_harnesses() -> str:
+    """Say which payload shapes reach this hook, so a caller can check its own.
+
+    Unrecognised payloads exit quietly, since an agent sends many that are none of our business,
+    and that silence is why the shapes have to be askable for.
+    """
+    lines = ['housestyle-hook reads one JSON payload on stdin.', '']
+    for harness in ALL_HARNESSES:
+        lines.extend([f'{harness.name}', f'  {harness.summary}', f'  {harness.example}', ''])
+    lines.append('A payload no harness claims exits 0 and changes nothing.')
+    return '\n'.join(lines)
+
+
 def main() -> int:
+    if {'--help', '-h', '--harnesses'} & set(sys.argv[1:]):
+        sys.stdout.write(describe_harnesses() + '\n')
+        return 0
     try:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
