@@ -2,16 +2,12 @@ import dataclasses
 import json
 import pathlib
 import sys
-import typing
 
 from ..application import FixDocument, LintDocument, RuleEngine
 from ..domain.document import Document
 from ..infrastructure import ALL_RULES, DEFAULT_CONFIG, DEFAULT_PARSER, PYTHON
 from . import report as reporters
-
-
-BLOCK_EXIT = 2
-EDIT_TOOLS = frozenset({'Edit', 'Write', 'MultiEdit', 'NotebookEdit'})
+from .harnesses import ALL_HARNESSES, BLOCK_EXIT, Payload, resolve
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -19,30 +15,25 @@ class HookResult:
     exit_code: int
     stderr: str = ''
     repaired: tuple[str, ...] = ()
+    harness: str = ''
 
     @property
     def is_blocking(self) -> bool:
         return self.exit_code == BLOCK_EXIT
 
 
-def targets(payload: typing.Mapping[str, object]) -> tuple[pathlib.Path, ...]:
-    tool_name = payload.get('tool_name')
-    if isinstance(tool_name, str) and tool_name not in EDIT_TOOLS:
-        return ()
-    tool_input = payload.get('tool_input')
-    tool_fields = tool_input if isinstance(tool_input, dict) else {}
-    paths: list[pathlib.Path] = []
-    for key in ('file_path', 'notebook_path'):
-        path_value = tool_fields.get(key)
-        if isinstance(path_value, str) and path_value:
-            paths.append(pathlib.Path(path_value))
-    return tuple(path for path in paths if path.suffix in PYTHON.extensions and path.is_file())
+def edited_files(payload: Payload) -> tuple[pathlib.Path, ...]:
+    resolved = resolve(payload)
+    return resolved[1] if resolved else ()
 
 
-def run(payload: typing.Mapping[str, object], *, write: bool = True) -> HookResult:
-    paths = targets(payload)
-    if not paths:
+def run(payload: Payload, *, write: bool = True) -> HookResult:
+    resolved = resolve(payload)
+    if resolved is None:
         return HookResult(exit_code=0)
+    chosen, paths = resolved
+    if not paths:
+        return HookResult(exit_code=0, harness=chosen.meta.name)
 
     fixer = FixDocument(LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES)))
     messages: list[str] = []
@@ -63,11 +54,38 @@ def run(payload: typing.Mapping[str, object], *, write: bool = True) -> HookResu
             messages.append(rendered_report)
 
     if not messages:
-        return HookResult(exit_code=0, repaired=tuple(repaired))
-    return HookResult(exit_code=BLOCK_EXIT, stderr='\n\n'.join(messages), repaired=tuple(repaired))
+        return HookResult(exit_code=0, repaired=tuple(repaired), harness=chosen.meta.name)
+    return HookResult(
+        exit_code=BLOCK_EXIT,
+        stderr='\n\n'.join(messages),
+        repaired=tuple(repaired),
+        harness=chosen.meta.name,
+    )
+
+
+def describe_harnesses() -> str:
+    """Say which payload shapes reach this hook, so a caller can check its own.
+
+    Unrecognised payloads exit quietly, since an agent sends many that are none of our business,
+    and that silence is why the shapes have to be askable for.
+    """
+    lines = ['housestyle-hook reads one agent payload on stdin.', '']
+    for harness in ALL_HARNESSES:
+        meta = harness.meta
+        lines.extend([meta.name, f'  {meta.summary}', f'  {json.dumps(meta.example)}', ''])
+    lines.extend(
+        [
+            'A payload no harness claims exits 0 and changes nothing.',
+            'Outside an agent, use housestyle fix --write and housestyle check instead.',
+        ]
+    )
+    return '\n'.join(lines)
 
 
 def main() -> int:
+    if {'--help', '-h', '--harnesses'} & set(sys.argv[1:]):
+        sys.stdout.write(describe_harnesses() + '\n')
+        return 0
     try:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):

@@ -48,14 +48,20 @@ housestyle stats src/                    # measure, to set thresholds from data
 
 ## Agent Hook
 
-Wire it into Claude Code so mechanical findings are repaired on write and only the rest reach the model.
+One entry point serves every agent. `housestyle-hook` reads a payload on stdin, repairs every mechanical finding in place without saying anything, and exits 2 only when a finding needs rewriting. Exit 2 returns the message to the model, which is the one path by which anything reaches it.
+
+Register the same command with each agent you use. Nothing tells it which agent is running, because the payload already says.
+
+### Claude Code
+
+`.claude/settings.json`
 
 ```json
 {
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
         "hooks": [{ "type": "command", "command": "housestyle-hook" }]
       }
     ]
@@ -63,7 +69,35 @@ Wire it into Claude Code so mechanical findings are repaired on write and only t
 }
 ```
 
-The hook reads the tool payload on stdin, repairs every mechanical finding in place without saying anything, and exits 2 only when a finding needs rewriting. Exit 2 sends the message back to the model, which is the one path by which anything reaches it.
+### Codex
+
+`~/.codex/hooks.json`
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [{ "command": "housestyle-hook" }]
+  }
+}
+```
+
+### Both at once
+
+Registering both is the normal case, and they do not interfere. The two agents name their edit tools differently, so every payload identifies its own sender.
+
+| | Claude Code | Codex |
+| --- | --- | --- |
+| Tool names | `Edit`, `Write`, `MultiEdit`, `NotebookEdit` | `apply_patch` |
+| Path | `tool_input.file_path` | parsed back out of the patch header |
+| Blocking | exit 2 with stderr | exit 2 with stderr |
+
+Each payload is offered to every harness until one recognises it. A harness returns the files that payload edited, or nothing at all when it came from another agent, and those two answers stay distinct. A notebook edit is Claude Code's even though we check nothing inside it, while a `Bash` call was never ours to read. A payload no harness recognises exits 0 in silence, because an agent sends many that are none of our business.
+
+Supporting a third agent is one file answering those two questions, with nothing else in the codebase changing. Run `housestyle-hook --help` to print the shapes it accepts. Each harness publishes its own example, and a test feeds every example back through the selector, so the printed contract cannot drift from the code.
+
+### Outside an agent
+
+Use the CLI. `housestyle fix --write` followed by `housestyle check --output=actionable` produces the same repairs and the same report, and a pre-commit hook or a CI step wants an ordinary exit code rather than the agent convention of 2.
 
 ## Configuration
 

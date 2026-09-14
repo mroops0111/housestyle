@@ -56,7 +56,7 @@ class MeasureCorpus:
         for document in documents:
             for group in self._parser.parse(document):
                 group_count += 1
-                grouped_line_counts.setdefault(self._label(group), []).append(group.line_count)
+                grouped_line_counts.setdefault(self._label_for(group), []).append(group.line_count)
                 physical_widths.extend(line.physical_width for line in group.lines)
                 for sentence in group.prose().sentences():
                     sentence_lengths.append(len(sentence.text))
@@ -75,7 +75,7 @@ class MeasureCorpus:
             unbreakable_at=tuple(sorted(unbreakable_counts.items())),
         )
 
-    def _label(self, group: CommentGroup) -> str:
+    def _label_for(self, group: CommentGroup) -> str:
         if group.form is CommentForm.DOC:
             visibility = Visibility.PUBLIC if group.attaches_to_public_symbol else Visibility.INTERNAL
             return f'doc/{visibility.value}'

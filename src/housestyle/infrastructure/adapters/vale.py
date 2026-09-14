@@ -39,12 +39,12 @@ class ValeAdapter:
     def _decode(self, document: Document, payload: str) -> tuple[Diagnostic, ...]:
         diagnostics: list[Diagnostic] = []
         for alert in ValeReport.parse(payload):
-            diagnostic = self._one(document, alert)
+            diagnostic = self._to_diagnostic(document, alert)
             if diagnostic is not None:
                 diagnostics.append(diagnostic)
         return tuple(diagnostics)
 
-    def _one(self, document: Document, alert: ValeAlert) -> Diagnostic | None:
+    def _to_diagnostic(self, document: Document, alert: ValeAlert) -> Diagnostic | None:
         start_column, end_column = alert.span
         try:
             start_offset = document.positions.to_offset(Position(alert.line - 1, start_column - 1))

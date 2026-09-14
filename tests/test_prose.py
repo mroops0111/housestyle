@@ -172,3 +172,32 @@ def test_a_numbered_list_is_not_split_into_marker_and_body() -> None:
 
 def test_a_decimal_is_still_not_a_list_marker() -> None:
     assert len(Prose('the cap is 3.14 percent of the budget').sentences()) == 1
+
+
+def test_a_wrapped_list_item_stays_with_its_marker() -> None:
+    prose = Prose(
+        'Steps below.\n'
+        '\n'
+        '1. The first step runs,\n'
+        '   and this line continues it rather than opening a paragraph.\n'
+        '2. The second step.'
+    )
+    literal_text = [segment.lines for segment in prose.segments() if segment.is_literal]
+
+    assert any('and this line continues it' in line for lines in literal_text for line in lines), (
+        'a continuation indented under its marker belongs to the item, not to the prose around it'
+    )
+
+
+def test_a_list_ends_at_a_blank_line() -> None:
+    prose = Prose('1. An item.\n\nA paragraph that follows.')
+    trailing = [segment for segment in prose.segments() if not segment.is_literal]
+
+    assert any('A paragraph that follows.' in line for segment in trailing for line in segment.lines)
+
+
+def test_an_unindented_line_after_a_list_is_prose_again() -> None:
+    prose = Prose('1. An item.\nA sentence at the left margin.')
+    flowing = [segment for segment in prose.segments() if not segment.is_literal]
+
+    assert any('A sentence at the left margin.' in line for segment in flowing for line in segment.lines)

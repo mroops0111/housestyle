@@ -9,9 +9,9 @@ _HASH_DELIMITER = re.compile(r'^(#+\s?)')
 
 QUERY = """
 (comment) @comment
-(module . (string) @docstring)
-(function_definition body: (block . (string) @docstring))
-(class_definition body: (block . (string) @docstring))
+(module . (string) @doc)
+(function_definition body: (block . (string) @doc))
+(class_definition body: (block . (string) @doc))
 """
 
 

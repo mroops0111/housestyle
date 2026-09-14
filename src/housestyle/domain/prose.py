@@ -73,6 +73,7 @@ class Prose:
         literal = False
         fenced = False
         held = False
+        inside_list = False
 
         def flush(next_literal: bool) -> None:
             nonlocal current_lines, literal
@@ -95,10 +96,15 @@ class Prose:
                 continue
             if not stripped_line:
                 held = False
+                inside_list = False
                 flush(next_literal=fenced)
                 current_lines.append(line)
                 continue
-            flush(next_literal=fenced or held or self._is_indented(line) or self._is_list_item(line))
+            if self._is_list_item(line):
+                inside_list = True
+            elif not self._continues_list_item(line, inside_list):
+                inside_list = False
+            flush(next_literal=fenced or held or inside_list or self._is_indented(line))
             current_lines.append(line)
 
         if current_lines:
@@ -107,6 +113,11 @@ class Prose:
 
     def _is_indented(self, line: str) -> bool:
         return line.startswith(('    ', '\t'))
+
+    # A wrapped list item is indented under its marker rather than to a fixed width,
+    # so the continuation belongs to the item instead of opening a paragraph.
+    def _continues_list_item(self, line: str, inside_list: bool) -> bool:
+        return inside_list and line[:1].isspace()
 
     def _is_list_item(self, line: str) -> bool:
         return bool(_LIST_DELIMITER.match(line))
@@ -125,7 +136,7 @@ class Prose:
         text = self.flattened
         if not text:
             return ()
-        protected = self._protected_spans(text)
+        protected = self._find_protected_spans(text)
         segments: list[Sentence] = []
         start = 0
         for match in _SENTENCE_END.finditer(text):
@@ -144,7 +155,7 @@ class Prose:
 
     def break_candidates(self) -> tuple[BreakPoint, ...]:
         text = self.flattened
-        protected = self._protected_spans(text)
+        protected = self._find_protected_spans(text)
         points: list[BreakPoint] = []
         for match in re.finditer(r'[.!?,]', text):
             if self._is_protected(match.start(), protected):
@@ -155,7 +166,7 @@ class Prose:
                 points.append(BreakPoint(match.end(), BreakStrength.SENTENCE))
         return tuple(points)
 
-    def _protected_spans(self, text: str) -> tuple[tuple[int, int], ...]:
+    def _find_protected_spans(self, text: str) -> tuple[tuple[int, int], ...]:
         spans = [(match.start(), match.end()) for match in _URL.finditer(text)]
         spans.extend((match.start(), match.end()) for match in _CODE_SPAN.finditer(text))
         return tuple(spans)
