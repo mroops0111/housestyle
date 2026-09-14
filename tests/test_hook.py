@@ -128,3 +128,29 @@ def test_the_hook_stays_silent_on_mechanical_findings_even_now(tmp_path: pathlib
     outcome = hook.run(payload(target))
     assert outcome.stderr == '', 'the hook must never narrate a repair it made silently'
     assert outcome.exit_code == 0
+
+
+def test_a_codex_patch_reaches_the_same_loop(tmp_path: pathlib.Path) -> None:
+    target = seed(tmp_path, UNBREAKABLE)
+    patch = f'*** Update File: {target}\n@@\n-old\n+new\n'
+    outcome = hook.run({'tool_name': 'apply_patch', 'tool_input': {'command': patch}})
+
+    assert outcome.harness == 'codex'
+    assert outcome.exit_code == 2
+    assert 'unbreakable-sentence' in outcome.stderr
+
+
+def test_explicit_paths_reach_the_same_loop(tmp_path: pathlib.Path) -> None:
+    target = seed(tmp_path, UNBREAKABLE)
+    outcome = hook.run({'paths': [str(target)]})
+
+    assert outcome.harness == 'explicit'
+    assert outcome.exit_code == 2
+
+
+def test_an_unclaimed_payload_does_nothing(tmp_path: pathlib.Path) -> None:
+    seed(tmp_path, UNBREAKABLE)
+    outcome = hook.run({'tool_name': 'Bash', 'tool_input': {'command': 'ls'}})
+
+    assert outcome.exit_code == 0
+    assert outcome.harness == ''

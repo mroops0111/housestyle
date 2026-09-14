@@ -104,10 +104,12 @@ BLOCK_TOO_LONG = RuleMeta(
     fix_kind=FixKind.REWRITE,
 )
 
+# Set from the p95 of a measured corpus, which housestyle stats reports.
+# A comment past this length has usually started restating the code below it.
 DEFAULT_LIMITS = {
     'line': 4,
     'doc-internal': 13,
-    'doc-public': 17,
+    'doc-public': 20,
 }
 
 

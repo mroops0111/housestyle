@@ -48,14 +48,16 @@ housestyle stats src/                    # measure, to set thresholds from data
 
 ## Agent Hook
 
-Wire it into Claude Code so mechanical findings are repaired on write and only the rest reach the model.
+One entry point serves every harness. `housestyle-hook` reads a payload on stdin, picks the harness that recognises it, repairs every mechanical finding in place without saying anything, and exits 2 only when a finding needs rewriting. Exit 2 returns the message to the model, which is the one path by which anything reaches it.
+
+### Claude Code
 
 ```json
 {
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
         "hooks": [{ "type": "command", "command": "housestyle-hook" }]
       }
     ]
@@ -63,7 +65,35 @@ Wire it into Claude Code so mechanical findings are repaired on write and only t
 }
 ```
 
-The hook reads the tool payload on stdin, repairs every mechanical finding in place without saying anything, and exits 2 only when a finding needs rewriting. Exit 2 sends the message back to the model, which is the one path by which anything reaches it.
+### Codex
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [{ "command": "housestyle-hook" }]
+  }
+}
+```
+
+### Anything else
+
+A caller with no harness of its own sends the paths directly, which covers pre-commit, CI, and a script you wrote this morning.
+
+```bash
+echo '{"paths": ["src/module.py"]}' | housestyle-hook
+```
+
+### How a payload finds its harness
+
+The two agents differ in how they name the edited file, and agree on how to block.
+
+| | Claude Code | Codex |
+| --- | --- | --- |
+| Tool names | `Edit`, `Write`, `MultiEdit`, `NotebookEdit` | `apply_patch` |
+| Path | `tool_input.file_path` | parsed back out of the patch header |
+| Blocking | exit 2 with stderr | exit 2 with stderr |
+
+Each harness answers whether it recognises a payload, and the first to claim it handles the run. Supporting a third agent means adding one file that answers the same two questions, with nothing else in the codebase changing.
 
 ## Configuration
 
