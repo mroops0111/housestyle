@@ -140,14 +140,6 @@ def test_a_codex_patch_reaches_the_same_loop(tmp_path: pathlib.Path) -> None:
     assert 'unbreakable-sentence' in outcome.stderr
 
 
-def test_explicit_paths_reach_the_same_loop(tmp_path: pathlib.Path) -> None:
-    target = seed(tmp_path, UNBREAKABLE)
-    outcome = hook.run({'paths': [str(target)]})
-
-    assert outcome.harness == 'explicit'
-    assert outcome.exit_code == 2
-
-
 def test_an_unclaimed_payload_does_nothing(tmp_path: pathlib.Path) -> None:
     seed(tmp_path, UNBREAKABLE)
     outcome = hook.run({'tool_name': 'Bash', 'tool_input': {'command': 'ls'}})
@@ -161,5 +153,5 @@ def test_the_hook_can_list_the_shapes_it_accepts() -> None:
 
     assert 'claude-code' in described
     assert 'codex' in described
-    assert '"paths"' in described
     assert 'exits 0' in described
+    assert 'housestyle fix' in described, 'a non agent caller needs pointing at the CLI'

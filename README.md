@@ -48,9 +48,13 @@ housestyle stats src/                    # measure, to set thresholds from data
 
 ## Agent Hook
 
-One entry point serves every harness. `housestyle-hook` reads a payload on stdin, picks the harness that recognises it, repairs every mechanical finding in place without saying anything, and exits 2 only when a finding needs rewriting. Exit 2 returns the message to the model, which is the one path by which anything reaches it.
+One entry point serves every agent. `housestyle-hook` reads a payload on stdin, repairs every mechanical finding in place without saying anything, and exits 2 only when a finding needs rewriting. Exit 2 returns the message to the model, which is the one path by which anything reaches it.
+
+Register the same command with each agent you use. Nothing tells it which agent is running, because the payload already says.
 
 ### Claude Code
+
+`.claude/settings.json`
 
 ```json
 {
@@ -67,6 +71,8 @@ One entry point serves every harness. `housestyle-hook` reads a payload on stdin
 
 ### Codex
 
+`~/.codex/hooks.json`
+
 ```json
 {
   "hooks": {
@@ -75,19 +81,9 @@ One entry point serves every harness. `housestyle-hook` reads a payload on stdin
 }
 ```
 
-### Anything else
+### Both at once
 
-A caller with no harness of its own sends the paths directly, which covers pre-commit, CI, and a script you wrote this morning.
-
-```bash
-echo '{"paths": ["src/module.py"]}' | housestyle-hook
-```
-
-Run `housestyle-hook --help` to print the shapes it accepts, rather than reading them from here. Each harness publishes its own example, and a test feeds every example back through the selector, so the printed contract cannot drift from the code.
-
-### How a payload finds its harness
-
-The two agents differ in how they name the edited file, and agree on how to block.
+Registering both is the normal case, and they do not interfere. The two agents name their edit tools differently, so every payload identifies its own sender.
 
 | | Claude Code | Codex |
 | --- | --- | --- |
@@ -95,9 +91,13 @@ The two agents differ in how they name the edited file, and agree on how to bloc
 | Path | `tool_input.file_path` | parsed back out of the patch header |
 | Blocking | exit 2 with stderr | exit 2 with stderr |
 
-Each harness answers whether it recognises a payload and which files that payload names. The runner asks the registry and uses the first to claim it, so supporting a third agent is one file and no change anywhere else.
+Each harness answers whether it recognises a payload and which files that payload names. A payload neither claims, such as a `Bash` call, exits 0 in silence, because an agent sends many that are none of our business.
 
-A payload no harness claims exits 0 in silence, because an agent sends many that are none of our business. That silence is why the accepted shapes have to be askable for.
+Supporting a third agent is one file answering those two questions, with nothing else in the codebase changing. Run `housestyle-hook --help` to print the shapes it accepts. Each harness publishes its own example, and a test feeds every example back through the selector, so the printed contract cannot drift from the code.
+
+### Outside an agent
+
+Use the CLI. `housestyle fix --write` followed by `housestyle check --output=actionable` produces the same repairs and the same report, and a pre-commit hook or a CI step wants an ordinary exit code rather than the agent convention of 2.
 
 ## Configuration
 

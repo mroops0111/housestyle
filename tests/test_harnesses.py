@@ -6,9 +6,6 @@ import pytest
 
 from housestyle.presentation.harnesses import (
     ALL_HARNESSES,
-    ClaudeCodeHarness,
-    CodexHarness,
-    ExplicitPathsHarness,
     harness_for,
 )
 
@@ -57,13 +54,6 @@ def test_codex_ignores_the_dev_null_side_of_an_addition(source: pathlib.Path) ->
     assert targets_of(payload) == (source,)
 
 
-def test_explicit_paths_serve_a_caller_with_no_harness(source: pathlib.Path) -> None:
-    payload = {'paths': [str(source)]}
-
-    assert name_of(payload) == 'explicit'
-    assert targets_of(payload) == (source,)
-
-
 def test_a_payload_no_harness_claims_selects_nothing() -> None:
     assert harness_for({'tool_name': 'Bash', 'tool_input': {'command': 'ls'}}) is None
     assert harness_for({}) is None
@@ -88,12 +78,6 @@ def test_the_same_path_named_twice_is_visited_once(source: pathlib.Path) -> None
     patch = f'--- {source}\n+++ {source}\n'
     payload = {'tool_name': 'apply_patch', 'tool_input': {'command': patch}}
     assert targets_of(payload) == (source,)
-
-
-def test_the_fallback_comes_last_so_it_never_shadows_a_real_harness() -> None:
-    assert isinstance(ALL_HARNESSES[-1], ExplicitPathsHarness)
-    assert isinstance(ALL_HARNESSES[0], ClaudeCodeHarness)
-    assert isinstance(ALL_HARNESSES[1], CodexHarness)
 
 
 def targets_of(payload: typing.Mapping[str, object]) -> tuple[pathlib.Path, ...]:

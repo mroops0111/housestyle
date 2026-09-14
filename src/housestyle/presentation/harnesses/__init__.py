@@ -2,16 +2,15 @@ from ...infrastructure import PYTHON
 from .base import BLOCK_EXIT, AgentHarness, Payload
 from .claude_code import ClaudeCodeHarness
 from .codex import CodexHarness
-from .explicit import ExplicitPathsHarness
 
 
 EXTENSIONS = frozenset(PYTHON.extensions)
 
-# Order decides which harness claims an ambiguous payload, and the fallback must come last.
+# Each agent names its edit tools differently, so a payload identifies its own sender.
+# One project can run both agents at once, and neither needs to know the other exists.
 ALL_HARNESSES: tuple[AgentHarness, ...] = (
     ClaudeCodeHarness(EXTENSIONS),
     CodexHarness(EXTENSIONS),
-    ExplicitPathsHarness(EXTENSIONS),
 )
 
 
@@ -25,7 +24,6 @@ __all__ = [
     'AgentHarness',
     'ClaudeCodeHarness',
     'CodexHarness',
-    'ExplicitPathsHarness',
     'Payload',
     'harness_for',
 ]

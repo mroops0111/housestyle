@@ -69,10 +69,15 @@ def describe_harnesses() -> str:
     Unrecognised payloads exit quietly, since an agent sends many that are none of our business,
     and that silence is why the shapes have to be askable for.
     """
-    lines = ['housestyle-hook reads one JSON payload on stdin.', '']
+    lines = ['housestyle-hook reads one agent payload on stdin.', '']
     for harness in ALL_HARNESSES:
         lines.extend([f'{harness.name}', f'  {harness.summary}', f'  {harness.example}', ''])
-    lines.append('A payload no harness claims exits 0 and changes nothing.')
+    lines.extend(
+        [
+            'A payload no harness claims exits 0 and changes nothing.',
+            'Outside an agent, use housestyle fix --write and housestyle check instead.',
+        ]
+    )
     return '\n'.join(lines)
 
 
