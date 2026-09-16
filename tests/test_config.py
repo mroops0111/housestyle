@@ -20,7 +20,7 @@ def write(directory: pathlib.Path, body: str) -> pathlib.Path:
 
 def test_defaults_enable_every_available_rule(tmp_path: pathlib.Path) -> None:
     rules = source().resolve(str(tmp_path))
-    assert rules.enabled == frozenset(AVAILABLE)
+    assert rules.enabled_rule_ids == frozenset(AVAILABLE)
     assert rules.line_width == 120
 
 
@@ -53,7 +53,7 @@ def test_a_table_carries_severity_and_options(tmp_path: pathlib.Path) -> None:
 
 def test_an_unknown_rule_is_ignored(tmp_path: pathlib.Path) -> None:
     target = write(tmp_path, '[rules]\nnot-a-rule = false\n')
-    assert source().resolve(str(target)).enabled == frozenset(AVAILABLE)
+    assert source().resolve(str(target)).enabled_rule_ids == frozenset(AVAILABLE)
 
 
 def test_a_nonsense_width_falls_back_to_the_default(tmp_path: pathlib.Path) -> None:

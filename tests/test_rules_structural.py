@@ -8,10 +8,10 @@ from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER
 STRUCTURAL = frozenset({'file-header-comment', 'plain-comment-on-public', 'signature-restating-tag', 'block-too-long'})
 
 
-def lint(source: str, enabled: frozenset[str] = STRUCTURAL, width: int = 120, **settings: RuleSettings):
+def lint(source: str, enabled_rule_ids: frozenset[str] = STRUCTURAL, width: int = 120, **settings: RuleSettings):
     document = Document(uri='file:///a.py', text=source, language_id='python')
     return LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES)).run(
-        document, RuleSet(enabled=enabled, line_width=width, settings=settings)
+        document, RuleSet(enabled_rule_ids=enabled_rule_ids, line_width=width, settings=settings)
     )
 
 
@@ -107,7 +107,7 @@ def test_every_structural_finding_needs_an_author() -> None:
 @pytest.mark.parametrize('rule_id', sorted(STRUCTURAL))
 def test_each_rule_can_be_disabled_independently(rule_id: str) -> None:
     source = '# a banner\ndef build(x):\n    """Build it.\n\n    Args:\n        x: a thing\n    """\n'
-    assert rule_id not in ids(source, enabled=STRUCTURAL - {rule_id})
+    assert rule_id not in ids(source, enabled_rule_ids=STRUCTURAL - {rule_id})
 
 
 @pytest.mark.parametrize(

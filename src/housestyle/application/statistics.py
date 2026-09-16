@@ -19,8 +19,8 @@ class Distribution:
         if not self.measurements:
             return 0
         sorted_values = sorted(self.measurements)
-        index = min(len(sorted_values) - 1, max(0, round(fraction * (len(sorted_values) - 1))))
-        return sorted_values[index]
+        position = min(len(sorted_values) - 1, max(0, round(fraction * (len(sorted_values) - 1))))
+        return sorted_values[position]
 
     @property
     def maximum(self) -> int:

@@ -8,10 +8,10 @@ from housestyle.infrastructure import DEFAULT_PARSER, LAYOUT_RULES
 ALL_LAYOUT = frozenset({'mid-clause-break', 'line-too-long'})
 
 
-def lint(source: str, width: int = 60, enabled: frozenset[str] = ALL_LAYOUT):
+def lint(source: str, width: int = 60, enabled_rule_ids: frozenset[str] = ALL_LAYOUT):
     document = Document(uri='file:///a.py', text=source, language_id='python')
     return LintDocument(DEFAULT_PARSER, RuleEngine(LAYOUT_RULES)).run(
-        document, RuleSet(enabled=enabled, line_width=width)
+        document, RuleSet(enabled_rule_ids=enabled_rule_ids, line_width=width)
     )
 
 
@@ -105,7 +105,7 @@ def test_a_literal_block_survives_reflow_untouched() -> None:
 @pytest.mark.parametrize('rule_id', sorted(ALL_LAYOUT))
 def test_each_rule_can_be_disabled_independently(rule_id: str) -> None:
     source = 'def f():\n    # cap the size to the limit so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n'
-    ids = [item.rule_id for item in lint(source, enabled=ALL_LAYOUT - {rule_id}).diagnostics]
+    ids = [item.rule_id for item in lint(source, enabled_rule_ids=ALL_LAYOUT - {rule_id}).diagnostics]
     assert rule_id not in ids
 
 

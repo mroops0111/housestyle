@@ -32,8 +32,10 @@ class CodexHarness:
         command = self._tool_input(payload).get('command')
         if not isinstance(command, str):
             return None
-        named = [_STRIP_PREFIX.sub('', match.group(1)) for match in _PATCH_HEADER.finditer(command)]
-        return existing_source_files([name for name in named if name != '/dev/null'], self._extensions)
+        patched_paths = [_STRIP_PREFIX.sub('', header.group(1)) for header in _PATCH_HEADER.finditer(command)]
+        return existing_source_files(
+            [patched_path for patched_path in patched_paths if patched_path != '/dev/null'], self._extensions
+        )
 
     def _tool_input(self, payload: Payload) -> typing.Mapping[str, object]:
         tool_input = payload.get('tool_input')

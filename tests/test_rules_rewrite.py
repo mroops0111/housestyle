@@ -8,10 +8,10 @@ from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER
 REWRITE_IDS = frozenset({'stub-fragment', 'unbreakable-sentence'})
 
 
-def lint(source: str, width: int = 50, enabled: frozenset[str] = REWRITE_IDS, **settings: RuleSettings):
+def lint(source: str, width: int = 50, enabled_rule_ids: frozenset[str] = REWRITE_IDS, **settings: RuleSettings):
     document = Document(uri='file:///a.py', text=source, language_id='python')
     return LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES)).run(
-        document, RuleSet(enabled=enabled, line_width=width, settings=settings)
+        document, RuleSet(enabled_rule_ids=enabled_rule_ids, line_width=width, settings=settings)
     )
 
 
@@ -96,4 +96,4 @@ def test_the_budget_shrinks_with_indentation() -> None:
 @pytest.mark.parametrize('rule_id', sorted(REWRITE_IDS))
 def test_each_rule_can_be_disabled_independently(rule_id: str) -> None:
     source = comment('cap the size to the shared runner ceiling limit that we set here, ok.')
-    assert rule_id not in ids(source, enabled=REWRITE_IDS - {rule_id})
+    assert rule_id not in ids(source, enabled_rule_ids=REWRITE_IDS - {rule_id})

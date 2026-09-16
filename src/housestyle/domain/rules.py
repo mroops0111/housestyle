@@ -18,12 +18,12 @@ class RuleSettings:
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class RuleSet:
-    enabled: frozenset[str]
+    enabled_rule_ids: frozenset[str]
     settings: typing.Mapping[str, RuleSettings] = dataclasses.field(default_factory=dict)
     line_width: int = 120
 
     def is_enabled(self, rule_id: str) -> bool:
-        return rule_id in self.enabled
+        return rule_id in self.enabled_rule_ids
 
     def settings_for(self, rule_id: str) -> RuleSettings:
         return self.settings.get(rule_id, RuleSettings())

@@ -44,7 +44,7 @@ def document(source: str) -> Document:
 
 
 def rule_set(*ids: str, **kwargs: object) -> RuleSet:
-    return RuleSet(enabled=frozenset(ids), **kwargs)  # pyright: ignore[reportArgumentType]
+    return RuleSet(enabled_rule_ids=frozenset(ids), **kwargs)  # pyright: ignore[reportArgumentType]
 
 
 def test_duplicate_rule_ids_are_rejected() -> None:

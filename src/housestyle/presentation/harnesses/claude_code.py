@@ -25,10 +25,12 @@ class ClaudeCodeHarness:
         if not isinstance(tool_name, str) or tool_name not in EDIT_TOOLS:
             return None
         tool_input = self._tool_input(payload)
-        named = [tool_input.get(field) for field in PATH_FIELDS]
-        if not any(value is not None for value in named):
+        path_values = [tool_input.get(field) for field in PATH_FIELDS]
+        if not any(path_value is not None for path_value in path_values):
             return None
-        return existing_source_files([value for value in named if isinstance(value, str) and value], self._extensions)
+        return existing_source_files(
+            [path_value for path_value in path_values if isinstance(path_value, str) and path_value], self._extensions
+        )
 
     def _tool_input(self, payload: Payload) -> typing.Mapping[str, object]:
         tool_input = payload.get('tool_input')

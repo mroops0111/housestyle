@@ -69,13 +69,13 @@ def test_housestyle_lints_itself_clean() -> None:
     ],
 )
 def test_the_self_hosting_check_has_teeth(probe: str, expected: str) -> None:
-    rules = RuleSet(enabled=frozenset(rule.meta.rule_id for rule in ALL_RULES), line_width=60)
+    rules = RuleSet(enabled_rule_ids=frozenset(rule.meta.rule_id for rule in ALL_RULES), line_width=60)
     assert expected in [item.rule_id for item in lint_text(probe, rules).diagnostics]
 
 
 def test_the_project_config_is_readable_and_enables_every_rule() -> None:
     rules = DEFAULT_CONFIG.resolve(str(SOURCE_ROOT))
-    assert rules.enabled == frozenset(rule.meta.rule_id for rule in ALL_RULES)
+    assert rules.enabled_rule_ids == frozenset(rule.meta.rule_id for rule in ALL_RULES)
     assert rules.line_width == 120
 
 

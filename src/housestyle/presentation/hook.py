@@ -14,8 +14,8 @@ from .harnesses import ALL_HARNESSES, BLOCK_EXIT, Payload, resolve
 class HookResult:
     exit_code: int
     stderr: str = ''
-    repaired: tuple[str, ...] = ()
-    harness: str = ''
+    repaired_paths: tuple[str, ...] = ()
+    harness_name: str = ''
 
     @property
     def is_blocking(self) -> bool:
@@ -23,67 +23,73 @@ class HookResult:
 
 
 def edited_files(payload: Payload) -> tuple[pathlib.Path, ...]:
-    resolved = resolve(payload)
-    return resolved[1] if resolved else ()
+    recognition = resolve(payload)
+    if recognition is None:
+        return ()
+    _, edited_paths = recognition
+    return edited_paths
 
 
 def run(payload: Payload, *, write: bool = True) -> HookResult:
-    resolved = resolve(payload)
-    if resolved is None:
+    recognition = resolve(payload)
+    if recognition is None:
         return HookResult(exit_code=0)
-    chosen, paths = resolved
-    if not paths:
-        return HookResult(exit_code=0, harness=chosen.meta.name)
+    harness, edited_paths = recognition
+    if not edited_paths:
+        return HookResult(exit_code=0, harness_name=harness.meta.name)
 
-    fixer = FixDocument(LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES)))
-    messages: list[str] = []
-    repaired: list[str] = []
+    fix_document = FixDocument(LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES)))
+    author_messages: list[str] = []
+    repaired_paths: list[str] = []
 
-    for path in paths:
+    for source_path in edited_paths:
         try:
-            source = path.read_text(encoding='utf-8')
+            source_text = source_path.read_text(encoding='utf-8')
         except (OSError, UnicodeDecodeError):
             continue
-        document = Document(uri=path.resolve().as_uri(), text=source, language_id=PYTHON.language_id)
-        outcome = fixer.run(document, DEFAULT_CONFIG.resolve(str(path)))
-        if outcome.has_changes and write:
-            path.write_text(outcome.document.text, encoding='utf-8')
-            repaired.append(str(path))
-        rendered_report = reporters.brief(outcome.document, outcome.report)
-        if rendered_report:
-            messages.append(rendered_report)
+        document = Document(uri=source_path.resolve().as_uri(), text=source_text, language_id=PYTHON.language_id)
+        fix_result = fix_document.run(document, DEFAULT_CONFIG.resolve(str(source_path)))
+        if fix_result.has_changes and write:
+            source_path.write_text(fix_result.document.text, encoding='utf-8')
+            repaired_paths.append(str(source_path))
+        brief_report = reporters.brief(fix_result.document, fix_result.report)
+        if brief_report:
+            author_messages.append(brief_report)
 
-    if not messages:
-        return HookResult(exit_code=0, repaired=tuple(repaired), harness=chosen.meta.name)
+    if not author_messages:
+        return HookResult(exit_code=0, repaired_paths=tuple(repaired_paths), harness_name=harness.meta.name)
     return HookResult(
         exit_code=BLOCK_EXIT,
-        stderr='\n\n'.join(messages),
-        repaired=tuple(repaired),
-        harness=chosen.meta.name,
+        stderr='\n\n'.join(author_messages),
+        repaired_paths=tuple(repaired_paths),
+        harness_name=harness.meta.name,
     )
 
 
 def describe_harnesses() -> str:
     """Say which payload shapes reach this hook, so a caller can check its own.
 
-    Unrecognised payloads exit quietly, since an agent sends many that are none of our business,
-    and that silence is why the shapes have to be askable for.
+    Unrecognised payloads exit quietly, since an agent sends many that are none of our business.
+    That silence is why the shapes have to be askable for.
     """
-    lines = ['housestyle-hook reads one agent payload on stdin.', '']
+    help_lines = ['housestyle-hook reads one agent payload on stdin.', '']
     for harness in ALL_HARNESSES:
         meta = harness.meta
-        lines.extend([meta.name, f'  {meta.summary}', f'  {json.dumps(meta.example)}', ''])
-    lines.extend(
+        help_lines.extend([meta.name, f'  {meta.summary}', f'  {json.dumps(meta.example)}', ''])
+    help_lines.extend(
         [
-            'A payload no harness claims exits 0 and changes nothing.',
+            'A payload no harness recognises exits 0 and changes nothing.',
             'Outside an agent, use housestyle fix --write and housestyle check instead.',
         ]
     )
-    return '\n'.join(lines)
+    return '\n'.join(help_lines)
+
+
+HELP_FLAGS = frozenset({'--help', '-h', '--harnesses'})
 
 
 def main() -> int:
-    if {'--help', '-h', '--harnesses'} & set(sys.argv[1:]):
+    if HELP_FLAGS & set(sys.argv[1:]):
         sys.stdout.write(describe_harnesses() + '\n')
         return 0
     try:
@@ -92,10 +98,10 @@ def main() -> int:
         return 0
     if not isinstance(payload, dict):
         return 0
-    outcome = run(payload)
-    if outcome.stderr:
-        sys.stderr.write(outcome.stderr + '\n')
-    return outcome.exit_code
+    hook_result = run(payload)
+    if hook_result.stderr:
+        sys.stderr.write(hook_result.stderr + '\n')
+    return hook_result.exit_code
 
 
 if __name__ == '__main__':
