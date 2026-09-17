@@ -52,7 +52,20 @@ One entry point serves every agent. `housestyle-hook` reads a payload on stdin, 
 
 Register the same command with each agent you use. Nothing tells it which agent is running, because the payload already says.
 
-### Claude Code
+### Claude Code, as a plugin
+
+The plugin wires the hook up for you. It cannot install the tool, so install that first.
+
+```bash
+uv tool install git+https://github.com/mroops0111/housestyle
+
+/plugin marketplace add mroops0111/housestyle
+/plugin install housestyle@mroops
+```
+
+If the command is missing when the hook runs, it says so on stderr rather than passing quietly, because a check that silently stopped running looks exactly like a clean file.
+
+### Claude Code, by hand
 
 `.claude/settings.json`
 

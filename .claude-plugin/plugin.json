@@ -1,0 +1,12 @@
+{
+  "name": "housestyle",
+  "displayName": "housestyle",
+  "version": "0.0.1",
+  "description": "Repairs comment layout silently on write, and returns only what needs rewriting.",
+  "author": {
+    "name": "mroops0111"
+  },
+  "homepage": "https://github.com/mroops0111/housestyle",
+  "repository": "https://github.com/mroops0111/housestyle",
+  "license": "MIT"
+}
