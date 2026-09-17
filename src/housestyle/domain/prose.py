@@ -70,43 +70,54 @@ class Prose:
     def segments(self) -> tuple[Segment, ...]:
         segments: list[Segment] = []
         current_lines: list[str] = []
-        literal = False
-        fenced = False
-        held = False
+        segment_is_literal = False
+        inside_fence = False
+        inside_literal_marker = False
+        inside_list = False
 
-        def flush(next_literal: bool) -> None:
-            nonlocal current_lines, literal
-            if current_lines and next_literal != literal:
-                segments.append(Segment(tuple(current_lines), literal))
+        def flush(next_is_literal: bool) -> None:
+            nonlocal current_lines, segment_is_literal
+            if current_lines and next_is_literal != segment_is_literal:
+                segments.append(Segment(tuple(current_lines), segment_is_literal))
                 current_lines = []
-            literal = next_literal
+            segment_is_literal = next_is_literal
 
         for line in self.physical_lines:
             stripped_line = line.strip()
             if _FENCE.match(line):
-                fenced = not fenced
-                flush(next_literal=True)
+                inside_fence = not inside_fence
+                flush(next_is_literal=True)
                 current_lines.append(line)
                 continue
             if stripped_line.startswith(_LITERAL_DELIMITER):
-                held = stripped_line == _LITERAL_DELIMITER
-                flush(next_literal=True)
+                inside_literal_marker = stripped_line == _LITERAL_DELIMITER
+                flush(next_is_literal=True)
                 current_lines.append(line)
                 continue
             if not stripped_line:
-                held = False
-                flush(next_literal=fenced)
+                inside_literal_marker = False
+                inside_list = False
+                flush(next_is_literal=inside_fence)
                 current_lines.append(line)
                 continue
-            flush(next_literal=fenced or held or self._is_indented(line) or self._is_list_item(line))
+            if self._is_list_item(line):
+                inside_list = True
+            elif not self._continues_list_item(line, inside_list):
+                inside_list = False
+            flush(next_is_literal=inside_fence or inside_literal_marker or inside_list or self._is_indented(line))
             current_lines.append(line)
 
         if current_lines:
-            segments.append(Segment(tuple(current_lines), literal))
+            segments.append(Segment(tuple(current_lines), segment_is_literal))
         return tuple(segments)
 
     def _is_indented(self, line: str) -> bool:
         return line.startswith(('    ', '\t'))
+
+    # A wrapped list item is indented under its marker rather than to a fixed width,
+    # so the continuation belongs to the item instead of opening a paragraph.
+    def _continues_list_item(self, line: str, inside_list: bool) -> bool:
+        return inside_list and line[:1].isspace()
 
     def _is_list_item(self, line: str) -> bool:
         return bool(_LIST_DELIMITER.match(line))
@@ -125,14 +136,14 @@ class Prose:
         text = self.flattened
         if not text:
             return ()
-        protected = self._protected_spans(text)
+        protected = self._find_protected_spans(text)
         segments: list[Sentence] = []
         start = 0
-        for match in _SENTENCE_END.finditer(text):
-            end = match.end()
-            if self._is_protected(match.start(), protected):
+        for sentence_end in _SENTENCE_END.finditer(text):
+            end = sentence_end.end()
+            if self._is_protected(sentence_end.start(), protected):
                 continue
-            if not self._terminates_a_sentence(text, match.start()):
+            if not self._terminates_a_sentence(text, sentence_end.start()):
                 continue
             segments.append(Sentence(text[start:end].strip(), start))
             start = end
@@ -144,20 +155,20 @@ class Prose:
 
     def break_candidates(self) -> tuple[BreakPoint, ...]:
         text = self.flattened
-        protected = self._protected_spans(text)
+        protected = self._find_protected_spans(text)
         points: list[BreakPoint] = []
-        for match in re.finditer(r'[.!?,]', text):
-            if self._is_protected(match.start(), protected):
+        for punctuation in re.finditer(r'[.!?,]', text):
+            if self._is_protected(punctuation.start(), protected):
                 continue
-            if match.group() == ',':
-                points.append(BreakPoint(match.end(), BreakStrength.COMMA))
-            elif self._terminates_a_sentence(text, match.start()):
-                points.append(BreakPoint(match.end(), BreakStrength.SENTENCE))
+            if punctuation.group() == ',':
+                points.append(BreakPoint(punctuation.end(), BreakStrength.COMMA))
+            elif self._terminates_a_sentence(text, punctuation.start()):
+                points.append(BreakPoint(punctuation.end(), BreakStrength.SENTENCE))
         return tuple(points)
 
-    def _protected_spans(self, text: str) -> tuple[tuple[int, int], ...]:
-        spans = [(match.start(), match.end()) for match in _URL.finditer(text)]
-        spans.extend((match.start(), match.end()) for match in _CODE_SPAN.finditer(text))
+    def _find_protected_spans(self, text: str) -> tuple[tuple[int, int], ...]:
+        spans = [(url.start(), url.end()) for url in _URL.finditer(text)]
+        spans.extend((code_span.start(), code_span.end()) for code_span in _CODE_SPAN.finditer(text))
         return tuple(spans)
 
     def _is_protected(self, offset: int, spans: tuple[tuple[int, int], ...]) -> bool:
@@ -170,10 +181,10 @@ class Prose:
             return False
         if offset > 0 and text[offset - 1].isdigit() and offset + 1 < len(text) and text[offset + 1].isdigit():
             return False
-        match = _TRAILING_WORD.search(text[:offset])
-        if match and match.group(1).lower().rstrip('.') in ABBREVIATIONS:
+        trailing_word = _TRAILING_WORD.search(text[:offset])
+        if trailing_word and trailing_word.group(1).lower().rstrip('.') in ABBREVIATIONS:
             return False
-        if match and len(match.group(1).replace('.', '')) == 1:
+        if trailing_word and len(trailing_word.group(1).replace('.', '')) == 1:
             return False
         return self._followed_by_break(text, offset)
 
@@ -198,9 +209,9 @@ def reflow_sentence(sentence: str, width: int) -> tuple[str, ...]:
 def _comma_pieces(sentence: str) -> tuple[str, ...]:
     pieces: list[str] = []
     start = 0
-    for match in re.finditer(r',\s+', sentence):
-        pieces.append(sentence[start : match.end()].rstrip())
-        start = match.end()
+    for comma in re.finditer(r',\s+', sentence):
+        pieces.append(sentence[start : comma.end()].rstrip())
+        start = comma.end()
     tail = sentence[start:].strip()
     if tail:
         pieces.append(tail)

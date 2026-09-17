@@ -39,11 +39,11 @@ def test_a_non_edit_tool_is_ignored(tmp_path: pathlib.Path) -> None:
 def test_a_non_python_file_is_ignored(tmp_path: pathlib.Path) -> None:
     target = tmp_path / 'notes.md'
     target.write_text('# heading\n', encoding='utf-8')
-    assert hook.targets(payload(target)) == ()
+    assert hook.edited_files(payload(target)) == ()
 
 
 def test_a_missing_file_is_ignored(tmp_path: pathlib.Path) -> None:
-    assert hook.targets(payload(tmp_path / 'gone.py')) == ()
+    assert hook.edited_files(payload(tmp_path / 'gone.py')) == ()
 
 
 def test_a_payload_without_a_path_is_ignored() -> None:
@@ -57,7 +57,7 @@ def test_mechanical_findings_are_repaired_silently(tmp_path: pathlib.Path) -> No
     assert outcome.exit_code == 0
     assert not outcome.is_blocking
     assert outcome.stderr == ''
-    assert str(target) in outcome.repaired
+    assert str(target) in outcome.repaired_paths
     assert 'does not blow past it,\n' in target.read_text(encoding='utf-8')
 
 
@@ -77,7 +77,7 @@ def test_a_clean_file_neither_writes_nor_blocks(tmp_path: pathlib.Path) -> None:
     outcome = hook.run(payload(target))
 
     assert outcome.exit_code == 0
-    assert outcome.repaired == ()
+    assert outcome.repaired_paths == ()
     assert target.read_text(encoding='utf-8') == original
 
 
@@ -128,3 +128,30 @@ def test_the_hook_stays_silent_on_mechanical_findings_even_now(tmp_path: pathlib
     outcome = hook.run(payload(target))
     assert outcome.stderr == '', 'the hook must never narrate a repair it made silently'
     assert outcome.exit_code == 0
+
+
+def test_a_codex_patch_reaches_the_same_loop(tmp_path: pathlib.Path) -> None:
+    target = seed(tmp_path, UNBREAKABLE)
+    patch = f'*** Update File: {target}\n@@\n-old\n+new\n'
+    outcome = hook.run({'tool_name': 'apply_patch', 'tool_input': {'command': patch}})
+
+    assert outcome.harness_name == 'codex'
+    assert outcome.exit_code == 2
+    assert 'unbreakable-sentence' in outcome.stderr
+
+
+def test_an_unclaimed_payload_does_nothing(tmp_path: pathlib.Path) -> None:
+    seed(tmp_path, UNBREAKABLE)
+    outcome = hook.run({'tool_name': 'Bash', 'tool_input': {'command': 'ls'}})
+
+    assert outcome.exit_code == 0
+    assert outcome.harness_name == ''
+
+
+def test_the_hook_can_list_the_shapes_it_accepts() -> None:
+    described = hook.describe_harnesses()
+
+    assert 'claude-code' in described
+    assert 'codex' in described
+    assert 'exits 0' in described
+    assert 'housestyle fix' in described, 'a non agent caller needs pointing at the CLI'

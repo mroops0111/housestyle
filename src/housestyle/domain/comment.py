@@ -53,7 +53,7 @@ class CommentLine:
     def prefix_width(self) -> int:
         return len(self.indent) + len(self.delimiter)
 
-    def rendered_lines(self) -> str:
+    def render(self) -> str:
         if not self.text and not self.suffix:
             return (self.indent + self.delimiter).rstrip()
         return self.indent + self.delimiter + self.text + self.suffix
@@ -91,22 +91,22 @@ class CommentGroup:
     def prose(self) -> Prose:
         filled_lines = [line for line in self.lines if line.text.strip()]
         base = min((len(line.indent) for line in filled_lines), default=0)
-        rendered_lines = [
+        render = [
             ' ' * max(0, len(line.indent) - base) + line.text.rstrip() if line.text.strip() else ''
             for line in self.lines
         ]
-        return Prose('\n'.join(rendered_lines))
+        return Prose('\n'.join(render))
 
     def reflow(self, width: int) -> 'CommentGroup':
-        texts = self._reflowed_payloads(width)
+        texts = self._reflow_into_texts(width)
         if not texts:
             return self
-        return self._rebuild(texts)
+        return self._rebuild_lines(texts)
 
-    def _reflowed_payloads(self, width: int) -> tuple[str, ...]:
+    def _reflow_into_texts(self, width: int) -> tuple[str, ...]:
         budget = max(20, width - self.lines[0].prefix_width)
         out: list[str] = []
-        for paragraph, is_literal in self._paragraphs():
+        for paragraph, is_literal in self._split_into_paragraphs():
             if out:
                 out.append('')
             if is_literal:
@@ -117,7 +117,7 @@ class CommentGroup:
                 out.extend(reflow_sentence(sentence.text, budget))
         return tuple(out)
 
-    def _paragraphs(self) -> tuple[tuple[tuple[str, ...], bool], ...]:
+    def _split_into_paragraphs(self) -> tuple[tuple[tuple[str, ...], bool], ...]:
         paragraphs: list[tuple[tuple[str, ...], bool]] = []
         for segment in self.prose().segments():
             current_lines: list[str] = []
@@ -131,7 +131,7 @@ class CommentGroup:
                 paragraphs.append((tuple(current_lines), segment.is_literal))
         return tuple(paragraphs)
 
-    def _rebuild(self, texts: tuple[str, ...]) -> 'CommentGroup':
+    def _rebuild_lines(self, texts: tuple[str, ...]) -> 'CommentGroup':
         if self.form is not CommentForm.DOC:
             return self.with_texts(texts)
         opening, closing = self.lines[0], self.lines[-1]
@@ -162,7 +162,7 @@ class CommentGroup:
         return dataclasses.replace(self, lines=rebuilt)
 
     def render(self) -> str:
-        return '\n'.join(line.rendered_lines() for line in self.lines)
+        return '\n'.join(line.render() for line in self.lines)
 
     def as_edit(self) -> TextEdit:
         return TextEdit(self.range, self.render())

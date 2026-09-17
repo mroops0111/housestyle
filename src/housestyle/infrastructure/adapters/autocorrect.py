@@ -27,12 +27,12 @@ class AutoCorrectAdapter:
         source_path = pathlib.Path(document.uri.removeprefix('file://'))
         if not self.is_available() or not source_path.is_file():
             return ()
-        corrected_text = self._corrected_text(source_path)
+        corrected_text = self._run_autocorrect(source_path)
         if corrected_text is None or corrected_text == document.text:
             return ()
-        return self._diff(document, corrected_text)
+        return self._diff_lines(document, corrected_text)
 
-    def _corrected_text(self, source_path: pathlib.Path) -> str | None:
+    def _run_autocorrect(self, source_path: pathlib.Path) -> str | None:
         try:
             process = subprocess.run(  # noqa: S603
                 [self._executable, '--stdin', str(source_path)],
@@ -46,7 +46,7 @@ class AutoCorrectAdapter:
             return None
         return process.stdout if process.stdout else None
 
-    def _diff(self, document: Document, corrected_text: str) -> tuple[Diagnostic, ...]:
+    def _diff_lines(self, document: Document, corrected_text: str) -> tuple[Diagnostic, ...]:
         original_lines = document.text.splitlines(keepends=True)
         corrected_lines = corrected_text.splitlines(keepends=True)
         if len(original_lines) != len(corrected_lines):

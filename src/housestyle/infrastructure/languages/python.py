@@ -9,9 +9,9 @@ _HASH_DELIMITER = re.compile(r'^(#+\s?)')
 
 QUERY = """
 (comment) @comment
-(module . (string) @docstring)
-(function_definition body: (block . (string) @docstring))
-(class_definition body: (block . (string) @docstring))
+(module . (string) @doc)
+(function_definition body: (block . (string) @doc))
+(class_definition body: (block . (string) @doc))
 """
 
 
@@ -46,10 +46,12 @@ class PythonProfile:
         if form is CommentForm.DOC:
             delimiter, text, suffix = self._split_doc(rest)
             return DelimiterSplit(indent=indent, delimiter=delimiter, text=text, suffix=suffix)
-        match = _HASH_DELIMITER.match(rest)
-        if match is None:
+        hash_delimiter = _HASH_DELIMITER.match(rest)
+        if hash_delimiter is None:
             return DelimiterSplit(indent=indent, delimiter='', text=rest.rstrip())
-        return DelimiterSplit(indent=indent, delimiter=match.group(1), text=rest[match.end() :].rstrip())
+        return DelimiterSplit(
+            indent=indent, delimiter=hash_delimiter.group(1), text=rest[hash_delimiter.end() :].rstrip()
+        )
 
     def _split_doc(self, rest: str) -> tuple[str, str, str]:
         opening = _DOC_DELIMITER.match(rest)

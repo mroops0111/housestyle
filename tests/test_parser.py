@@ -1,7 +1,8 @@
 import pytest
 
 from housestyle.domain import CommentForm, CommentGroup, CommentPlacement, Document, SymbolKind, Visibility
-from housestyle.infrastructure import DEFAULT_PARSER
+from housestyle.infrastructure import DEFAULT_PARSER, PYTHON, TreeSitterParser
+from housestyle.infrastructure.languages import DelimiterSplit, NodeRole
 
 
 def parse(source: str) -> tuple[CommentGroup, ...]:
@@ -235,3 +236,33 @@ def test_only_a_leading_comment_attaches_to_what_follows(source: str) -> None:
     for group in parse(source):
         if group.placement is not CommentPlacement.LEADING_DECLARATION:
             assert group.attachment is None
+
+
+def test_a_profile_naming_its_captures_otherwise_yields_nothing() -> None:
+    class MisnamedProfile:
+        language_id = 'python'
+        extensions = frozenset({'.py'})
+        doc_delimiter = '"""'
+        signature_tags = ()
+
+        def query(self) -> str:
+            return '(comment) @remark'
+
+        def role_of(self, node_type: str) -> NodeRole:
+            return PYTHON.role_of(node_type)
+
+        def symbol_kind(self, node_type: str) -> SymbolKind:
+            return PYTHON.symbol_kind(node_type)
+
+        def visibility_of(self, name: str) -> Visibility:
+            return PYTHON.visibility_of(name)
+
+        def split_delimiter(self, line: str, form: CommentForm) -> DelimiterSplit:
+            return PYTHON.split_delimiter(line, form)
+
+    document = Document(uri='file:///a.py', text='# a note\n', language_id='python')
+
+    assert TreeSitterParser((MisnamedProfile(),)).parse(document) == (), (
+        'a capture named anything but comment or doc is dropped, which is why the names are constants'
+    )
+    assert TreeSitterParser((PYTHON,)).parse(document) != ()

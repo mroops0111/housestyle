@@ -22,7 +22,7 @@ class TomlConfigSource:
         return self._to_rule_set(config_file)
 
     def defaults(self) -> RuleSet:
-        return RuleSet(enabled=frozenset(self._available), line_width=DEFAULT_WIDTH)
+        return RuleSet(enabled_rule_ids=frozenset(self._available), line_width=DEFAULT_WIDTH)
 
     def excludes(self, path: str) -> tuple[str, ...]:
         config_file = self._read(path)
@@ -82,21 +82,21 @@ class TomlConfigSource:
         return isinstance(tools, dict) and 'housestyle' in tools
 
     def _to_rule_set(self, config_file: ConfigFile) -> RuleSet:
-        enabled = set(self._available)
+        enabled_ids = set(self._available)
         settings: dict[str, RuleSettings] = {}
 
         for rule_id, rule_entry in config_file.rules.items():
             if rule_id not in self._available:
                 continue
             if rule_entry is False or rule_entry == 'off':
-                enabled.discard(rule_id)
+                enabled_ids.discard(rule_id)
             elif isinstance(rule_entry, RuleTable):
                 settings[rule_id] = RuleSettings(severity=rule_entry.resolved_severity, options=rule_entry.options)
             elif isinstance(rule_entry, str):
                 settings[rule_id] = RuleSettings(severity=RuleTable(severity=rule_entry).resolved_severity)
 
         return RuleSet(
-            enabled=frozenset(enabled),
+            enabled_rule_ids=frozenset(enabled_ids),
             settings=settings,
             line_width=config_file.housestyle.line_width,
         )
