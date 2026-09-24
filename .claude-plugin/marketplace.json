@@ -1,0 +1,11 @@
+{
+  "name": "mroops",
+  "owner": { "name": "mroops0111" },
+  "plugins": [
+    {
+      "name": "housestyle",
+      "source": { "source": "github", "repo": "mroops0111/housestyle" },
+      "description": "Repairs comment layout silently on write, and returns only what needs rewriting."
+    }
+  ]
+}
