@@ -1,8 +1,8 @@
 import dataclasses
-import enum
 import re
 
 
+# Abbreviations whose period does not end a sentence, written without that period.
 ABBREVIATIONS = frozenset(
     {
         'e.g',
@@ -12,7 +12,6 @@ ABBREVIATIONS = frozenset(
         'cf',
         'al',
         'approx',
-        'no',
         'fig',
         'ca',
         'resp',
@@ -26,17 +25,10 @@ _CODE_SPAN = re.compile(r'`[^`]*`')
 _FENCE = re.compile(r'^\s*(```|~~~)')
 _LIST_DELIMITER = re.compile(r'^\s*(?:[0-9]+[.)]|[-*+]|[a-zA-Z][.)])\s')
 _LITERAL_DELIMITER = '\\b'
+_CLOSING_MARKS = '"\')]}'
 
-
-class BreakStrength(enum.IntEnum):
-    COMMA = 1
-    SENTENCE = 2
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class BreakPoint:
-    offset: int
-    strength: BreakStrength
+# Only before a number, since "No. 5" abbreviates while a trailing no ends its sentence.
+NUMBER_ABBREVIATION = 'no'
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -141,6 +133,8 @@ class Prose:
         start = 0
         for sentence_end in _SENTENCE_END.finditer(text):
             end = sentence_end.end()
+            if end < len(text) and text[end] in _CLOSING_MARKS:
+                end += 1
             if self._is_protected(sentence_end.start(), protected):
                 continue
             if not self._terminates_a_sentence(text, sentence_end.start()):
@@ -152,19 +146,6 @@ class Prose:
         if start < len(text):
             found_sentences.append(Sentence(text[start:].strip(), start))
         return tuple(sentence for sentence in found_sentences if sentence.text)
-
-    def break_candidates(self) -> tuple[BreakPoint, ...]:
-        text = self.flattened
-        protected = self._find_protected_spans(text)
-        points: list[BreakPoint] = []
-        for punctuation in re.finditer(r'[.!?,]', text):
-            if self._is_protected(punctuation.start(), protected):
-                continue
-            if punctuation.group() == ',':
-                points.append(BreakPoint(punctuation.end(), BreakStrength.COMMA))
-            elif self._terminates_a_sentence(text, punctuation.start()):
-                points.append(BreakPoint(punctuation.end(), BreakStrength.SENTENCE))
-        return tuple(points)
 
     def _find_protected_spans(self, text: str) -> tuple[tuple[int, int], ...]:
         spans = [(url.start(), url.end()) for url in _URL.finditer(text)]
@@ -179,10 +160,11 @@ class Prose:
             return self._followed_by_break(text, offset)
         if offset + 1 < len(text) and text[offset + 1].isdigit():
             return False
-        if offset > 0 and text[offset - 1].isdigit() and offset + 1 < len(text) and text[offset + 1].isdigit():
-            return False
         trailing_word = _TRAILING_WORD.search(text[:offset])
-        if trailing_word and trailing_word.group(1).lower().rstrip('.') in ABBREVIATIONS:
+        word = trailing_word.group(1).lower().rstrip('.') if trailing_word else ''
+        if word in ABBREVIATIONS:
+            return False
+        if word == NUMBER_ABBREVIATION and text[offset + 1 :].lstrip()[:1].isdigit():
             return False
         if trailing_word and len(trailing_word.group(1).replace('.', '')) == 1:
             return False
@@ -192,7 +174,7 @@ class Prose:
         rest = text[offset + 1 :]
         if not rest:
             return True
-        if rest[0] in '"\')]}':
+        if rest[0] in _CLOSING_MARKS:
             rest = rest[1:]
         return not rest or rest[0] == ' '
 
