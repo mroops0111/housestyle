@@ -7,7 +7,7 @@ from .comment import (
     SymbolRef,
     Visibility,
 )
-from .diagnostic import Diagnostic, Fix, FixKind, Report, RuleMeta, Severity
+from .diagnostic import Diagnostic, Fix, FixKind, Report, RuleMetadata, Severity
 from .document import Document
 from .external import ExternalLinter
 from .ports import SourceParser
@@ -37,7 +37,7 @@ __all__ = [
     'Report',
     'Rule',
     'RuleContext',
-    'RuleMeta',
+    'RuleMetadata',
     'RuleSet',
     'RuleSettings',
     'Sentence',

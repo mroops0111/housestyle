@@ -86,7 +86,7 @@ def test_rules_nest_under_the_tool_table_in_pyproject(tmp_path: pathlib.Path) ->
 
 def test_excludes_are_read_from_pyproject(tmp_path: pathlib.Path) -> None:
     body = '[tool.housestyle]\nexclude = ["build/**"]\n'
-    assert source().excludes(str(write_pyproject(tmp_path, body))) == ('build/**',)
+    assert source().exclude_patterns(str(write_pyproject(tmp_path, body))) == ('build/**',)
 
 
 def test_a_pyproject_without_our_table_is_ignored(tmp_path: pathlib.Path) -> None:

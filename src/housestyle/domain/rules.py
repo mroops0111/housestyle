@@ -2,7 +2,7 @@ import dataclasses
 import typing
 
 from .comment import CommentGroup
-from .diagnostic import Diagnostic, RuleMeta, Severity
+from .diagnostic import Diagnostic, RuleMetadata, Severity
 from .document import Document
 
 
@@ -28,28 +28,28 @@ class RuleSet:
     def settings_for(self, rule_id: str) -> RuleSettings:
         return self.settings.get(rule_id, RuleSettings())
 
-    def severity_for(self, meta: RuleMeta) -> Severity:
-        return self.settings_for(meta.rule_id).severity or meta.default_severity
+    def severity_for(self, metadata: RuleMetadata) -> Severity:
+        return self.settings_for(metadata.rule_id).severity or metadata.default_severity
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class RuleContext:
     document: Document
-    rules: RuleSet
+    rule_set: RuleSet
 
     @property
     def line_width(self) -> int:
-        return self.rules.line_width
+        return self.rule_set.line_width
 
     def settings(self, rule_id: str) -> RuleSettings:
-        return self.rules.settings_for(rule_id)
+        return self.rule_set.settings_for(rule_id)
 
 
 class Rule(typing.Protocol):
     @property
-    def meta(self) -> RuleMeta: ...
+    def metadata(self) -> RuleMetadata: ...
 
-    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]: ...
+    def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]: ...
 
 
 class ConfigSource(typing.Protocol):

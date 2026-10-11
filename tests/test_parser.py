@@ -10,7 +10,7 @@ def parse(source: str) -> tuple[CommentGroup, ...]:
 
 
 def prose_of(source: str) -> list[str]:
-    return [block.prose().flattened for block in parse(source)]
+    return [group.prose().flattened for group in parse(source)]
 
 
 def test_an_unsupported_language_yields_nothing() -> None:
@@ -108,10 +108,10 @@ def test_visibility_follows_the_leading_underscore() -> None:
 
 
 def test_a_class_docstring_attaches_to_the_class() -> None:
-    block = parse('class Widget:\n    """Doc."""\n')[0]
-    assert block.attachment is not None
-    assert block.attachment.kind is SymbolKind.CLASS
-    assert block.attachment.name == 'Widget'
+    group = parse('class Widget:\n    """Doc."""\n')[0]
+    assert group.attachment is not None
+    assert group.attachment.kind is SymbolKind.CLASS
+    assert group.attachment.name == 'Widget'
 
 
 def test_form_distinguishes_docstrings_from_hash_comments() -> None:
@@ -120,9 +120,9 @@ def test_form_distinguishes_docstrings_from_hash_comments() -> None:
 
 
 def test_a_multiline_docstring_keeps_every_physical_line() -> None:
-    block = parse('def f():\n    """Summary.\n\n    Detail here.\n    """\n')[0]
-    assert block.line_count == 4
-    assert block.prose().flattened == 'Summary. Detail here.'
+    group = parse('def f():\n    """Summary.\n\n    Detail here.\n    """\n')[0]
+    assert group.line_count == 4
+    assert group.prose().flattened == 'Summary. Detail here.'
 
 
 def test_a_prefixed_docstring_delimiter_is_stripped() -> None:
@@ -150,13 +150,13 @@ def test_physical_width_counts_indent_and_marker() -> None:
 )
 def test_every_block_range_reproduces_its_rendering(source: str) -> None:
     data = source.encode('utf-8')
-    for block in parse(source):
-        assert data[block.range.start : block.range.end].decode('utf-8') == block.render()
+    for group in parse(source):
+        assert data[group.range.start : group.range.end].decode('utf-8') == group.render()
 
 
 def test_blocks_come_back_in_source_order() -> None:
     source = '"""Header."""\n# middle\ndef f():\n    """Doc."""\n'
-    starts = [block.range.start for block in parse(source)]
+    starts = [group.range.start for group in parse(source)]
     assert starts == sorted(starts)
 
 
@@ -183,21 +183,21 @@ def test_the_profile_satisfies_the_language_profile_port() -> None:
     ],
 )
 def test_a_decorated_declaration_still_resolves_its_name(source: str, expected: str) -> None:
-    block = parse(source)[0]
-    assert block.attachment is not None
-    assert block.attachment.name == expected
+    group = parse(source)[0]
+    assert group.attachment is not None
+    assert group.attachment.name == expected
 
 
 def test_a_decorated_class_is_still_a_class() -> None:
-    block = parse('# note\n@dataclass\nclass Widget:\n    pass\n')[0]
-    assert block.attachment is not None
-    assert block.attachment.kind is SymbolKind.CLASS
+    group = parse('# note\n@dataclass\nclass Widget:\n    pass\n')[0]
+    assert group.attachment is not None
+    assert group.attachment.kind is SymbolKind.CLASS
 
 
 def test_a_decorated_private_function_is_still_internal() -> None:
-    block = parse('# note\n@cache\ndef _helper():\n    pass\n')[0]
-    assert block.attachment is not None
-    assert block.attachment.visibility is Visibility.INTERNAL
+    group = parse('# note\n@cache\ndef _helper():\n    pass\n')[0]
+    assert group.attachment is not None
+    assert group.attachment.visibility is Visibility.INTERNAL
 
 
 @pytest.mark.parametrize(
@@ -211,9 +211,9 @@ def test_a_decorated_private_function_is_still_internal() -> None:
     ],
 )
 def test_a_leading_declaration_comment_always_names_what_it_documents(source: str) -> None:
-    block = parse(source)[0]
-    assert block.placement is CommentPlacement.LEADING_DECLARATION
-    assert block.attachment is not None, 'leading-declaration without an attachment silently disables rules'
+    group = parse(source)[0]
+    assert group.placement is CommentPlacement.LEADING_DECLARATION
+    assert group.attachment is not None, 'leading-declaration without an attachment silently disables rules'
 
 
 def test_a_trailing_comment_never_documents_the_declaration_below_it() -> None:

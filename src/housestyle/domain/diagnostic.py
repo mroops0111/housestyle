@@ -46,7 +46,7 @@ class Fix:
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class RuleMeta:
+class RuleMetadata:
     rule_id: str
     summary: str
     fix_kind: FixKind

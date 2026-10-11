@@ -6,14 +6,14 @@ from .rules import ALL_RULES, LAYOUT_RULES, REWRITE_RULES
 
 
 DEFAULT_PARSER = TreeSitterParser((PYTHON,))
-DEFAULT_CONFIG = TomlConfigSource(tuple(rule.meta.rule_id for rule in ALL_RULES))
+DEFAULT_CONFIG_SOURCE = TomlConfigSource(tuple(rule.metadata.rule_id for rule in ALL_RULES))
 
 EXTERNAL_LINTERS = (ValeAdapter(), AutoCorrectAdapter())
 
 __all__ = [
     'ALL_RULES',
     'CONFIG_NAME',
-    'DEFAULT_CONFIG',
+    'DEFAULT_CONFIG_SOURCE',
     'DEFAULT_PARSER',
     'EXTERNAL_LINTERS',
     'LAYOUT_RULES',

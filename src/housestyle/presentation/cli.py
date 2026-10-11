@@ -8,7 +8,7 @@ import typer
 from .. import __version__
 from ..application import AggregateReport, CorpusStatistics, FixDocument, LintDocument, MeasureCorpus, RuleEngine
 from ..domain.document import Document
-from ..infrastructure import ALL_RULES, DEFAULT_CONFIG, DEFAULT_PARSER, EXTERNAL_LINTERS, PYTHON
+from ..infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, EXTERNAL_LINTERS, PYTHON
 from . import docs as rule_docs
 from . import report as reporters
 
@@ -39,7 +39,7 @@ def check(
     aggregator = _build_aggregate_report(delegate)
     finding_count = 0
     for document in documents:
-        report = aggregator.run(document, DEFAULT_CONFIG.resolve(_file_path(document)))
+        report = aggregator.run(document, DEFAULT_CONFIG_SOURCE.resolve(_file_path(document)))
         finding_count += len(report.diagnostics)
         rendered_report = formatter(document, report)
         if rendered_report:
@@ -59,7 +59,7 @@ def fix(
     changed_file_count = 0
     unresolved_finding_count = 0
     for document in documents:
-        fix_result = fixer.run(document, DEFAULT_CONFIG.resolve(_file_path(document)))
+        fix_result = fixer.run(document, DEFAULT_CONFIG_SOURCE.resolve(_file_path(document)))
         unresolved_finding_count += len(fix_result.unresolved_findings)
         if fix_result.has_changes:
             changed_file_count += 1
@@ -117,8 +117,10 @@ def _load(paths: tuple[pathlib.Path, ...]) -> tuple[Document, ...]:
             source_paths.append(path)
     documents: list[Document] = []
     for source_path in source_paths:
-        root = DEFAULT_CONFIG.root_for(str(source_path))
-        if DEFAULT_CONFIG.is_excluded(source_path, root, DEFAULT_CONFIG.excludes(str(source_path))):
+        root = DEFAULT_CONFIG_SOURCE.root_for(str(source_path))
+        if DEFAULT_CONFIG_SOURCE.is_excluded(
+            source_path, root, DEFAULT_CONFIG_SOURCE.exclude_patterns(str(source_path))
+        ):
             continue
         try:
             text = source_path.read_text(encoding='utf-8')
@@ -164,12 +166,17 @@ def _render(statistics: CorpusStatistics) -> str:
         + ' '.join(f'p{int(fraction * 100):<3d}' for fraction in PERCENTILES)
         + '  max'
     )
-    lines = [f'{statistics.documents} documents, {statistics.blocks} comment blocks', '', 'block line counts', heading]
+    lines = [
+        f'{statistics.document_count} documents, {statistics.group_count} comment blocks',
+        '',
+        'block line counts',
+        heading,
+    ]
     lines.extend(_row(distribution.label, distribution) for distribution in statistics.line_counts)
     for distribution in (statistics.physical_widths, statistics.sentence_lengths):
         lines.extend(['', distribution.label, _row('', distribution)])
     lines.extend(['', 'sentences over width with no comma to break at'])
-    for width, sentence_count in statistics.unbreakable_at:
+    for width, sentence_count in statistics.unbreakable_counts_by_width:
         percentage = (
             sentence_count / statistics.sentence_lengths.count * 100 if statistics.sentence_lengths.count else 0.0
         )

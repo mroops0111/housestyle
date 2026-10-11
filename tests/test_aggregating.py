@@ -8,7 +8,7 @@ from housestyle.domain import Diagnostic, Document, Fix, FixKind, RuleSet, Sourc
 from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER, AutoCorrectAdapter, ValeAdapter
 
 
-ENABLED = frozenset(rule.meta.rule_id for rule in ALL_RULES)
+ENABLED = frozenset(rule.metadata.rule_id for rule in ALL_RULES)
 MIS_WRAPPED = (
     'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n'
 )

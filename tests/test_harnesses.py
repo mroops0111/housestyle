@@ -7,7 +7,7 @@ from housestyle.presentation.harnesses import (
     ALL_HARNESSES,
     ClaudeCodeHarness,
     CodexHarness,
-    HarnessMeta,
+    HarnessMetadata,
     resolve,
 )
 
@@ -22,7 +22,7 @@ def source(tmp_path: pathlib.Path) -> pathlib.Path:
 def name_of(payload: typing.Mapping[str, object]) -> str:
     resolved = resolve(payload)
     assert resolved is not None, 'no harness recognised the payload'
-    return resolved[0].meta.name
+    return resolved[0].metadata.name
 
 
 def edited_files_of(payload: typing.Mapping[str, object]) -> tuple[pathlib.Path, ...]:
@@ -93,20 +93,20 @@ def test_the_same_path_named_twice_is_visited_once(source: pathlib.Path) -> None
 
 def test_every_harness_describes_itself() -> None:
     for harness in ALL_HARNESSES:
-        assert harness.meta.summary
-        assert harness.meta.example
+        assert harness.metadata.summary
+        assert harness.metadata.example
 
 
 def test_each_example_is_recognised_by_the_harness_that_published_it() -> None:
     for harness in ALL_HARNESSES:
-        assert name_of(harness.meta.example) == harness.meta.name, (
+        assert name_of(harness.metadata.example) == harness.metadata.name, (
             'a published example nobody feeds back is documentation that can rot'
         )
 
 
 def test_a_harness_must_name_itself() -> None:
     with pytest.raises(ValueError, match='names itself'):
-        HarnessMeta(name='', summary='something', example={})
+        HarnessMetadata(name='', summary='something', example={})
 
 
 def test_the_registry_holds_both_agents() -> None:

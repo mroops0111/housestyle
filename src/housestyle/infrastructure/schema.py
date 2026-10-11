@@ -25,7 +25,7 @@ class RuleTable(pydantic.BaseModel):
 RuleEntry = typing.Annotated[bool | str | RuleTable, pydantic.Field(union_mode='left_to_right')]
 
 
-class ProjectSection(pydantic.BaseModel):
+class HousestyleSection(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(frozen=True, populate_by_name=True)
 
     line_width: int = pydantic.Field(default=120, alias='line-width', gt=0)
@@ -35,7 +35,7 @@ class ProjectSection(pydantic.BaseModel):
 class ConfigFile(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(frozen=True)
 
-    housestyle: ProjectSection = pydantic.Field(default_factory=ProjectSection)
+    housestyle: HousestyleSection = pydantic.Field(default_factory=HousestyleSection)
     rules: dict[str, RuleEntry] = pydantic.Field(default_factory=dict)
 
     @classmethod

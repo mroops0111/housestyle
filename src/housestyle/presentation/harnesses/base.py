@@ -11,7 +11,7 @@ Payload = typing.Mapping[str, object]
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class HarnessMeta:
+class HarnessMetadata:
     name: str
     summary: str
     example: Payload
@@ -22,7 +22,7 @@ class HarnessMeta:
 
 
 class AgentHarness(typing.Protocol):
-    meta: HarnessMeta
+    metadata: HarnessMetadata
 
     def edited_files(self, payload: Payload) -> tuple[pathlib.Path, ...] | None:
         """Return the files this payload edited, or None when it came from another agent.

@@ -10,8 +10,8 @@ class AggregateReport:
         self._lint = lint
         self._linters = linters
 
-    def run(self, document: Document, rules: RuleSet) -> Report:
-        report = self._lint.run(document, rules)
+    def run(self, document: Document, rule_set: RuleSet) -> Report:
+        report = self._lint.run(document, rule_set)
         missing_sources: list[str] = []
         for linter in self._linters:
             if not linter.is_available():

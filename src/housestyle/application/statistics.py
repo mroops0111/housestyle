@@ -33,12 +33,12 @@ class Distribution:
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class CorpusStatistics:
-    documents: int
-    blocks: int
+    document_count: int
+    group_count: int
     line_counts: tuple[Distribution, ...]
     physical_widths: Distribution
     sentence_lengths: Distribution
-    unbreakable_at: tuple[tuple[int, int], ...]
+    unbreakable_counts_by_width: tuple[tuple[int, int], ...]
 
 
 class MeasureCorpus:
@@ -65,14 +65,14 @@ class MeasureCorpus:
                             unbreakable_counts[width] += 1
 
         return CorpusStatistics(
-            documents=len(documents),
-            blocks=group_count,
+            document_count=len(documents),
+            group_count=group_count,
             line_counts=tuple(
                 Distribution(label, tuple(measurements)) for label, measurements in sorted(grouped_line_counts.items())
             ),
             physical_widths=Distribution('physical-width', tuple(physical_widths)),
             sentence_lengths=Distribution('sentence-length', tuple(sentence_lengths)),
-            unbreakable_at=tuple(sorted(unbreakable_counts.items())),
+            unbreakable_counts_by_width=tuple(sorted(unbreakable_counts.items())),
         )
 
     def _label_for(self, group: CommentGroup) -> str:

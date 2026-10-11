@@ -4,7 +4,7 @@ import pytest
 
 from housestyle.application import LintDocument, RuleEngine
 from housestyle.domain import Document, RuleSet
-from housestyle.infrastructure import ALL_RULES, DEFAULT_CONFIG, DEFAULT_PARSER, PYTHON
+from housestyle.infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, PYTHON
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -14,7 +14,7 @@ SOURCE_ROOT = REPO_ROOT / 'src'
 def lint_text(text: str, rules: RuleSet | None = None):
     document = Document(uri='file:///probe.py', text=text, language_id=PYTHON.language_id)
     engine = RuleEngine(ALL_RULES)
-    return LintDocument(DEFAULT_PARSER, engine).run(document, rules or DEFAULT_CONFIG.resolve(str(SOURCE_ROOT)))
+    return LintDocument(DEFAULT_PARSER, engine).run(document, rules or DEFAULT_CONFIG_SOURCE.resolve(str(SOURCE_ROOT)))
 
 
 def source_files() -> list[pathlib.Path]:
@@ -38,7 +38,7 @@ def test_the_project_carries_comments_worth_checking() -> None:
 
 
 def test_housestyle_lints_itself_clean() -> None:
-    rules = DEFAULT_CONFIG.resolve(str(SOURCE_ROOT))
+    rules = DEFAULT_CONFIG_SOURCE.resolve(str(SOURCE_ROOT))
     engine = RuleEngine(ALL_RULES)
     lint = LintDocument(DEFAULT_PARSER, engine)
 
@@ -69,13 +69,13 @@ def test_housestyle_lints_itself_clean() -> None:
     ],
 )
 def test_the_self_hosting_check_has_teeth(probe: str, expected: str) -> None:
-    rules = RuleSet(enabled_rule_ids=frozenset(rule.meta.rule_id for rule in ALL_RULES), line_width=60)
+    rules = RuleSet(enabled_rule_ids=frozenset(rule.metadata.rule_id for rule in ALL_RULES), line_width=60)
     assert expected in [item.rule_id for item in lint_text(probe, rules).diagnostics]
 
 
 def test_the_project_config_is_readable_and_enables_every_rule() -> None:
-    rules = DEFAULT_CONFIG.resolve(str(SOURCE_ROOT))
-    assert rules.enabled_rule_ids == frozenset(rule.meta.rule_id for rule in ALL_RULES)
+    rules = DEFAULT_CONFIG_SOURCE.resolve(str(SOURCE_ROOT))
+    assert rules.enabled_rule_ids == frozenset(rule.metadata.rule_id for rule in ALL_RULES)
     assert rules.line_width == 120
 
 
@@ -92,7 +92,7 @@ def test_every_rule_appears_in_the_reference() -> None:
     from housestyle.infrastructure import ALL_RULES
 
     reference = (REPO_ROOT / 'docs' / 'rules.md').read_text(encoding='utf-8')
-    missing = [rule.meta.rule_id for rule in ALL_RULES if f'`{rule.meta.rule_id}`' not in reference]
+    missing = [rule.metadata.rule_id for rule in ALL_RULES if f'`{rule.metadata.rule_id}`' not in reference]
     assert not missing, f'rules absent from the reference: {missing}'
 
 
@@ -110,10 +110,12 @@ def test_the_repository_installs_its_own_hook() -> None:
 
 
 def test_the_excluded_fixture_is_actually_excluded() -> None:
-    from housestyle.infrastructure import DEFAULT_CONFIG
+    from housestyle.infrastructure import DEFAULT_CONFIG_SOURCE
 
     fixture = REPO_ROOT / 'tests' / 'fixtures' / 'vale' / 'violations.py'
-    patterns = DEFAULT_CONFIG.excludes(str(fixture))
+    patterns = DEFAULT_CONFIG_SOURCE.exclude_patterns(str(fixture))
     assert patterns, 'the project config must declare an exclude for deliberate fixtures'
-    assert DEFAULT_CONFIG.is_excluded(fixture, REPO_ROOT, patterns)
-    assert not DEFAULT_CONFIG.is_excluded(REPO_ROOT / 'src' / 'housestyle' / 'domain' / 'prose.py', REPO_ROOT, patterns)
+    assert DEFAULT_CONFIG_SOURCE.is_excluded(fixture, REPO_ROOT, patterns)
+    assert not DEFAULT_CONFIG_SOURCE.is_excluded(
+        REPO_ROOT / 'src' / 'housestyle' / 'domain' / 'prose.py', REPO_ROOT, patterns
+    )

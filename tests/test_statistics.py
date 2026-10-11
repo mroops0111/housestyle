@@ -14,8 +14,8 @@ def measure(*sources: str):
 
 def test_an_empty_corpus_reports_nothing() -> None:
     report = measure()
-    assert report.documents == 0
-    assert report.blocks == 0
+    assert report.document_count == 0
+    assert report.group_count == 0
     assert report.physical_widths.count == 0
 
 
@@ -57,22 +57,22 @@ def test_an_unbreakable_sentence_is_one_that_is_long_with_no_comma() -> None:
     breakable = 'x = 1  # ' + 'word ' * 30 + 'and, a comma here.\n'
     unbreakable = 'y = 2  # ' + 'word ' * 30 + 'no comma at all.\n'
     report = measure(breakable, unbreakable)
-    counts = dict(report.unbreakable_at)
+    counts = dict(report.unbreakable_counts_by_width)
     assert counts[80] == 1
     assert counts[120] == 1
 
 
 def test_a_short_sentence_is_never_unbreakable() -> None:
     report = measure('# brief note.\n')
-    assert all(count == 0 for _, count in report.unbreakable_at)
+    assert all(count == 0 for _, count in report.unbreakable_counts_by_width)
 
 
 @pytest.mark.parametrize('width', [72, 80, 88, 100, 120])
 def test_every_configured_width_is_reported(width: int) -> None:
-    assert width in dict(measure('# note.\n').unbreakable_at)
+    assert width in dict(measure('# note.\n').unbreakable_counts_by_width)
 
 
 def test_unbreakable_counts_fall_as_the_width_rises() -> None:
     source = '# ' + 'word ' * 20 + 'without any comma.\n'
-    counts = [count for _, count in sorted(measure(source).unbreakable_at)]
+    counts = [count for _, count in sorted(measure(source).unbreakable_counts_by_width)]
     assert counts == sorted(counts, reverse=True)

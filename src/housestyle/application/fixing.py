@@ -31,11 +31,11 @@ class FixDocument:
         self._lint = lint
         self._max_rounds = max_rounds
 
-    def run(self, document: Document, rules: RuleSet) -> FixResult:
+    def run(self, document: Document, rule_set: RuleSet) -> FixResult:
         working_document = document
         applied_edit_count = 0
         round_count = 0
-        report = self._lint.run(working_document, rules)
+        report = self._lint.run(working_document, rule_set)
 
         while round_count < self._max_rounds:
             edits = self._next_edits(report)
@@ -44,7 +44,7 @@ class FixDocument:
             working_document = working_document.with_text(apply_edits(working_document.text, edits))
             applied_edit_count += len(edits)
             round_count += 1
-            report = self._lint.run(working_document, rules)
+            report = self._lint.run(working_document, rule_set)
 
         return FixResult(
             document=working_document, report=report, round_count=round_count, applied_edit_count=applied_edit_count

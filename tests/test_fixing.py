@@ -8,7 +8,7 @@ from housestyle.domain import (
     Fix,
     FixKind,
     RuleContext,
-    RuleMeta,
+    RuleMetadata,
     RuleSet,
     SourceRange,
     TextEdit,
@@ -85,30 +85,30 @@ def test_targeted_edits_run_before_reflow() -> None:
     order: list[str] = []
 
     class TargetedRule:
-        meta = RuleMeta(rule_id='targeted', summary='t', fix_kind=FixKind.TARGETED)
+        metadata = RuleMetadata(rule_id='targeted', summary='t', fix_kind=FixKind.TARGETED)
 
-        def check(self, block: CommentGroup, context: RuleContext):
+        def check(self, group: CommentGroup, context: RuleContext):
             order.append('targeted')
-            if '!' in block.render():
+            if '!' in group.render():
                 return
-            start = block.lines[0].range.start + len(block.lines[0].indent + block.lines[0].delimiter)
+            start = group.lines[0].range.start + len(group.lines[0].indent + group.lines[0].delimiter)
             yield Diagnostic(
                 rule_id='targeted',
-                range=block.range,
+                range=group.range,
                 message='insert a delimiter',
                 fix=Fix.targeted(TextEdit(SourceRange(start, start), '!')),
             )
 
     class ReflowRule:
-        meta = RuleMeta(rule_id='reflowing', summary='r', fix_kind=FixKind.REFLOW)
+        metadata = RuleMetadata(rule_id='reflowing', summary='r', fix_kind=FixKind.REFLOW)
 
-        def check(self, block: CommentGroup, context: RuleContext):
+        def check(self, group: CommentGroup, context: RuleContext):
             order.append('reflow')
-            reflowed = block.reflow(context.line_width)
-            if reflowed.render() != block.render():
+            reflowed = group.reflow(context.line_width)
+            if reflowed.render() != group.render():
                 yield Diagnostic(
                     rule_id='reflowing',
-                    range=block.range,
+                    range=group.range,
                     message='reflow',
                     fix=Fix.reflow(reflowed.as_edit()),
                 )
@@ -124,21 +124,21 @@ def test_targeted_edits_run_before_reflow() -> None:
 
 def test_overlapping_edits_are_deferred_rather_than_dropped() -> None:
     class DoubleRule:
-        meta = RuleMeta(rule_id='double', summary='d', fix_kind=FixKind.TARGETED)
+        metadata = RuleMetadata(rule_id='double', summary='d', fix_kind=FixKind.TARGETED)
 
-        def check(self, block: CommentGroup, context: RuleContext):
-            if block.render().count('!') >= 2:
+        def check(self, group: CommentGroup, context: RuleContext):
+            if group.render().count('!') >= 2:
                 return
-            start = block.range.start
+            start = group.range.start
             yield Diagnostic(
                 rule_id='double',
-                range=block.range,
+                range=group.range,
                 message='first',
                 fix=Fix.targeted(TextEdit(SourceRange(start, start), '!')),
             )
             yield Diagnostic(
                 rule_id='double',
-                range=block.range,
+                range=group.range,
                 message='second',
                 fix=Fix.targeted(TextEdit(SourceRange(start, start + 1), '!x')),
             )

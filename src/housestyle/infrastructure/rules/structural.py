@@ -1,24 +1,24 @@
 import typing
 
 from ...domain.comment import CommentForm, CommentGroup, CommentPlacement
-from ...domain.diagnostic import Diagnostic, Fix, FixKind, RuleMeta
+from ...domain.diagnostic import Diagnostic, Fix, FixKind, RuleMetadata
 from ...domain.rules import RuleContext
 from ..languages.base import LanguageConventions
 
 
-FILE_HEADER_COMMENT = RuleMeta(
+FILE_HEADER_COMMENT = RuleMetadata(
     rule_id='file-header-comment',
     summary='A file must not open with a banner comment before its first declaration.',
     fix_kind=FixKind.REWRITE,
 )
 
-PLAIN_COMMENT_ON_PUBLIC = RuleMeta(
+PLAIN_COMMENT_ON_PUBLIC = RuleMetadata(
     rule_id='plain-comment-on-public',
     summary='A public symbol must be documented in the doc comment form its language renders.',
     fix_kind=FixKind.REWRITE,
 )
 
-SIGNATURE_RESTATING_TAG = RuleMeta(
+SIGNATURE_RESTATING_TAG = RuleMetadata(
     rule_id='signature-restating-tag',
     summary='A doc comment must not restate what the type signature already carries.',
     fix_kind=FixKind.REWRITE,
@@ -26,14 +26,14 @@ SIGNATURE_RESTATING_TAG = RuleMeta(
 
 
 class FileHeaderCommentRule:
-    meta = FILE_HEADER_COMMENT
+    metadata = FILE_HEADER_COMMENT
 
-    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
-        if block.placement is not CommentPlacement.FILE_HEADER:
+    def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
+        if group.placement is not CommentPlacement.FILE_HEADER:
             return
         yield Diagnostic(
-            rule_id=self.meta.rule_id,
-            range=block.range,
+            rule_id=self.metadata.rule_id,
+            range=group.range,
             message=(
                 'This comment opens the file before any declaration. '
                 'A reader has the file, not a banner about it, so delete it. '
@@ -46,18 +46,18 @@ class FileHeaderCommentRule:
 class PlainCommentOnPublicRule:
     def __init__(self, conventions: LanguageConventions) -> None:
         self._conventions = conventions
-        self.meta = PLAIN_COMMENT_ON_PUBLIC
+        self.metadata = PLAIN_COMMENT_ON_PUBLIC
 
-    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
-        if not block.attaches_to_public_symbol or block.form is CommentForm.DOC:
+    def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
+        if not group.attaches_to_public_symbol or group.form is CommentForm.DOC:
             return
-        if block.placement is not CommentPlacement.LEADING_DECLARATION:
+        if group.placement is not CommentPlacement.LEADING_DECLARATION:
             return
         delimiter = self._conventions.doc_delimiter
-        name = block.attachment.name if block.attachment else 'the symbol'
+        name = group.attachment.name if group.attachment else 'the symbol'
         yield Diagnostic(
-            rule_id=self.meta.rule_id,
-            range=block.range,
+            rule_id=self.metadata.rule_id,
+            range=group.range,
             message=(
                 f'{name} is public but documented with a plain comment. '
                 f'Move the text into a {delimiter} doc comment so tooling renders it on hover.'
@@ -69,18 +69,18 @@ class PlainCommentOnPublicRule:
 class SignatureRestatingTagRule:
     def __init__(self, conventions: LanguageConventions) -> None:
         self._conventions = conventions
-        self.meta = SIGNATURE_RESTATING_TAG
+        self.metadata = SIGNATURE_RESTATING_TAG
 
-    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
-        if block.form is not CommentForm.DOC:
+    def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
+        if group.form is not CommentForm.DOC:
             return
-        for line in block.lines:
+        for line in group.lines:
             matched_tag = self._first_matching_tag(line.text)
             if matched_tag is None:
                 continue
             yield Diagnostic(
-                rule_id=self.meta.rule_id,
-                range=block.range,
+                rule_id=self.metadata.rule_id,
+                range=group.range,
                 message=(
                     f'The tag "{matched_tag}" restates the signature, which the annotations already carry. '
                     'Delete the tag and its block. '
@@ -98,7 +98,7 @@ class SignatureRestatingTagRule:
         return None
 
 
-BLOCK_TOO_LONG = RuleMeta(
+BLOCK_TOO_LONG = RuleMetadata(
     rule_id='block-too-long',
     summary='A comment block long enough to restate the code has stopped earning its place.',
     fix_kind=FixKind.REWRITE,
@@ -114,25 +114,25 @@ DEFAULT_LIMITS = {
 
 
 class BlockTooLongRule:
-    meta = BLOCK_TOO_LONG
+    metadata = BLOCK_TOO_LONG
 
-    def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
-        category = self._category(block)
-        limit = context.settings(self.meta.rule_id).integer(category, DEFAULT_LIMITS[category])
-        if block.line_count <= limit:
+    def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
+        category = self._category(group)
+        limit = context.settings(self.metadata.rule_id).integer(category, DEFAULT_LIMITS[category])
+        if group.line_count <= limit:
             return
         yield Diagnostic(
-            rule_id=self.meta.rule_id,
-            range=block.range,
+            rule_id=self.metadata.rule_id,
+            range=group.range,
             message=(
-                f'This comment runs to {block.line_count} lines against a {limit} line limit for {category} '
+                f'This comment runs to {group.line_count} lines against a {limit} line limit for {category} '
                 'comments. A comment earns its place by stating one constraint the code cannot show. '
                 'Cut it to that constraint, or move the explanation into a name.'
             ),
             fix=Fix.rewrite(),
         )
 
-    def _category(self, block: CommentGroup) -> str:
-        if block.form is not CommentForm.DOC:
+    def _category(self, group: CommentGroup) -> str:
+        if group.form is not CommentForm.DOC:
             return 'line'
-        return 'doc-public' if block.attaches_to_public_symbol else 'doc-internal'
+        return 'doc-public' if group.attaches_to_public_symbol else 'doc-internal'

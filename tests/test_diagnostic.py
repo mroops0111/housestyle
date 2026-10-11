@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.domain import Diagnostic, Fix, FixKind, Report, RuleMeta, Severity, SourceRange, TextEdit
+from housestyle.domain import Diagnostic, Fix, FixKind, Report, RuleMetadata, Severity, SourceRange, TextEdit
 
 
 def edit(start: int = 0, end: int = 1, new_text: str = 'x') -> TextEdit:
@@ -51,13 +51,13 @@ def test_an_empty_message_is_rejected() -> None:
 
 def test_a_rule_needs_an_id() -> None:
     with pytest.raises(ValueError, match='needs an id'):
-        RuleMeta(rule_id='', summary='s', fix_kind=FixKind.REFLOW)
+        RuleMetadata(rule_id='', summary='s', fix_kind=FixKind.REFLOW)
 
 
 def test_rule_meta_defaults_to_error() -> None:
-    meta = RuleMeta(rule_id='mid-clause-break', summary='s', fix_kind=FixKind.REFLOW)
-    assert meta.default_severity is Severity.ERROR
-    assert meta.source == 'housestyle'
+    metadata = RuleMetadata(rule_id='mid-clause-break', summary='s', fix_kind=FixKind.REFLOW)
+    assert metadata.default_severity is Severity.ERROR
+    assert metadata.source == 'housestyle'
 
 
 def test_report_partitions_by_who_can_fix() -> None:

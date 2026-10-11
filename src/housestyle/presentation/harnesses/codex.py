@@ -2,12 +2,12 @@ import pathlib
 import re
 import typing
 
-from .base import HarnessMeta, Payload, existing_source_files
+from .base import HarnessMetadata, Payload, existing_source_files
 
 
 EDIT_TOOLS = frozenset({'apply_patch'})
 
-CODEX = HarnessMeta(
+CODEX = HarnessMetadata(
     name='codex',
     summary='Codex sends a patch, and the path is read from its header.',
     example={'tool_name': 'apply_patch', 'tool_input': {'command': '*** Update File: src/module.py'}},
@@ -20,7 +20,7 @@ _STRIP_PREFIX = re.compile(r'^[ab]/')
 
 
 class CodexHarness:
-    meta = CODEX
+    metadata = CODEX
 
     def __init__(self, extensions: frozenset[str]) -> None:
         self._extensions = extensions

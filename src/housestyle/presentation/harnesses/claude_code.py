@@ -1,13 +1,13 @@
 import pathlib
 import typing
 
-from .base import HarnessMeta, Payload, existing_source_files
+from .base import HarnessMetadata, Payload, existing_source_files
 
 
 EDIT_TOOLS = frozenset({'Edit', 'Write', 'MultiEdit', 'NotebookEdit'})
 PATH_FIELDS = ('file_path', 'notebook_path')
 
-CLAUDE_CODE = HarnessMeta(
+CLAUDE_CODE = HarnessMetadata(
     name='claude-code',
     summary='Claude Code names the edited file in tool_input.',
     example={'tool_name': 'Edit', 'tool_input': {'file_path': 'src/module.py'}},
@@ -15,7 +15,7 @@ CLAUDE_CODE = HarnessMeta(
 
 
 class ClaudeCodeHarness:
-    meta = CLAUDE_CODE
+    metadata = CLAUDE_CODE
 
     def __init__(self, extensions: frozenset[str]) -> None:
         self._extensions = extensions

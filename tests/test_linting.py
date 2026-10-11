@@ -8,7 +8,7 @@ from housestyle.domain import (
     Fix,
     FixKind,
     RuleContext,
-    RuleMeta,
+    RuleMetadata,
     RuleSet,
     RuleSettings,
     Severity,
@@ -20,22 +20,22 @@ from housestyle.infrastructure import DEFAULT_PARSER
 
 class RecordingRule:
     def __init__(self, rule_id: str, fix_kind: FixKind = FixKind.REWRITE) -> None:
-        self.meta = RuleMeta(rule_id=rule_id, summary='test rule', fix_kind=fix_kind)
+        self.metadata = RuleMetadata(rule_id=rule_id, summary='test rule', fix_kind=fix_kind)
         self.seen: list[str] = []
 
-    def check(self, block: CommentGroup, context: RuleContext):
-        self.seen.append(block.prose().flattened)
+    def check(self, group: CommentGroup, context: RuleContext):
+        self.seen.append(group.prose().flattened)
         yield Diagnostic(
-            rule_id=self.meta.rule_id,
-            range=block.range,
-            message=f'{self.meta.rule_id} at width {context.line_width}',
+            rule_id=self.metadata.rule_id,
+            range=group.range,
+            message=f'{self.metadata.rule_id} at width {context.line_width}',
         )
 
 
 class SilentRule:
-    meta = RuleMeta(rule_id='silent', summary='never fires', fix_kind=FixKind.REWRITE)
+    metadata = RuleMetadata(rule_id='silent', summary='never fires', fix_kind=FixKind.REWRITE)
 
-    def check(self, block: CommentGroup, context: RuleContext):
+    def check(self, group: CommentGroup, context: RuleContext):
         return ()
 
 
@@ -122,13 +122,13 @@ def test_rule_settings_read_integer_options_defensively() -> None:
 
 def test_a_fix_kind_survives_the_engine() -> None:
     class FixingRule:
-        meta = RuleMeta(rule_id='fixer', summary='fixes', fix_kind=FixKind.TARGETED)
+        metadata = RuleMetadata(rule_id='fixer', summary='fixes', fix_kind=FixKind.TARGETED)
 
-        def check(self, block: CommentGroup, context: RuleContext):
-            edit = TextEdit(SourceRange(block.range.start, block.range.start), '!')
+        def check(self, group: CommentGroup, context: RuleContext):
+            edit = TextEdit(SourceRange(group.range.start, group.range.start), '!')
             yield Diagnostic(
                 rule_id='fixer',
-                range=block.range,
+                range=group.range,
                 message='fix me',
                 fix=Fix.targeted(edit),
             )

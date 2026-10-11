@@ -1,7 +1,7 @@
 import pathlib
 
 from ...infrastructure import PYTHON
-from .base import BLOCK_EXIT, AgentHarness, HarnessMeta, Payload
+from .base import BLOCK_EXIT, AgentHarness, HarnessMetadata, Payload
 from .claude_code import ClaudeCodeHarness
 from .codex import CodexHarness
 
@@ -34,7 +34,7 @@ __all__ = [
     'AgentHarness',
     'ClaudeCodeHarness',
     'CodexHarness',
-    'HarnessMeta',
+    'HarnessMetadata',
     'Payload',
     'resolve',
 ]

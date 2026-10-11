@@ -12,8 +12,8 @@ DEFAULT_WIDTH = 120
 
 
 class TomlConfigSource:
-    def __init__(self, available: tuple[str, ...]) -> None:
-        self._available = available
+    def __init__(self, available_rule_ids: tuple[str, ...]) -> None:
+        self._available_rule_ids = available_rule_ids
 
     def resolve(self, path: str) -> RuleSet:
         config_file = self._read(path)
@@ -22,9 +22,9 @@ class TomlConfigSource:
         return self._to_rule_set(config_file)
 
     def defaults(self) -> RuleSet:
-        return RuleSet(enabled_rule_ids=frozenset(self._available), line_width=DEFAULT_WIDTH)
+        return RuleSet(enabled_rule_ids=frozenset(self._available_rule_ids), line_width=DEFAULT_WIDTH)
 
-    def excludes(self, path: str) -> tuple[str, ...]:
+    def exclude_patterns(self, path: str) -> tuple[str, ...]:
         config_file = self._read(path)
         return config_file.housestyle.exclude if config_file else ()
 
@@ -82,11 +82,11 @@ class TomlConfigSource:
         return isinstance(tools, dict) and 'housestyle' in tools
 
     def _to_rule_set(self, config_file: ConfigFile) -> RuleSet:
-        enabled_ids = set(self._available)
+        enabled_ids = set(self._available_rule_ids)
         settings: dict[str, RuleSettings] = {}
 
         for rule_id, rule_entry in config_file.rules.items():
-            if rule_id not in self._available:
+            if rule_id not in self._available_rule_ids:
                 continue
             if rule_entry is False or rule_entry == 'off':
                 enabled_ids.discard(rule_id)
