@@ -137,7 +137,7 @@ class Prose:
         if not text:
             return ()
         protected = self._find_protected_spans(text)
-        segments: list[Sentence] = []
+        found_sentences: list[Sentence] = []
         start = 0
         for sentence_end in _SENTENCE_END.finditer(text):
             end = sentence_end.end()
@@ -145,13 +145,13 @@ class Prose:
                 continue
             if not self._terminates_a_sentence(text, sentence_end.start()):
                 continue
-            segments.append(Sentence(text[start:end].strip(), start))
+            found_sentences.append(Sentence(text[start:end].strip(), start))
             start = end
             while start < len(text) and text[start] == ' ':
                 start += 1
         if start < len(text):
-            segments.append(Sentence(text[start:].strip(), start))
-        return tuple(sentence for sentence in segments if sentence.text)
+            found_sentences.append(Sentence(text[start:].strip(), start))
+        return tuple(sentence for sentence in found_sentences if sentence.text)
 
     def break_candidates(self) -> tuple[BreakPoint, ...]:
         text = self.flattened
@@ -220,14 +220,14 @@ def _comma_pieces(sentence: str) -> tuple[str, ...]:
 
 def _pack(pieces: tuple[str, ...], width: int) -> tuple[str, ...]:
     lines: list[str] = []
-    current_lines = ''
+    current_line = ''
     for piece in pieces:
-        candidate = f'{current_lines} {piece}'.strip() if current_lines else piece
-        if current_lines and len(candidate) > width:
-            lines.append(current_lines)
-            current_lines = piece
+        candidate = f'{current_line} {piece}'.strip() if current_line else piece
+        if current_line and len(candidate) > width:
+            lines.append(current_line)
+            current_line = piece
         else:
-            current_lines = candidate
-    if current_lines:
-        lines.append(current_lines)
+            current_line = candidate
+    if current_line:
+        lines.append(current_line)
     return tuple(lines)

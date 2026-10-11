@@ -7,16 +7,16 @@ from .base import HarnessMeta, Payload, existing_source_files
 
 EDIT_TOOLS = frozenset({'apply_patch'})
 
-# Codex carries no path field.
-# The patch body names each file in its header, so the path is read back out of the diff.
-_PATCH_HEADER = re.compile(r'^(?:\*\*\*\s+(?:Update|Add|Delete) File:|---|\+\+\+)\s+(.+?)\s*$', re.MULTILINE)
-_STRIP_PREFIX = re.compile(r'^[ab]/')
-
 CODEX = HarnessMeta(
     name='codex',
     summary='Codex sends a patch, and the path is read from its header.',
     example={'tool_name': 'apply_patch', 'tool_input': {'command': '*** Update File: src/module.py'}},
 )
+
+# Codex carries no path field.
+# The patch body names each file in its header, so the path is read back out of the diff.
+_PATCH_HEADER = re.compile(r'^(?:\*\*\*\s+(?:Update|Add|Delete) File:|---|\+\+\+)\s+(.+?)\s*$', re.MULTILINE)
+_STRIP_PREFIX = re.compile(r'^[ab]/')
 
 
 class CodexHarness:

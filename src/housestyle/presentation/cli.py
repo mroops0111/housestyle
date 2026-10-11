@@ -15,12 +15,95 @@ from . import report as reporters
 
 app = typer.Typer(add_completion=False, help='A linter and formatter for the prose inside code comments.')
 
-PERCENTILES = (0.5, 0.75, 0.9, 0.95, 0.99)
 FORMATTERS = {
     'full': reporters.full,
     'actionable': reporters.actionable,
     'json': reporters.as_json,
 }
+PERCENTILES = (0.5, 0.75, 0.9, 0.95, 0.99)
+
+
+@app.command()
+def check(
+    paths: list[pathlib.Path] = typer.Argument(..., help='Files or directories to check.'),
+    output: str = typer.Option('full', '--output', help='full, actionable, or json.'),
+    delegate: bool = typer.Option(True, '--delegate/--no-delegate', help='Also run Vale and AutoCorrect.'),
+) -> None:
+    documents = _load(tuple(paths))
+    _require(documents)
+    formatter = FORMATTERS.get(output)
+    if formatter is None:
+        typer.echo(f'Unknown output format {output!r}. Choose full, actionable, or json.', err=True)
+        raise typer.Exit(2)
+
+    aggregator = _build_aggregate_report(delegate)
+    finding_count = 0
+    for document in documents:
+        report = aggregator.run(document, DEFAULT_CONFIG.resolve(_file_path(document)))
+        finding_count += len(report.diagnostics)
+        rendered_report = formatter(document, report)
+        if rendered_report:
+            typer.echo(rendered_report)
+    raise typer.Exit(1 if finding_count else 0)
+
+
+@app.command()
+def fix(
+    paths: list[pathlib.Path] = typer.Argument(..., help='Files or directories to fix.'),
+    write: bool = typer.Option(False, '--write', help='Write changes instead of printing a diff.'),
+) -> None:
+    documents = _load(tuple(paths))
+    _require(documents)
+
+    fixer = FixDocument(_build_lint_document())
+    changed_file_count = 0
+    unresolved_finding_count = 0
+    for document in documents:
+        fix_result = fixer.run(document, DEFAULT_CONFIG.resolve(_file_path(document)))
+        unresolved_finding_count += len(fix_result.unresolved_findings)
+        if fix_result.has_changes:
+            changed_file_count += 1
+            if write:
+                pathlib.Path(_file_path(document)).write_text(fix_result.document.text, encoding='utf-8')
+            else:
+                typer.echo(_diff(document, fix_result.document))
+        if fix_result.unresolved_findings:
+            typer.echo(reporters.brief(fix_result.document, fix_result.report))
+
+    action_word = 'rewrote' if write else 'would rewrite'
+    typer.echo(
+        f'{action_word} {changed_file_count} of {len(documents)} files, {unresolved_finding_count} findings need an author.',
+        err=True,
+    )
+    raise typer.Exit(1 if unresolved_finding_count else 0)
+
+
+@app.command()
+def stats(paths: list[pathlib.Path] = typer.Argument(..., help='Files or directories to measure.')) -> None:
+    documents = _load(tuple(paths))
+    _require(documents)
+    typer.echo(_render(MeasureCorpus(DEFAULT_PARSER).run(documents)))
+
+
+@app.command()
+def rules(
+    destination: pathlib.Path = typer.Option(None, '--write', help='Write the generated table to this path.'),
+) -> None:
+    rule_table = rule_docs.render(ALL_RULES)
+    if destination is None:
+        typer.echo(rule_table, nl=False)
+        return
+    destination.write_text(rule_table, encoding='utf-8')
+
+
+@app.command()
+def version() -> None:
+    typer.echo(f'housestyle {__version__}')
+
+
+def main() -> int:
+    app()
+    return 0
 
 
 def _load(paths: tuple[pathlib.Path, ...]) -> tuple[Document, ...]:
@@ -45,104 +128,26 @@ def _load(paths: tuple[pathlib.Path, ...]) -> tuple[Document, ...]:
     return tuple(documents)
 
 
-def _lint_document() -> LintDocument:
-    return LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES))
-
-
-def _aggregate_report(delegate: bool) -> AggregateReport:
-    return AggregateReport(_lint_document(), EXTERNAL_LINTERS if delegate else ())
-
-
 def _require(documents: tuple[Document, ...]) -> None:
     if not documents:
-        typer.echo('No readable source source_paths found.', err=True)
+        typer.echo('No readable source files found.', err=True)
         raise typer.Exit(1)
 
 
-@app.command()
-def check(
-    paths: list[pathlib.Path] = typer.Argument(..., help='Files or directories to check.'),
-    output: str = typer.Option('full', '--output', help='full, actionable, or json.'),
-    delegate: bool = typer.Option(True, '--delegate/--no-delegate', help='Also run Vale and AutoCorrect.'),
-) -> None:
-    documents = _load(tuple(paths))
-    _require(documents)
-    formatter = FORMATTERS.get(output)
-    if formatter is None:
-        typer.echo(f'Unknown output format {output!r}. Choose full, actionable, or json.', err=True)
-        raise typer.Exit(2)
-
-    aggregator = _aggregate_report(delegate)
-    finding_count = 0
-    for document in documents:
-        report = aggregator.run(document, DEFAULT_CONFIG.resolve(_fspath(document)))
-        finding_count += len(report.diagnostics)
-        rendered_report = formatter(document, report)
-        if rendered_report:
-            typer.echo(rendered_report)
-    raise typer.Exit(1 if finding_count else 0)
+def _build_lint_document() -> LintDocument:
+    return LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES))
 
 
-@app.command()
-def fix(
-    paths: list[pathlib.Path] = typer.Argument(..., help='Files or directories to fix.'),
-    write: bool = typer.Option(False, '--write', help='Write changes instead of printing a diff.'),
-) -> None:
-    documents = _load(tuple(paths))
-    _require(documents)
-
-    fixer = FixDocument(_lint_document())
-    changed_count = 0
-    unresolved_count = 0
-    for document in documents:
-        outcome = fixer.run(document, DEFAULT_CONFIG.resolve(_fspath(document)))
-        unresolved_count += len(outcome.unresolved_findings)
-        if outcome.has_changes:
-            changed_count += 1
-            if write:
-                pathlib.Path(_fspath(document)).write_text(outcome.document.text, encoding='utf-8')
-            else:
-                typer.echo(_diff(document, outcome.document))
-        if outcome.unresolved_findings:
-            typer.echo(reporters.brief(outcome.document, outcome.report))
-
-    action_word = 'rewrote' if write else 'would rewrite'
-    typer.echo(
-        f'{action_word} {changed_count} of {len(documents)} source_paths, {unresolved_count} finding_count need an author.',
-        err=True,
-    )
-    raise typer.Exit(1 if unresolved_count else 0)
+def _build_aggregate_report(delegate: bool) -> AggregateReport:
+    return AggregateReport(_build_lint_document(), EXTERNAL_LINTERS if delegate else ())
 
 
-@app.command()
-def stats(paths: list[pathlib.Path] = typer.Argument(..., help='Files or directories to measure.')) -> None:
-    documents = _load(tuple(paths))
-    _require(documents)
-    typer.echo(_render(MeasureCorpus(DEFAULT_PARSER).run(documents)))
-
-
-@app.command()
-def rules(
-    write: pathlib.Path = typer.Option(None, '--write', help='Write the generated table to this path.'),
-) -> None:
-    rendered_report = rule_docs.render(ALL_RULES)
-    if write is None:
-        typer.echo(rendered_report, nl=False)
-        return
-    write.write_text(rendered_report, encoding='utf-8')
-
-
-@app.command()
-def version() -> None:
-    typer.echo(f'housestyle {__version__}')
-
-
-def _fspath(document: Document) -> str:
+def _file_path(document: Document) -> str:
     return document.uri.removeprefix('file://')
 
 
 def _diff(before: Document, after: Document) -> str:
-    path = _fspath(before)
+    path = _file_path(before)
     return ''.join(
         difflib.unified_diff(
             before.text.splitlines(keepends=True),
@@ -153,31 +158,28 @@ def _diff(before: Document, after: Document) -> str:
     ).rstrip()
 
 
-def _render(report: CorpusStatistics) -> str:
+def _render(statistics: CorpusStatistics) -> str:
     heading = (
         f'{"group":24s} {"n":>6s} {"med":>5s} '
         + ' '.join(f'p{int(fraction * 100):<3d}' for fraction in PERCENTILES)
         + '  max'
     )
-    lines = [f'{report.documents} documents, {report.blocks} comment blocks', '', 'block line counts', heading]
-    lines.extend(_row(distribution.label, distribution) for distribution in report.line_counts)
-    for distribution in (report.physical_widths, report.sentence_lengths):
+    lines = [f'{statistics.documents} documents, {statistics.blocks} comment blocks', '', 'block line counts', heading]
+    lines.extend(_row(distribution.label, distribution) for distribution in statistics.line_counts)
+    for distribution in (statistics.physical_widths, statistics.sentence_lengths):
         lines.extend(['', distribution.label, _row('', distribution)])
     lines.extend(['', 'sentences over width with no comma to break at'])
-    for width, count in report.unbreakable_at:
-        share = count / report.sentence_lengths.count * 100 if report.sentence_lengths.count else 0.0
-        lines.append(f'  width {width:3d}  {count:5d} sentences  {share:5.2f}%')
+    for width, sentence_count in statistics.unbreakable_at:
+        percentage = (
+            sentence_count / statistics.sentence_lengths.count * 100 if statistics.sentence_lengths.count else 0.0
+        )
+        lines.append(f'  width {width:3d}  {sentence_count:5d} sentences  {percentage:5.2f}%')
     return '\n'.join(lines)
 
 
 def _row(label: str, distribution: typing.Any) -> str:
     cells = ' '.join(f'{distribution.percentile(fraction):<4d}' for fraction in PERCENTILES)
     return f'{label:24s} {distribution.count:6d} {distribution.median:5d} {cells} {distribution.maximum:4d}'
-
-
-def main() -> int:
-    app()
-    return 0
 
 
 if __name__ == '__main__':

@@ -91,11 +91,11 @@ class CommentGroup:
     def prose(self) -> Prose:
         filled_lines = [line for line in self.lines if line.text.strip()]
         base = min((len(line.indent) for line in filled_lines), default=0)
-        render = [
+        rendered_lines = [
             ' ' * max(0, len(line.indent) - base) + line.text.rstrip() if line.text.strip() else ''
             for line in self.lines
         ]
-        return Prose('\n'.join(render))
+        return Prose('\n'.join(rendered_lines))
 
     def reflow(self, width: int) -> 'CommentGroup':
         texts = self._reflow_into_texts(width)

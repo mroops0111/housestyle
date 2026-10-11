@@ -48,9 +48,9 @@ class SourceRange:
 class PositionMap:
     def __init__(self, text: str) -> None:
         self._text = text
-        self._data = text.encode('utf-8')
+        self._encoded_text = text.encode('utf-8')
         starts = [0]
-        for index, byte in enumerate(self._data):
+        for index, byte in enumerate(self._encoded_text):
             if byte == 0x0A:
                 starts.append(index + 1)
         self._line_starts = starts
@@ -64,27 +64,27 @@ class PositionMap:
         start = self._line_starts[line]
         if line + 1 < len(self._line_starts):
             end = self._line_starts[line + 1] - 1
-            if end > start and self._data[end - 1] == 0x0D:
+            if end > start and self._encoded_text[end - 1] == 0x0D:
                 end -= 1
         else:
-            end = len(self._data)
+            end = len(self._encoded_text)
         return SourceRange(start, end)
 
     def line_text(self, line: int) -> str:
         span = self.line_range(line)
-        return self._data[span.start : span.end].decode('utf-8')
+        return self._encoded_text[span.start : span.end].decode('utf-8')
 
     def to_position(self, offset: int, encoding: Encoding = Encoding.UTF16) -> Position:
         self._require_offset(offset)
         line = bisect.bisect_right(self._line_starts, offset) - 1
         span = self.line_range(line)
-        prefix = self._data[span.start : min(offset, span.end)].decode('utf-8')
+        prefix = self._encoded_text[span.start : min(offset, span.end)].decode('utf-8')
         return Position(line, self._measure(prefix, encoding))
 
     def to_offset(self, position: Position, encoding: Encoding = Encoding.UTF16) -> int:
         self._require_line(position.line)
         span = self.line_range(position.line)
-        text = self._data[span.start : span.end].decode('utf-8')
+        text = self._encoded_text[span.start : span.end].decode('utf-8')
         consumed = 0
         for index, character in enumerate(text):
             if consumed >= position.character:
@@ -104,5 +104,5 @@ class PositionMap:
             raise ValueError(f'Line {line} out of range, document has {len(self._line_starts)} lines')
 
     def _require_offset(self, offset: int) -> None:
-        if not 0 <= offset <= len(self._data):
-            raise ValueError(f'Offset {offset} out of range, document has {len(self._data)} bytes')
+        if not 0 <= offset <= len(self._encoded_text):
+            raise ValueError(f'Offset {offset} out of range, document has {len(self._encoded_text)} bytes')

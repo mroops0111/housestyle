@@ -52,7 +52,7 @@ class StubFragmentRule:
                 range=block.range,
                 message=(
                     f'Breaking this sentence leaves a {len(shortest_piece)} character line, below the '
-                    f'{minimum_length} character minimum_length, so the layout reads as a stub rather than a clause. '
+                    f'{minimum_length} character minimum, so the layout reads as a stub rather than a clause. '
                     f'Rewrite it to fit one line, or split it into two complete sentences. '
                     f'The fragment is "{shortest_piece.strip()}".'
                 ),

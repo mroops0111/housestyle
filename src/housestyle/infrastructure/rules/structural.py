@@ -82,8 +82,8 @@ class SignatureRestatingTagRule:
                 rule_id=self.meta.rule_id,
                 range=block.range,
                 message=(
-                    f'The matched_tag "{matched_tag}" restates the signature, which the annotations already carry. '
-                    'Delete the matched_tag and its block. '
+                    f'The tag "{matched_tag}" restates the signature, which the annotations already carry. '
+                    'Delete the tag and its block. '
                     'If a parameter needs explaining, say why it matters in prose instead.'
                 ),
                 fix=Fix.rewrite(),
@@ -117,22 +117,22 @@ class BlockTooLongRule:
     meta = BLOCK_TOO_LONG
 
     def check(self, block: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
-        group = self._group(block)
-        limit = context.settings(self.meta.rule_id).integer(group, DEFAULT_LIMITS[group])
+        category = self._category(block)
+        limit = context.settings(self.meta.rule_id).integer(category, DEFAULT_LIMITS[category])
         if block.line_count <= limit:
             return
         yield Diagnostic(
             rule_id=self.meta.rule_id,
             range=block.range,
             message=(
-                f'This comment runs to {block.line_count} lines against a {limit} line limit for {group} '
+                f'This comment runs to {block.line_count} lines against a {limit} line limit for {category} '
                 'comments. A comment earns its place by stating one constraint the code cannot show. '
                 'Cut it to that constraint, or move the explanation into a name.'
             ),
             fix=Fix.rewrite(),
         )
 
-    def _group(self, block: CommentGroup) -> str:
+    def _category(self, block: CommentGroup) -> str:
         if block.form is not CommentForm.DOC:
             return 'line'
         return 'doc-public' if block.attaches_to_public_symbol else 'doc-internal'

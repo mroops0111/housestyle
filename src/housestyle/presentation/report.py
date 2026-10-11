@@ -25,13 +25,24 @@ def actionable(document: Document, report: Report) -> str:
     if report.needing_author:
         return _rewrite_brief(document, report)
     if report.mechanical:
-        count = len(report.mechanical)
+        mechanical_count = len(report.mechanical)
         return (
             f'Nothing needs rewriting in {_path(document)}. '
-            f'{count} finding{"s" if count != 1 else ""} can be repaired mechanically, '
+            f'{mechanical_count} finding{"s" if mechanical_count != 1 else ""} can be repaired mechanically, '
             'so run fix --write rather than editing by hand.'
         )
     return f'No findings in {_path(document)}.'
+
+
+def as_json(document: Document, report: Report) -> str:
+    return json.dumps(
+        {
+            'uri': document.uri,
+            'diagnostics': [_encode(document, diagnostic) for diagnostic in report.diagnostics],
+            'unavailable_sources': list(report.unavailable_sources),
+        },
+        indent=2,
+    )
 
 
 def _rewrite_brief(document: Document, report: Report) -> str:
@@ -45,17 +56,6 @@ def _rewrite_brief(document: Document, report: Report) -> str:
         lines.append(f'line {position.line + 1}  [{diagnostic.rule_id}]')
         lines.append(f'  {diagnostic.message}')
     return '\n'.join(lines)
-
-
-def as_json(document: Document, report: Report) -> str:
-    return json.dumps(
-        {
-            'uri': document.uri,
-            'diagnostics': [_encode(document, diagnostic) for diagnostic in report.diagnostics],
-            'unavailable_sources': list(report.unavailable_sources),
-        },
-        indent=2,
-    )
 
 
 def _encode(document: Document, diagnostic: Diagnostic) -> dict[str, object]:

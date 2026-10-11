@@ -218,7 +218,7 @@ class TreeSitterParser:
             return node
         for child_node in node.named_children:
             if profile.role_of(child_node.type) is NodeRole.DEFINITION:
-                grouped_captures = self._find_named_declaration(profile, child_node)
-                if grouped_captures is not None:
-                    return grouped_captures
+                named_declaration = self._find_named_declaration(profile, child_node)
+                if named_declaration is not None:
+                    return named_declaration
         return None

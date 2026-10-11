@@ -42,15 +42,15 @@ class CorpusStatistics:
 
 
 class MeasureCorpus:
-    def __init__(self, parser: SourceParser, physical_widths: tuple[int, ...] = (72, 80, 88, 100, 120)) -> None:
+    def __init__(self, parser: SourceParser, candidate_widths: tuple[int, ...] = (72, 80, 88, 100, 120)) -> None:
         self._parser = parser
-        self._widths = physical_widths
+        self._candidate_widths = candidate_widths
 
     def run(self, documents: tuple[Document, ...]) -> CorpusStatistics:
         grouped_line_counts: dict[str, list[int]] = {}
         physical_widths: list[int] = []
         sentence_lengths: list[int] = []
-        unbreakable_counts = dict.fromkeys(self._widths, 0)
+        unbreakable_counts = dict.fromkeys(self._candidate_widths, 0)
         group_count = 0
 
         for document in documents:
@@ -60,7 +60,7 @@ class MeasureCorpus:
                 physical_widths.extend(line.physical_width for line in group.lines)
                 for sentence in group.prose().sentences():
                     sentence_lengths.append(len(sentence.text))
-                    for width in self._widths:
+                    for width in self._candidate_widths:
                         if self._is_unbreakable(sentence.text, width):
                             unbreakable_counts[width] += 1
 

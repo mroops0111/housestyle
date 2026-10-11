@@ -10,6 +10,9 @@ from . import report as reporters
 from .harnesses import ALL_HARNESSES, BLOCK_EXIT, Payload, resolve
 
 
+HELP_FLAGS = frozenset({'--help', '-h', '--harnesses'})
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class HookResult:
     exit_code: int
@@ -20,14 +23,6 @@ class HookResult:
     @property
     def is_blocking(self) -> bool:
         return self.exit_code == BLOCK_EXIT
-
-
-def edited_files(payload: Payload) -> tuple[pathlib.Path, ...]:
-    recognition = resolve(payload)
-    if recognition is None:
-        return ()
-    _, edited_paths = recognition
-    return edited_paths
 
 
 def run(payload: Payload, *, write: bool = True) -> HookResult:
@@ -66,6 +61,14 @@ def run(payload: Payload, *, write: bool = True) -> HookResult:
     )
 
 
+def edited_files(payload: Payload) -> tuple[pathlib.Path, ...]:
+    recognition = resolve(payload)
+    if recognition is None:
+        return ()
+    _, edited_paths = recognition
+    return edited_paths
+
+
 def describe_harnesses() -> str:
     """Say which payload shapes reach this hook, so a caller can check its own.
 
@@ -83,9 +86,6 @@ def describe_harnesses() -> str:
         ]
     )
     return '\n'.join(help_lines)
-
-
-HELP_FLAGS = frozenset({'--help', '-h', '--harnesses'})
 
 
 def main() -> int:
