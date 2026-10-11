@@ -5,7 +5,7 @@ import typing
 
 import pytest
 
-from housestyle.presentation.harnesses.claude_code import EDIT_TOOLS
+from housestyle.presentation.harnesses.claude_code_harness import EDIT_TOOLS
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]

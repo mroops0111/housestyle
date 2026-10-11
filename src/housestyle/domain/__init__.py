@@ -1,43 +1,54 @@
-from .comment import (
+from .models import (
+    SEVERITY_BY_NAME,
     CommentForm,
     CommentGroup,
     CommentLine,
     CommentPlacement,
+    Diagnostic,
+    Document,
+    Encoding,
+    Fix,
+    FixKind,
+    Position,
+    PositionMap,
+    Prose,
+    Report,
+    RuleMetadata,
+    RuleSet,
+    RuleSettings,
+    Sentence,
+    Severity,
+    SourceRange,
     SymbolKind,
     SymbolRef,
+    TextEdit,
     Visibility,
+    apply_edits,
 )
-from .diagnostic import Diagnostic, Fix, FixKind, Report, RuleMeta, Severity
-from .document import Document
-from .external import ExternalLinter
-from .ports import SourceParser
-from .position import Encoding, Position, PositionMap, SourceRange
-from .prose import BreakPoint, BreakStrength, Prose, Sentence
-from .rules import ConfigSource, Rule, RuleContext, RuleSet, RuleSettings
-from .text import TextEdit, apply_edits
+from .ports import DelimiterSplit, ExternalLinter, LanguageConventions, Rule, RuleContext, SourceParser
 
 
 __all__ = [
-    'BreakPoint',
-    'BreakStrength',
+    'SEVERITY_BY_NAME',
     'CommentForm',
     'CommentGroup',
     'CommentLine',
     'CommentPlacement',
-    'ConfigSource',
+    'DelimiterSplit',
     'Diagnostic',
     'Document',
     'Encoding',
     'ExternalLinter',
     'Fix',
     'FixKind',
+    'LanguageConventions',
     'Position',
     'PositionMap',
     'Prose',
     'Report',
     'Rule',
     'RuleContext',
-    'RuleMeta',
+    'RuleMetadata',
     'RuleSet',
     'RuleSettings',
     'Sentence',

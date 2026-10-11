@@ -1,6 +1,6 @@
 # Rules
 
-Generated from `RuleMeta`. Edit the rule, not this file.
+Generated from `RuleMetadata`. Edit the rule, not this file.
 
 The fix kind states who resolves a finding. A mechanical kind is repaired without telling the author, so only a rewrite reaches an agent.
 

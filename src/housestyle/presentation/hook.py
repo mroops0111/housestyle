@@ -3,11 +3,14 @@ import json
 import pathlib
 import sys
 
-from ..application import FixDocument, LintDocument, RuleEngine
-from ..domain.document import Document
-from ..infrastructure import ALL_RULES, DEFAULT_CONFIG, DEFAULT_PARSER, PYTHON
+from ..application import Fixer, Linter, RuleEngine
+from ..domain.models.document import Document
+from ..infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, PYTHON
 from . import report as reporters
 from .harnesses import ALL_HARNESSES, BLOCK_EXIT, Payload, resolve
+
+
+HELP_FLAGS = frozenset({'--help', '-h', '--harnesses'})
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -22,23 +25,15 @@ class HookResult:
         return self.exit_code == BLOCK_EXIT
 
 
-def edited_files(payload: Payload) -> tuple[pathlib.Path, ...]:
-    recognition = resolve(payload)
-    if recognition is None:
-        return ()
-    _, edited_paths = recognition
-    return edited_paths
-
-
 def run(payload: Payload, *, write: bool = True) -> HookResult:
     recognition = resolve(payload)
     if recognition is None:
         return HookResult(exit_code=0)
     harness, edited_paths = recognition
     if not edited_paths:
-        return HookResult(exit_code=0, harness_name=harness.meta.name)
+        return HookResult(exit_code=0, harness_name=harness.metadata.name)
 
-    fix_document = FixDocument(LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES)))
+    fixer = Fixer(Linter(DEFAULT_PARSER, RuleEngine(ALL_RULES)))
     author_messages: list[str] = []
     repaired_paths: list[str] = []
 
@@ -48,7 +43,7 @@ def run(payload: Payload, *, write: bool = True) -> HookResult:
         except (OSError, UnicodeDecodeError):
             continue
         document = Document(uri=source_path.resolve().as_uri(), text=source_text, language_id=PYTHON.language_id)
-        fix_result = fix_document.run(document, DEFAULT_CONFIG.resolve(str(source_path)))
+        fix_result = fixer.run(document, DEFAULT_CONFIG_SOURCE.resolve(str(source_path)))
         if fix_result.has_changes and write:
             source_path.write_text(fix_result.document.text, encoding='utf-8')
             repaired_paths.append(str(source_path))
@@ -57,13 +52,21 @@ def run(payload: Payload, *, write: bool = True) -> HookResult:
             author_messages.append(brief_report)
 
     if not author_messages:
-        return HookResult(exit_code=0, repaired_paths=tuple(repaired_paths), harness_name=harness.meta.name)
+        return HookResult(exit_code=0, repaired_paths=tuple(repaired_paths), harness_name=harness.metadata.name)
     return HookResult(
         exit_code=BLOCK_EXIT,
         stderr='\n\n'.join(author_messages),
         repaired_paths=tuple(repaired_paths),
-        harness_name=harness.meta.name,
+        harness_name=harness.metadata.name,
     )
+
+
+def edited_files(payload: Payload) -> tuple[pathlib.Path, ...]:
+    recognition = resolve(payload)
+    if recognition is None:
+        return ()
+    _, edited_paths = recognition
+    return edited_paths
 
 
 def describe_harnesses() -> str:
@@ -74,8 +77,8 @@ def describe_harnesses() -> str:
     """
     help_lines = ['housestyle-hook reads one agent payload on stdin.', '']
     for harness in ALL_HARNESSES:
-        meta = harness.meta
-        help_lines.extend([meta.name, f'  {meta.summary}', f'  {json.dumps(meta.example)}', ''])
+        metadata = harness.metadata
+        help_lines.extend([metadata.name, f'  {metadata.summary}', f'  {json.dumps(metadata.example)}', ''])
     help_lines.extend(
         [
             'A payload no harness recognises exits 0 and changes nothing.',
@@ -83,9 +86,6 @@ def describe_harnesses() -> str:
         ]
     )
     return '\n'.join(help_lines)
-
-
-HELP_FLAGS = frozenset({'--help', '-h', '--harnesses'})
 
 
 def main() -> int:

@@ -2,72 +2,83 @@
 
 Your house style, enforced in the places prose hides inside a codebase.
 
-Linters check your code. Almost nothing checks the sentences you write around it. `housestyle` extracts prose with tree-sitter and enforces layout and structure rules on it, delegating the rules other tools already do well.
+Linters check your code. Almost nothing checks the sentences you write around it. `housestyle` reads the comments and docstrings in your source, lays them out one sentence per line, and only tells you about the sentences a tool cannot fix for you.
 
-## Surfaces
+## Example
 
-| Surface | Status | What it enforces here |
-| --- | --- | --- |
-| Code comments and docstrings | working | layout, mostly. One sentence per line, physical width, and the wrap faults neither Vale nor a formatter can reach |
-| Markdown | planned | structure, mostly. Heading case and form, a lead sentence before a list, bold bullet labels |
-| Markdown based slides | planned | Markdown plus front matter, which the extractor already treats as literal |
+An editor wraps a comment at whatever column it reaches, so sentences break mid clause.
 
-The two surfaces need opposite things. Code comments sit inside a column limit, so layout dominates and structure is incidental. Markdown is soft wrapped, so layout barely applies and structure is the whole point.
+```python
+    # Cap the buffer at the runner limit, because an unbounded
+    # read faults the job. Retry once, then give up.
+```
 
-## What It Does Not Do
+`housestyle fix --write` repairs the layout and says nothing.
 
-Delegated rather than reimplemented, verified by measurement rather than assumed:
+```python
+    # Cap the buffer at the runner limit, because an unbounded read faults the job.
+    # Retry once, then give up.
+```
 
-- **Vale** for punctuation, banned phrasing, and anything a markup aware prose linter already handles
-- **AutoCorrect** for spacing and punctuation width between CJK and Latin text
+A sentence that runs past the width with no comma has nowhere legal to break, and only its author knows where the meaning divides. That one comes back to you, or to the agent that wrote it.
 
-`housestyle` normalises their findings into its own report, so a mechanical fix is applied silently and only what needs rewriting is surfaced.
+```text
+1 comment finding needs rewriting in src/cache.py.
+Each states the fix. Apply it in place, do not add a suppression comment.
+
+line 2  [unbreakable-sentence]
+  This sentence runs to 116 characters against a budget of 114 characters and contains no comma, so there is no legal place to break it. Add a comma at a clause boundary, or split it into two sentences.
+```
+
+## Installation
+
+Install the command line tool with uv.
+
+```bash
+uv tool install git+https://github.com/mroops0111/housestyle@v0.1.0
+```
+
+## Commands
+
+Every command takes files or directories.
+
+| Command | Result |
+| --- | --- |
+| `housestyle check src/` | every finding |
+| `housestyle check src/ --output=actionable` | only the sentences that need rewriting |
+| `housestyle fix src/` | the repairs, as a diff |
+| `housestyle fix src/ --write` | the repairs, applied |
+| `housestyle stats src/` | comment shapes across the codebase, for setting thresholds from data |
+| `housestyle rules` | every rule and who resolves it |
+
+`check` and `fix` exit 1 while anything needs an author, so they drop into pre-commit or CI as they are.
 
 ## Fix Kinds
 
-Every finding says who can resolve it, which is the axis the whole design turns on.
+Every finding says who can resolve it, and the whole design turns on that answer.
 
-| Kind | Resolved by | Reaches an agent |
+| Kind | Resolved by | Reaches you |
 | --- | --- | --- |
 | `TARGETED` | the tool, silently | no |
 | `REFLOW` | the tool, silently | no |
 | `REWRITE` | only the author | yes |
 
-Rewriting a sentence needs meaning, and a deterministic process cannot supply it. Everything else is repaired without saying so, because each surfaced message costs the reader attention.
-
-## Usage
-
-```bash
-uv tool install git+https://github.com/mroops0111/housestyle
-
-housestyle check src/                    # every finding
-housestyle check src/ --output=actionable  # only what you must rewrite
-housestyle fix src/ --write              # repair what can be repaired
-housestyle stats src/                    # measure, to set thresholds from data
-```
+Rewriting a sentence needs its meaning, which a deterministic process cannot supply. Everything else is repaired without a word, because each message costs the reader attention.
 
 ## Agent Hook
 
-One entry point serves every agent. `housestyle-hook` reads a payload on stdin, repairs every mechanical finding in place without saying anything, and exits 2 only when a finding needs rewriting. Exit 2 returns the message to the model, which is the one path by which anything reaches it.
+`housestyle-hook` runs after every file an agent edits. It repairs the mechanical findings in place, and exits 2 only when a sentence needs rewriting, which hands the message back to the model.
 
-Register the same command with each agent you use. Nothing tells it which agent is running, because the payload already says.
+### Claude Code
 
-### Claude Code, as a plugin
+The plugin registers the hook. It cannot install the tool, so install that first.
 
-The plugin wires the hook up for you. It cannot install the tool, so install that first.
-
-```bash
-uv tool install git+https://github.com/mroops0111/housestyle
-
+```text
 /plugin marketplace add mroops0111/housestyle
 /plugin install housestyle@mroops
 ```
 
-If the command is missing when the hook runs, it says so on stderr rather than passing quietly, because a check that silently stopped running looks exactly like a clean file.
-
-### Claude Code, by hand
-
-`.claude/settings.json`
+To register it by hand instead, add this to `.claude/settings.json`.
 
 ```json
 {
@@ -84,7 +95,7 @@ If the command is missing when the hook runs, it says so on stderr rather than p
 
 ### Codex
 
-`~/.codex/hooks.json`
+Add this to `~/.codex/hooks.json`.
 
 ```json
 {
@@ -94,27 +105,13 @@ If the command is missing when the hook runs, it says so on stderr rather than p
 }
 ```
 
-### Both at once
+### Several Agents
 
-Registering both is the normal case, and they do not interfere. The two agents name their edit tools differently, so every payload identifies its own sender.
-
-| | Claude Code | Codex |
-| --- | --- | --- |
-| Tool names | `Edit`, `Write`, `MultiEdit`, `NotebookEdit` | `apply_patch` |
-| Path | `tool_input.file_path` | parsed back out of the patch header |
-| Blocking | exit 2 with stderr | exit 2 with stderr |
-
-Each payload is offered to every harness until one recognises it. A harness returns the files that payload edited, or nothing at all when it came from another agent, and those two answers stay distinct. A notebook edit is Claude Code's even though we check nothing inside it, while a `Bash` call was never ours to read. A payload no harness recognises exits 0 in silence, because an agent sends many that are none of our business.
-
-Supporting a third agent is one file answering those two questions, with nothing else in the codebase changing. Run `housestyle-hook --help` to print the shapes it accepts. Each harness publishes its own example, and a test feeds every example back through the selector, so the printed contract cannot drift from the code.
-
-### Outside an agent
-
-Use the CLI. `housestyle fix --write` followed by `housestyle check --output=actionable` produces the same repairs and the same report, and a pre-commit hook or a CI step wants an ordinary exit code rather than the agent convention of 2.
+Registering the hook with both agents is the normal case. Each agent names its edit tools differently, so every payload identifies its sender, and a payload from anything else exits 0 untouched. `housestyle-hook --help` prints the payload shapes it accepts.
 
 ## Configuration
 
-Settings come from `housestyle.toml`, or from `[tool.housestyle]` in `pyproject.toml`, whichever is found first walking upward from the file being checked. A dedicated file wins over `pyproject.toml` in the same directory.
+Settings come from `housestyle.toml`, or from `[tool.housestyle]` in `pyproject.toml`, whichever sits closest above the file being checked.
 
 ```toml
 [housestyle]
@@ -126,19 +123,36 @@ mid-clause-break = "error"
 block-too-long = { severity = "warning", line = 3, doc-public = 20 }
 ```
 
-Rule names describe the problem they report, following the convention ruff uses. Every rule is listed in `docs/rules.md`, which is generated from the rules themselves.
+Rule names describe the problem they report. `docs/rules.md` lists every rule, generated from the rules themselves.
 
-## Where It Sits
+## Delegated Tools
 
-`housestyle` is one tool among three, split by what each analyses rather than by language.
+`housestyle check` also runs two tools where they are installed, and folds their findings into its own report.
 
-| Tool | Analyses | Knowledge it needs |
+- **Vale**: punctuation, banned phrasing, and anything a markup aware prose linter already handles
+- **AutoCorrect**: spacing and punctuation width between CJK and Latin text
+
+`--no-delegate` skips both. `fix` and the agent hook do not run them.
+
+## Surfaces
+
+Code comments are the first surface, and Markdown comes next.
+
+| Surface | Status | Mostly enforces |
 | --- | --- | --- |
-| ruff | code structure | Python syntax and semantics |
-| basedpyright | types | the type system |
-| **housestyle** | **natural language inside source** | English prose and layout |
+| Code comments and docstrings | working | layout, since comments sit inside a column limit |
+| Markdown | planned | structure, since soft wrapped text barely needs layout |
+| Markdown slides | planned | Markdown, with front matter left as it is |
 
-`ruff` cannot judge where a sentence should break, and `housestyle` cannot judge whether a variable is unused. Run both, through pre-commit or CI.
+## Related Tools
+
+`housestyle` covers the one thing the usual Python tools leave alone.
+
+| Tool | Checks |
+| --- | --- |
+| ruff | code structure |
+| basedpyright | types |
+| **housestyle** | **the natural language inside source** |
 
 ## License
 

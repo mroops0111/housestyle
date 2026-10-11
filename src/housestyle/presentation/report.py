@@ -1,7 +1,7 @@
 import json
 
-from ..domain.diagnostic import Diagnostic, Report
-from ..domain.document import Document
+from ..domain.models.diagnostic import Diagnostic, Report
+from ..domain.models.document import Document
 
 
 def full(document: Document, report: Report) -> str:
@@ -25,26 +25,13 @@ def actionable(document: Document, report: Report) -> str:
     if report.needing_author:
         return _rewrite_brief(document, report)
     if report.mechanical:
-        count = len(report.mechanical)
+        mechanical_count = len(report.mechanical)
         return (
             f'Nothing needs rewriting in {_path(document)}. '
-            f'{count} finding{"s" if count != 1 else ""} can be repaired mechanically, '
+            f'{mechanical_count} finding{"s" if mechanical_count != 1 else ""} can be repaired mechanically, '
             'so run fix --write rather than editing by hand.'
         )
     return f'No findings in {_path(document)}.'
-
-
-def _rewrite_brief(document: Document, report: Report) -> str:
-    lines = [
-        f'{len(report.needing_author)} comment findings need rewriting in {_path(document)}.',
-        'Each states the fix. Apply it in place, do not add a suppression comment.',
-        '',
-    ]
-    for diagnostic in report.needing_author:
-        position = document.positions.to_position(diagnostic.range.start)
-        lines.append(f'line {position.line + 1}  [{diagnostic.rule_id}]')
-        lines.append(f'  {diagnostic.message}')
-    return '\n'.join(lines)
 
 
 def as_json(document: Document, report: Report) -> str:
@@ -56,6 +43,20 @@ def as_json(document: Document, report: Report) -> str:
         },
         indent=2,
     )
+
+
+def _rewrite_brief(document: Document, report: Report) -> str:
+    finding_count = len(report.needing_author)
+    lines = [
+        f'{finding_count} comment {"finding needs" if finding_count == 1 else "findings need"} rewriting in {_path(document)}.',
+        'Each states the fix. Apply it in place, do not add a suppression comment.',
+        '',
+    ]
+    for diagnostic in report.needing_author:
+        position = document.positions.to_position(diagnostic.range.start)
+        lines.append(f'line {position.line + 1}  [{diagnostic.rule_id}]')
+        lines.append(f'  {diagnostic.message}')
+    return '\n'.join(lines)
 
 
 def _encode(document: Document, diagnostic: Diagnostic) -> dict[str, object]:

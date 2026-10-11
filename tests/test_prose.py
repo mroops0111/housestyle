@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.domain.prose import BreakStrength, Prose
+from housestyle.domain.models import Prose
 
 
 def texts(prose: Prose) -> list[str]:
@@ -33,10 +33,15 @@ def test_physical_lines_are_flattened_before_segmentation() -> None:
         'the port, i.e. the interface, lives in domain',
         'compare vs. the previous value here',
         'see Smith et al. for the derivation',
+        'the fix landed in No. 5 last week',
     ],
 )
 def test_abbreviations_do_not_end_a_sentence(text: str) -> None:
     assert len(Prose(text).sentences()) == 1
+
+
+def test_no_ends_a_sentence_unless_a_number_follows() -> None:
+    assert texts(Prose('just say no. then move on.')) == ['just say no.', 'then move on.']
 
 
 @pytest.mark.parametrize(
@@ -75,30 +80,7 @@ def test_a_terminator_needs_whitespace_after_it() -> None:
 
 
 def test_a_closing_quote_after_a_terminator_still_ends_the_sentence() -> None:
-    assert len(Prose('he said "stop." then left the room.').sentences()) == 2
-
-
-def test_break_candidates_rank_sentence_ends_above_commas() -> None:
-    prose = Prose('cap the size, then flush. retry later')
-    strengths = [point.strength for point in prose.break_candidates()]
-    assert BreakStrength.COMMA in strengths
-    assert BreakStrength.SENTENCE in strengths
-    assert BreakStrength.SENTENCE > BreakStrength.COMMA
-
-
-def test_break_candidates_land_after_the_punctuation() -> None:
-    prose = Prose('alpha, beta')
-    assert [point.offset for point in prose.break_candidates()] == [len('alpha,')]
-
-
-def test_a_sentence_without_a_comma_offers_no_internal_break() -> None:
-    prose = Prose('this sentence runs on without any internal punctuation at all')
-    assert prose.break_candidates() == ()
-
-
-def test_urls_offer_no_break_candidates_inside_themselves() -> None:
-    prose = Prose('see https://example.com/a,b,c now')
-    assert prose.break_candidates() == ()
+    assert texts(Prose('he said "stop." then left the room.')) == ['he said "stop."', 'then left the room.']
 
 
 def test_sentence_offsets_address_the_flattened_text() -> None:
@@ -144,10 +126,6 @@ def test_literal_lines_stay_available_for_rendering() -> None:
 
 def test_a_literal_block_produces_no_sentences() -> None:
     assert Prose('\\b just --an example\n').sentences() == ()
-
-
-def test_a_literal_block_produces_no_break_candidates() -> None:
-    assert Prose('\\b example --a, --b, --c\n').break_candidates() == ()
 
 
 def test_prose_without_literal_blocks_is_unchanged() -> None:

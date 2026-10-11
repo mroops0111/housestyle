@@ -40,9 +40,9 @@ def parsed_lines(source: str) -> tuple[set[int], set[int]]:
     mapper = document.positions
     comments: set[int] = set()
     docstrings: set[int] = set()
-    for block in DEFAULT_PARSER.parse(document):
-        rows = {mapper.to_position(line.range.start).line + 1 for line in block.lines}
-        if block.form is CommentForm.DOC:
+    for group in DEFAULT_PARSER.parse(document):
+        rows = {mapper.to_position(line.range.start).line + 1 for line in group.lines}
+        if group.form is CommentForm.DOC:
             docstrings.add(min(rows))
         else:
             comments |= rows

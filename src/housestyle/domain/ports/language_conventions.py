@@ -1,0 +1,25 @@
+import abc
+import dataclasses
+
+from ..models.comment import CommentForm, Visibility
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class DelimiterSplit:
+    indent: str
+    delimiter: str
+    text: str
+    suffix: str = ''
+
+
+class LanguageConventions(abc.ABC):
+    language_id: str
+    extensions: frozenset[str]
+    doc_delimiter: str
+    signature_tags: tuple[str, ...]
+
+    @abc.abstractmethod
+    def visibility_of(self, name: str) -> Visibility: ...
+
+    @abc.abstractmethod
+    def split_delimiter(self, line: str, form: CommentForm) -> DelimiterSplit: ...

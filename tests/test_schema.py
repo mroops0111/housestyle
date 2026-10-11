@@ -1,7 +1,8 @@
 import pytest
 
 from housestyle.domain import Severity
-from housestyle.infrastructure.schema import ConfigFile, ProjectSection, RuleTable, ValeReport
+from housestyle.infrastructure.config_sources import ConfigFile, HousestyleSection, RuleTable
+from housestyle.infrastructure.linters.vale_linter import ValeReport
 
 
 def test_a_missing_section_falls_back_to_defaults() -> None:
@@ -49,7 +50,7 @@ def test_a_project_section_rejects_a_zero_width_at_the_boundary() -> None:
     import pydantic
 
     with pytest.raises(pydantic.ValidationError):
-        ProjectSection.model_validate({'line-width': 0})
+        HousestyleSection.model_validate({'line-width': 0})
 
 
 def test_a_vale_report_decodes_alerts() -> None:

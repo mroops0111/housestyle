@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.application import LintDocument, RuleEngine
+from housestyle.application import Linter, RuleEngine
 from housestyle.domain import Document, FixKind, RuleSet, RuleSettings
 from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER
 
@@ -10,7 +10,7 @@ REWRITE_IDS = frozenset({'stub-fragment', 'unbreakable-sentence'})
 
 def lint(source: str, width: int = 50, enabled_rule_ids: frozenset[str] = REWRITE_IDS, **settings: RuleSettings):
     document = Document(uri='file:///a.py', text=source, language_id='python')
-    return LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES)).run(
+    return Linter(DEFAULT_PARSER, RuleEngine(ALL_RULES)).run(
         document, RuleSet(enabled_rule_ids=enabled_rule_ids, line_width=width, settings=settings)
     )
 

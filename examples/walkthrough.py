@@ -1,6 +1,6 @@
 import sys
 
-from housestyle.application import LintDocument, RuleEngine
+from housestyle.application import Linter, RuleEngine
 from housestyle.domain import Document, RuleSet
 from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER
 
@@ -22,40 +22,40 @@ def show(n, title, body):
 show(1, '原始碼 (就是一串字)', SOURCE.rstrip())
 
 doc = Document(uri='file:///demo.py', text=SOURCE, language_id='python')
-block = DEFAULT_PARSER.parse(doc)[0]
+group = DEFAULT_PARSER.parse(doc)[0]
 
 show(
     2,
     'Parser 把它變成物件 CommentGroup',
-    f"""form       = {block.form.value}          註解的外形
-placement  = {block.placement.value}   它站在哪
-attachment = {block.attachment}      它在說誰
-line_count = {block.line_count}
-widest     = {block.longest_line} 字元""",
+    f"""form       = {group.form.value}          註解的外形
+placement  = {group.placement.value}   它站在哪
+attachment = {group.attachment}      它在說誰
+line_count = {group.line_count}
+widest     = {group.longest_line} 字元""",
 )
 
 show(
     3,
     '每一行被拆成三塊 (這是量寬度的關鍵)',
     '\n'.join(
-        f'  indent={line.indent!r:6s} delimiter={line.delimiter!r:5s} text={line.text!r}' for line in block.lines
+        f'  indent={line.indent!r:6s} delimiter={line.delimiter!r:5s} text={line.text!r}' for line in group.lines
     ),
 )
 
 show(
     4,
     'Prose 是剝掉標記後的純文字',
-    f"""physical_lines = {block.prose().physical_lines}
+    f"""physical_lines = {group.prose().physical_lines}
 
-flattened      = {block.prose().flattened!r}
+flattened      = {group.prose().flattened!r}
 
-sentences      = {[s.text for s in block.prose().sentences()]}""",
+sentences      = {[s.text for s in group.prose().sentences()]}""",
 )
 
-show(5, f'reflow 算出正確排版 (一句一行, 寬度 {WIDTH})', block.reflow(WIDTH).render())
+show(5, f'reflow 算出正確排版 (一句一行, 寬度 {WIDTH})', group.reflow(WIDTH).render())
 
-report = LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES)).run(
-    doc, RuleSet(enabled=frozenset(r.meta.rule_id for r in ALL_RULES), line_width=WIDTH)
+report = Linter(DEFAULT_PARSER, RuleEngine(ALL_RULES)).run(
+    doc, RuleSet(enabled_rule_ids=frozenset(rule.metadata.rule_id for rule in ALL_RULES), line_width=WIDTH)
 )
 
 show(
