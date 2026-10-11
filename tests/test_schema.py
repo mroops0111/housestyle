@@ -1,7 +1,8 @@
 import pytest
 
 from housestyle.domain import Severity
-from housestyle.infrastructure.schema import ConfigFile, HousestyleSection, RuleTable, ValeReport
+from housestyle.infrastructure.config_sources import ConfigFile, HousestyleSection, RuleTable
+from housestyle.infrastructure.linters.vale_linter import ValeReport
 
 
 def test_a_missing_section_falls_back_to_defaults() -> None:

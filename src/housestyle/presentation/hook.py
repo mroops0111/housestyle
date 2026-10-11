@@ -4,7 +4,7 @@ import pathlib
 import sys
 
 from ..application import Fixer, Linter, RuleEngine
-from ..domain.document import Document
+from ..domain.models.document import Document
 from ..infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, PYTHON
 from . import report as reporters
 from .harnesses import ALL_HARNESSES, BLOCK_EXIT, Payload, resolve

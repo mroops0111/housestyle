@@ -1,8 +1,9 @@
 import re
 
 from housestyle.domain import CommentForm, CommentPlacement, Document, SymbolKind, Visibility
+from housestyle.domain.ports import DelimiterSplit
 from housestyle.infrastructure import TreeSitterParser
-from housestyle.infrastructure.languages import DelimiterSplit, LanguageProfile, NodeRole
+from housestyle.infrastructure.parsers.languages import LanguageProfile, NodeRole
 
 
 _TS_DELIMITER = re.compile(r'^(/\*\*|/\*|//+)\s?')

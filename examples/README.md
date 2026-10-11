@@ -42,6 +42,6 @@ Three files, smallest first. Together they are about two hundred lines, and the 
 
 | File | Lines | What it teaches |
 | --- | --- | --- |
-| `src/housestyle/domain/text.py` | 31 | what a value object looks like here |
-| `src/housestyle/infrastructure/rules/layout.py` | 57 | what a rule looks like |
-| `src/housestyle/domain/diagnostic.py` | 116 | why `FixKind` is the centre of the design |
+| `src/housestyle/domain/models/text.py` | 23 | what a value object looks like here |
+| `src/housestyle/domain/rules/layout.py` | 57 | what a rule looks like |
+| `src/housestyle/domain/models/diagnostic.py` | 123 | why `FixKind` is the centre of the design |

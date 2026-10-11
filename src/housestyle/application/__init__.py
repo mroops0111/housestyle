@@ -1,7 +1,7 @@
-from .aggregating import ReportAggregator
-from .fixing import Fixer, FixResult
-from .linting import Linter, RuleEngine
-from .statistics import CorpusMeter, CorpusStatistics, Distribution
+from .corpus_meter import CorpusMeter, CorpusStatistics, Distribution
+from .fixer import Fixer, FixResult
+from .linter import Linter, RuleEngine
+from .report_aggregator import ReportAggregator
 
 
 __all__ = [

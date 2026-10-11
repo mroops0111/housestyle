@@ -81,11 +81,11 @@ def test_the_project_config_is_readable_and_enables_every_rule() -> None:
 
 def test_the_generated_rule_reference_is_in_sync() -> None:
     from housestyle.infrastructure import ALL_RULES
-    from housestyle.presentation import docs
+    from housestyle.presentation import rule_reference
 
     reference = REPO_ROOT / 'docs' / 'rules.md'
     assert reference.is_file(), 'run: housestyle rules --write docs/rules.md'
-    assert reference.read_text(encoding='utf-8') == docs.render(ALL_RULES)
+    assert reference.read_text(encoding='utf-8') == rule_reference.render(ALL_RULES)
 
 
 def test_every_rule_appears_in_the_reference() -> None:

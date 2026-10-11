@@ -1,7 +1,7 @@
 import json
 
-from ..domain.diagnostic import Diagnostic, Report
-from ..domain.document import Document
+from ..domain.models.diagnostic import Diagnostic, Report
+from ..domain.models.document import Document
 
 
 def full(document: Document, report: Report) -> str:

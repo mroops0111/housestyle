@@ -55,7 +55,7 @@ sentences      = {[s.text for s in group.prose().sentences()]}""",
 show(5, f'reflow 算出正確排版 (一句一行, 寬度 {WIDTH})', group.reflow(WIDTH).render())
 
 report = Linter(DEFAULT_PARSER, RuleEngine(ALL_RULES)).run(
-    doc, RuleSet(enabled=frozenset(r.metadata.rule_id for r in ALL_RULES), line_width=WIDTH)
+    doc, RuleSet(enabled_rule_ids=frozenset(rule.metadata.rule_id for rule in ALL_RULES), line_width=WIDTH)
 )
 
 show(

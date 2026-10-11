@@ -7,10 +7,10 @@ import typer
 
 from .. import __version__
 from ..application import CorpusMeter, CorpusStatistics, Fixer, Linter, ReportAggregator, RuleEngine
-from ..domain.document import Document
+from ..domain.models.document import Document
 from ..infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, EXTERNAL_LINTERS, PYTHON
-from . import docs as rule_docs
 from . import report as reporters
+from . import rule_reference
 
 
 app = typer.Typer(add_completion=False, help='A linter and formatter for the prose inside code comments.')
@@ -89,7 +89,7 @@ def stats(paths: list[pathlib.Path] = typer.Argument(..., help='Files or directo
 def rules(
     destination: pathlib.Path = typer.Option(None, '--write', help='Write the generated table to this path.'),
 ) -> None:
-    rule_table = rule_docs.render(ALL_RULES)
+    rule_table = rule_reference.render(ALL_RULES)
     if destination is None:
         typer.echo(rule_table, nl=False)
         return

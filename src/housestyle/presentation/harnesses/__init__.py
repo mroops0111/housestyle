@@ -1,9 +1,9 @@
 import pathlib
 
 from ...infrastructure import PYTHON
-from .base import BLOCK_EXIT, AgentHarness, HarnessMetadata, Payload
-from .claude_code import ClaudeCodeHarness
-from .codex import CodexHarness
+from .agent_harness import BLOCK_EXIT, AgentHarness, HarnessMetadata, Payload
+from .claude_code_harness import ClaudeCodeHarness
+from .codex_harness import CodexHarness
 
 
 EXTENSIONS = frozenset(PYTHON.extensions)
