@@ -128,7 +128,7 @@ class BlockTooLongRule(Rule):
             rule_id=self.metadata.rule_id,
             range=group.range,
             message=(
-                f'This comment runs to {group.line_count} lines against a {limit} line limit for {category} '
+                f'This comment runs to {group.line_count} lines against a limit of {limit} lines for {category} '
                 'comments. A comment earns its place by stating one constraint the code cannot show. '
                 'Cut it to that constraint, or move the explanation into a name.'
             ),

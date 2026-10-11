@@ -46,8 +46,9 @@ def as_json(document: Document, report: Report) -> str:
 
 
 def _rewrite_brief(document: Document, report: Report) -> str:
+    finding_count = len(report.needing_author)
     lines = [
-        f'{len(report.needing_author)} comment findings need rewriting in {_path(document)}.',
+        f'{finding_count} comment {"finding needs" if finding_count == 1 else "findings need"} rewriting in {_path(document)}.',
         'Each states the fix. Apply it in place, do not add a suppression comment.',
         '',
     ]

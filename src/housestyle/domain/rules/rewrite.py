@@ -54,8 +54,8 @@ class StubFragmentRule(Rule):
                 rule_id=self.metadata.rule_id,
                 range=group.range,
                 message=(
-                    f'Breaking this sentence leaves a {len(shortest_piece)} character line, below the '
-                    f'{minimum_length} character minimum, so the layout reads as a stub rather than a clause. '
+                    f'Breaking this sentence leaves a line of {len(shortest_piece)} characters, below the minimum of '
+                    f'{minimum_length}, so the layout reads as a stub rather than a clause. '
                     f'Rewrite it to fit one line, or split it into two complete sentences. '
                     f'The fragment is "{shortest_piece.strip()}".'
                 ),
@@ -75,7 +75,7 @@ class UnbreakableSentenceRule(Rule):
                 rule_id=self.metadata.rule_id,
                 range=group.range,
                 message=(
-                    f'This sentence runs to {len(sentence)} characters against a {budget} character budget '
+                    f'This sentence runs to {len(sentence)} characters against a budget of {budget} characters '
                     'and contains no comma, so there is no legal place to break it. '
                     'Add a comma at a clause boundary, or split it into two sentences.'
                 ),
