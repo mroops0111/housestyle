@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.application import FixDocument, LintDocument, RuleEngine
+from housestyle.application import Fixer, Linter, RuleEngine
 from housestyle.domain import (
     CommentGroup,
     Diagnostic,
@@ -19,8 +19,8 @@ from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER
 LAYOUT = frozenset({'mid-clause-break', 'line-too-long', 'stub-fragment', 'unbreakable-sentence'})
 
 
-def fixer(rules=ALL_RULES, max_rounds: int = 10) -> FixDocument:
-    return FixDocument(LintDocument(DEFAULT_PARSER, RuleEngine(rules)), max_rounds=max_rounds)
+def fixer(rules=ALL_RULES, max_rounds: int = 10) -> Fixer:
+    return Fixer(Linter(DEFAULT_PARSER, RuleEngine(rules)), max_rounds=max_rounds)
 
 
 def run(source: str, width: int = 60, enabled_rule_ids: frozenset[str] = LAYOUT, **kwargs):
@@ -115,7 +115,7 @@ def test_targeted_edits_run_before_reflow() -> None:
 
     source = 'def f():\n    # one. two.\n    pass\n'
     document = Document(uri='file:///a.py', text=source, language_id='python')
-    outcome = FixDocument(LintDocument(DEFAULT_PARSER, RuleEngine((ReflowRule(), TargetedRule())))).run(
+    outcome = Fixer(Linter(DEFAULT_PARSER, RuleEngine((ReflowRule(), TargetedRule())))).run(
         document, RuleSet(enabled_rule_ids=frozenset({'targeted', 'reflowing'}), line_width=60)
     )
     assert '!' in outcome.document.text
@@ -144,7 +144,7 @@ def test_overlapping_edits_are_deferred_rather_than_dropped() -> None:
             )
 
     document = Document(uri='file:///a.py', text='# note\n', language_id='python')
-    outcome = FixDocument(LintDocument(DEFAULT_PARSER, RuleEngine((DoubleRule(),))), max_rounds=3).run(
+    outcome = Fixer(Linter(DEFAULT_PARSER, RuleEngine((DoubleRule(),))), max_rounds=3).run(
         document, RuleSet(enabled_rule_ids=frozenset({'double'}), line_width=60)
     )
     assert outcome.round_count >= 1

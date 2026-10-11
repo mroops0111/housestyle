@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.application import LintDocument, RuleEngine
+from housestyle.application import Linter, RuleEngine
 from housestyle.domain import Document, FixKind, RuleSet, apply_edits
 from housestyle.infrastructure import DEFAULT_PARSER, LAYOUT_RULES
 
@@ -10,7 +10,7 @@ ALL_LAYOUT = frozenset({'mid-clause-break', 'line-too-long'})
 
 def lint(source: str, width: int = 60, enabled_rule_ids: frozenset[str] = ALL_LAYOUT):
     document = Document(uri='file:///a.py', text=source, language_id='python')
-    return LintDocument(DEFAULT_PARSER, RuleEngine(LAYOUT_RULES)).run(
+    return Linter(DEFAULT_PARSER, RuleEngine(LAYOUT_RULES)).run(
         document, RuleSet(enabled_rule_ids=enabled_rule_ids, line_width=width)
     )
 

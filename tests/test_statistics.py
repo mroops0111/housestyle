@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.application import Distribution, MeasureCorpus
+from housestyle.application import CorpusMeter, Distribution
 from housestyle.domain import Document
 from housestyle.infrastructure import DEFAULT_PARSER
 
@@ -9,7 +9,7 @@ def measure(*sources: str):
     documents = tuple(
         Document(uri=f'file:///a{index}.py', text=source, language_id='python') for index, source in enumerate(sources)
     )
-    return MeasureCorpus(DEFAULT_PARSER).run(documents)
+    return CorpusMeter(DEFAULT_PARSER).run(documents)
 
 
 def test_an_empty_corpus_reports_nothing() -> None:

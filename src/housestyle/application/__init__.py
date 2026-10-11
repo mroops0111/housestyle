@@ -1,16 +1,16 @@
-from .aggregating import AggregateReport
-from .fixing import FixDocument, FixResult
-from .linting import LintDocument, RuleEngine
-from .statistics import CorpusStatistics, Distribution, MeasureCorpus
+from .aggregating import ReportAggregator
+from .fixing import Fixer, FixResult
+from .linting import Linter, RuleEngine
+from .statistics import CorpusMeter, CorpusStatistics, Distribution
 
 
 __all__ = [
-    'AggregateReport',
+    'CorpusMeter',
     'CorpusStatistics',
     'Distribution',
-    'FixDocument',
     'FixResult',
-    'LintDocument',
-    'MeasureCorpus',
+    'Fixer',
+    'Linter',
+    'ReportAggregator',
     'RuleEngine',
 ]

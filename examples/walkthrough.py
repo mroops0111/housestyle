@@ -1,6 +1,6 @@
 import sys
 
-from housestyle.application import LintDocument, RuleEngine
+from housestyle.application import Linter, RuleEngine
 from housestyle.domain import Document, RuleSet
 from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER
 
@@ -54,7 +54,7 @@ sentences      = {[s.text for s in group.prose().sentences()]}""",
 
 show(5, f'reflow 算出正確排版 (一句一行, 寬度 {WIDTH})', group.reflow(WIDTH).render())
 
-report = LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES)).run(
+report = Linter(DEFAULT_PARSER, RuleEngine(ALL_RULES)).run(
     doc, RuleSet(enabled=frozenset(r.metadata.rule_id for r in ALL_RULES), line_width=WIDTH)
 )
 

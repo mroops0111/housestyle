@@ -2,7 +2,7 @@ import pathlib
 
 import pytest
 
-from housestyle.application import LintDocument, RuleEngine
+from housestyle.application import Linter, RuleEngine
 from housestyle.domain import Document, RuleSet
 from housestyle.infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, PYTHON
 
@@ -14,7 +14,7 @@ SOURCE_ROOT = REPO_ROOT / 'src'
 def lint_text(text: str, rules: RuleSet | None = None):
     document = Document(uri='file:///probe.py', text=text, language_id=PYTHON.language_id)
     engine = RuleEngine(ALL_RULES)
-    return LintDocument(DEFAULT_PARSER, engine).run(document, rules or DEFAULT_CONFIG_SOURCE.resolve(str(SOURCE_ROOT)))
+    return Linter(DEFAULT_PARSER, engine).run(document, rules or DEFAULT_CONFIG_SOURCE.resolve(str(SOURCE_ROOT)))
 
 
 def source_files() -> list[pathlib.Path]:
@@ -40,7 +40,7 @@ def test_the_project_carries_comments_worth_checking() -> None:
 def test_housestyle_lints_itself_clean() -> None:
     rules = DEFAULT_CONFIG_SOURCE.resolve(str(SOURCE_ROOT))
     engine = RuleEngine(ALL_RULES)
-    lint = LintDocument(DEFAULT_PARSER, engine)
+    linter = Linter(DEFAULT_PARSER, engine)
 
     findings: list[str] = []
     for path in source_files():
@@ -49,7 +49,7 @@ def test_housestyle_lints_itself_clean() -> None:
             text=path.read_text(encoding='utf-8'),
             language_id=PYTHON.language_id,
         )
-        for item in lint.run(document, rules).diagnostics:
+        for item in linter.run(document, rules).diagnostics:
             findings.append(f'{path.relative_to(REPO_ROOT)}: {item.rule_id} {item.message[:80]}')
     assert not findings, f'{len(findings)} self-hosting findings: {findings[:5]}'
 

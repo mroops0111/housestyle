@@ -40,7 +40,7 @@ class RuleEngine:
         return duplicate_ids
 
 
-class LintDocument:
+class Linter:
     def __init__(self, parser: SourceParser, engine: RuleEngine) -> None:
         self._parser = parser
         self._engine = engine

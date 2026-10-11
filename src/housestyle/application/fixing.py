@@ -4,7 +4,7 @@ from ..domain.diagnostic import Diagnostic, FixKind, Report
 from ..domain.document import Document
 from ..domain.rules import RuleSet
 from ..domain.text import TextEdit, apply_edits
-from .linting import LintDocument
+from .linting import Linter
 
 
 MAX_ROUNDS = 10
@@ -26,16 +26,16 @@ class FixResult:
         return self.report.needing_author
 
 
-class FixDocument:
-    def __init__(self, lint: LintDocument, max_rounds: int = MAX_ROUNDS) -> None:
-        self._lint = lint
+class Fixer:
+    def __init__(self, linter: Linter, max_rounds: int = MAX_ROUNDS) -> None:
+        self._linter = linter
         self._max_rounds = max_rounds
 
     def run(self, document: Document, rule_set: RuleSet) -> FixResult:
         working_document = document
         applied_edit_count = 0
         round_count = 0
-        report = self._lint.run(working_document, rule_set)
+        report = self._linter.run(working_document, rule_set)
 
         while round_count < self._max_rounds:
             edits = self._next_edits(report)
@@ -44,7 +44,7 @@ class FixDocument:
             working_document = working_document.with_text(apply_edits(working_document.text, edits))
             applied_edit_count += len(edits)
             round_count += 1
-            report = self._lint.run(working_document, rule_set)
+            report = self._linter.run(working_document, rule_set)
 
         return FixResult(
             document=working_document, report=report, round_count=round_count, applied_edit_count=applied_edit_count

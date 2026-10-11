@@ -6,7 +6,7 @@ import typing
 import typer
 
 from .. import __version__
-from ..application import AggregateReport, CorpusStatistics, FixDocument, LintDocument, MeasureCorpus, RuleEngine
+from ..application import CorpusMeter, CorpusStatistics, Fixer, Linter, ReportAggregator, RuleEngine
 from ..domain.document import Document
 from ..infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, EXTERNAL_LINTERS, PYTHON
 from . import docs as rule_docs
@@ -36,7 +36,7 @@ def check(
         typer.echo(f'Unknown output format {output!r}. Choose full, actionable, or json.', err=True)
         raise typer.Exit(2)
 
-    aggregator = _build_aggregate_report(delegate)
+    aggregator = _build_report_aggregator(delegate)
     finding_count = 0
     for document in documents:
         report = aggregator.run(document, DEFAULT_CONFIG_SOURCE.resolve(_file_path(document)))
@@ -55,7 +55,7 @@ def fix(
     documents = _load(tuple(paths))
     _require(documents)
 
-    fixer = FixDocument(_build_lint_document())
+    fixer = Fixer(_build_linter())
     changed_file_count = 0
     unresolved_finding_count = 0
     for document in documents:
@@ -82,7 +82,7 @@ def fix(
 def stats(paths: list[pathlib.Path] = typer.Argument(..., help='Files or directories to measure.')) -> None:
     documents = _load(tuple(paths))
     _require(documents)
-    typer.echo(_render(MeasureCorpus(DEFAULT_PARSER).run(documents)))
+    typer.echo(_render(CorpusMeter(DEFAULT_PARSER).run(documents)))
 
 
 @app.command()
@@ -136,12 +136,12 @@ def _require(documents: tuple[Document, ...]) -> None:
         raise typer.Exit(1)
 
 
-def _build_lint_document() -> LintDocument:
-    return LintDocument(DEFAULT_PARSER, RuleEngine(ALL_RULES))
+def _build_linter() -> Linter:
+    return Linter(DEFAULT_PARSER, RuleEngine(ALL_RULES))
 
 
-def _build_aggregate_report(delegate: bool) -> AggregateReport:
-    return AggregateReport(_build_lint_document(), EXTERNAL_LINTERS if delegate else ())
+def _build_report_aggregator(delegate: bool) -> ReportAggregator:
+    return ReportAggregator(_build_linter(), EXTERNAL_LINTERS if delegate else ())
 
 
 def _file_path(document: Document) -> str:

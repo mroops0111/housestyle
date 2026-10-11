@@ -41,7 +41,7 @@ class CorpusStatistics:
     unbreakable_counts_by_width: tuple[tuple[int, int], ...]
 
 
-class MeasureCorpus:
+class CorpusMeter:
     def __init__(self, parser: SourceParser, candidate_widths: tuple[int, ...] = (72, 80, 88, 100, 120)) -> None:
         self._parser = parser
         self._candidate_widths = candidate_widths
