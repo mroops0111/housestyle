@@ -1,3 +1,4 @@
+import abc
 import dataclasses
 import pathlib
 import typing
@@ -21,9 +22,10 @@ class HarnessMetadata:
             raise ValueError('A harness names itself and says what it recognises')
 
 
-class AgentHarness(typing.Protocol):
+class AgentHarness(abc.ABC):
     metadata: HarnessMetadata
 
+    @abc.abstractmethod
     def edited_files(self, payload: Payload) -> tuple[pathlib.Path, ...] | None:
         """Return the files this payload edited, or None when it came from another agent.
 

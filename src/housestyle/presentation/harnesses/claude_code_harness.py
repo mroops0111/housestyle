@@ -1,7 +1,7 @@
 import pathlib
 import typing
 
-from .agent_harness import HarnessMetadata, Payload, existing_source_files
+from .agent_harness import AgentHarness, HarnessMetadata, Payload, existing_source_files
 
 
 EDIT_TOOLS = frozenset({'Edit', 'Write', 'MultiEdit', 'NotebookEdit'})
@@ -14,7 +14,7 @@ CLAUDE_CODE = HarnessMetadata(
 )
 
 
-class ClaudeCodeHarness:
+class ClaudeCodeHarness(AgentHarness):
     metadata = CLAUDE_CODE
 
     def __init__(self, extensions: frozenset[str]) -> None:

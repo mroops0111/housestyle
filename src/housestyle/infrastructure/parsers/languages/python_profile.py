@@ -2,7 +2,7 @@ import re
 
 from ....domain.models.comment import CommentForm, SymbolKind, Visibility
 from ....domain.ports.language_conventions import DelimiterSplit
-from .language_profile import NodeRole
+from .language_profile import LanguageProfile, NodeRole
 
 
 _DOC_DELIMITER = re.compile(r'^([rRbBuUfF]{0,2})("""|\'\'\')')
@@ -16,7 +16,7 @@ QUERY = """
 """
 
 
-class PythonProfile:
+class PythonProfile(LanguageProfile):
     language_id = 'python'
     extensions = frozenset({'.py', '.pyi'})
     doc_delimiter = '"""'

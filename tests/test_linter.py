@@ -7,6 +7,7 @@ from housestyle.domain import (
     Document,
     Fix,
     FixKind,
+    Rule,
     RuleContext,
     RuleMetadata,
     RuleSet,
@@ -18,7 +19,7 @@ from housestyle.domain import (
 from housestyle.infrastructure import DEFAULT_PARSER
 
 
-class RecordingRule:
+class RecordingRule(Rule):
     def __init__(self, rule_id: str, fix_kind: FixKind = FixKind.REWRITE) -> None:
         self.metadata = RuleMetadata(rule_id=rule_id, summary='test rule', fix_kind=fix_kind)
         self.seen: list[str] = []
@@ -32,7 +33,7 @@ class RecordingRule:
         )
 
 
-class SilentRule:
+class SilentRule(Rule):
     metadata = RuleMetadata(rule_id='silent', summary='never fires', fix_kind=FixKind.REWRITE)
 
     def check(self, group: CommentGroup, context: RuleContext):
@@ -121,7 +122,7 @@ def test_rule_settings_read_integer_options_defensively() -> None:
 
 
 def test_a_fix_kind_survives_the_engine() -> None:
-    class FixingRule:
+    class FixingRule(Rule):
         metadata = RuleMetadata(rule_id='fixer', summary='fixes', fix_kind=FixKind.TARGETED)
 
         def check(self, group: CommentGroup, context: RuleContext):

@@ -4,6 +4,7 @@ from tree_sitter_language_pack import get_language, get_parser
 from ...domain.models.comment import CommentForm, CommentGroup, CommentLine, CommentPlacement, SymbolRef
 from ...domain.models.document import Document
 from ...domain.models.position import SourceRange
+from ...domain.ports.source_parser import SourceParser
 from .languages import LanguageProfile, NodeRole
 
 
@@ -13,7 +14,7 @@ COMMENT_CAPTURE = 'comment'
 DOC_CAPTURE = 'doc'
 
 
-class TreeSitterParser:
+class TreeSitterParser(SourceParser):
     def __init__(self, profiles: tuple[LanguageProfile, ...]) -> None:
         self._profiles = {profile.language_id: profile for profile in profiles}
 

@@ -7,6 +7,7 @@ from ...domain.models.diagnostic import Diagnostic, Fix, Severity
 from ...domain.models.document import Document
 from ...domain.models.position import Position, SourceRange
 from ...domain.models.text import TextEdit
+from ...domain.ports.external_linter import ExternalLinter
 
 
 LOCATION = re.compile(r'^(?P<source_path>.+?):(?P<line>\d+):(?P<column>\d+)$')
@@ -14,7 +15,7 @@ TIMEOUT_SECONDS = 30
 RULE_ID = 'autocorrect/spacing'
 
 
-class AutoCorrectLinter:
+class AutoCorrectLinter(ExternalLinter):
     name = 'autocorrect'
 
     def __init__(self, executable: str = 'autocorrect') -> None:

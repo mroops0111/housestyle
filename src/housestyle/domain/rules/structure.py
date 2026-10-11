@@ -3,7 +3,7 @@ import typing
 from ..models.comment import CommentForm, CommentGroup, CommentPlacement
 from ..models.diagnostic import Diagnostic, Fix, FixKind, RuleMetadata
 from ..ports.language_conventions import LanguageConventions
-from ..ports.rule import RuleContext
+from ..ports.rule import Rule, RuleContext
 
 
 FILE_HEADER_COMMENT = RuleMetadata(
@@ -25,7 +25,7 @@ SIGNATURE_RESTATING_TAG = RuleMetadata(
 )
 
 
-class FileHeaderCommentRule:
+class FileHeaderCommentRule(Rule):
     metadata = FILE_HEADER_COMMENT
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
@@ -43,10 +43,11 @@ class FileHeaderCommentRule:
         )
 
 
-class PlainCommentOnPublicRule:
+class PlainCommentOnPublicRule(Rule):
+    metadata = PLAIN_COMMENT_ON_PUBLIC
+
     def __init__(self, conventions: LanguageConventions) -> None:
         self._conventions = conventions
-        self.metadata = PLAIN_COMMENT_ON_PUBLIC
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         if not group.attaches_to_public_symbol or group.form is CommentForm.DOC:
@@ -66,10 +67,11 @@ class PlainCommentOnPublicRule:
         )
 
 
-class SignatureRestatingTagRule:
+class SignatureRestatingTagRule(Rule):
+    metadata = SIGNATURE_RESTATING_TAG
+
     def __init__(self, conventions: LanguageConventions) -> None:
         self._conventions = conventions
-        self.metadata = SIGNATURE_RESTATING_TAG
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         if group.form is not CommentForm.DOC:
@@ -104,6 +106,7 @@ BLOCK_TOO_LONG = RuleMetadata(
     fix_kind=FixKind.REWRITE,
 )
 
+
 # Set from the p95 of a measured corpus, which housestyle stats reports.
 # A comment past this length has usually started restating the code below it.
 DEFAULT_LIMITS = {
@@ -113,7 +116,7 @@ DEFAULT_LIMITS = {
 }
 
 
-class BlockTooLongRule:
+class BlockTooLongRule(Rule):
     metadata = BLOCK_TOO_LONG
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:

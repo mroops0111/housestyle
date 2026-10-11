@@ -3,7 +3,7 @@ import typing
 from ..models.comment import CommentGroup
 from ..models.diagnostic import Diagnostic, Fix, FixKind, RuleMetadata
 from ..models.prose import Prose, reflow_sentence
-from ..ports.rule import RuleContext
+from ..ports.rule import Rule, RuleContext
 
 
 STUB_FRAGMENT = RuleMetadata(
@@ -17,6 +17,7 @@ UNBREAKABLE_SENTENCE = RuleMetadata(
     summary='A sentence over the width must carry a comma so it has somewhere legal to break.',
     fix_kind=FixKind.REWRITE,
 )
+
 
 DEFAULT_MINIMUM_CHARACTERS = 24
 
@@ -34,7 +35,7 @@ def sentence_budget(group: CommentGroup, context: RuleContext) -> int:
     return max(20, context.line_width - group.lines[0].prefix_width)
 
 
-class StubFragmentRule:
+class StubFragmentRule(Rule):
     metadata = STUB_FRAGMENT
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
@@ -62,7 +63,7 @@ class StubFragmentRule:
             )
 
 
-class UnbreakableSentenceRule:
+class UnbreakableSentenceRule(Rule):
     metadata = UNBREAKABLE_SENTENCE
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:

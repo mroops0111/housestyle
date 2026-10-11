@@ -11,7 +11,7 @@ _TS_DELIMITER = re.compile(r'^(/\*\*|/\*|//+)\s?')
 TYPESCRIPT_QUERY = '(comment) @comment'
 
 
-class TypeScriptProfile:
+class TypeScriptProfile(LanguageProfile):
     language_id = 'typescript'
     extensions = frozenset({'.ts', '.tsx'})
     doc_delimiter = '/**'

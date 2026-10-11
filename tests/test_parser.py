@@ -2,7 +2,7 @@ import pytest
 
 from housestyle.domain import CommentForm, CommentGroup, CommentPlacement, Document, SymbolKind, Visibility
 from housestyle.domain.ports import DelimiterSplit
-from housestyle.infrastructure import DEFAULT_PARSER, PYTHON, TreeSitterParser
+from housestyle.infrastructure import DEFAULT_PARSER, PYTHON, LanguageProfile, TreeSitterParser
 from housestyle.infrastructure.parsers.languages import NodeRole
 
 
@@ -239,7 +239,7 @@ def test_only_a_leading_comment_attaches_to_what_follows(source: str) -> None:
 
 
 def test_a_profile_naming_its_captures_otherwise_yields_nothing() -> None:
-    class MisnamedProfile:
+    class MisnamedProfile(LanguageProfile):
         language_id = 'python'
         extensions = frozenset({'.py'})
         doc_delimiter = '"""'

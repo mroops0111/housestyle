@@ -1,5 +1,5 @@
+import abc
 import dataclasses
-import typing
 
 from ..models.comment import CommentForm, Visibility
 
@@ -12,19 +12,14 @@ class DelimiterSplit:
     suffix: str = ''
 
 
-class LanguageConventions(typing.Protocol):
-    @property
-    def language_id(self) -> str: ...
+class LanguageConventions(abc.ABC):
+    language_id: str
+    extensions: frozenset[str]
+    doc_delimiter: str
+    signature_tags: tuple[str, ...]
 
-    @property
-    def extensions(self) -> frozenset[str]: ...
-
-    @property
-    def doc_delimiter(self) -> str: ...
-
-    @property
-    def signature_tags(self) -> tuple[str, ...]: ...
-
+    @abc.abstractmethod
     def visibility_of(self, name: str) -> Visibility: ...
 
+    @abc.abstractmethod
     def split_delimiter(self, line: str, form: CommentForm) -> DelimiterSplit: ...

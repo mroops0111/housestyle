@@ -2,7 +2,7 @@ import pathlib
 import re
 import typing
 
-from .agent_harness import HarnessMetadata, Payload, existing_source_files
+from .agent_harness import AgentHarness, HarnessMetadata, Payload, existing_source_files
 
 
 EDIT_TOOLS = frozenset({'apply_patch'})
@@ -13,13 +13,14 @@ CODEX = HarnessMetadata(
     example={'tool_name': 'apply_patch', 'tool_input': {'command': '*** Update File: src/module.py'}},
 )
 
+
 # Codex carries no path field.
 # The patch body names each file in its header, so the path is read back out of the diff.
 _PATCH_HEADER = re.compile(r'^(?:\*\*\*\s+(?:Update|Add|Delete) File:|---|\+\+\+)\s+(.+?)\s*$', re.MULTILINE)
 _STRIP_PREFIX = re.compile(r'^[ab]/')
 
 
-class CodexHarness:
+class CodexHarness(AgentHarness):
     metadata = CODEX
 
     def __init__(self, extensions: frozenset[str]) -> None:

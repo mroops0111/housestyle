@@ -2,7 +2,7 @@ import typing
 
 from ..models.comment import CommentGroup
 from ..models.diagnostic import Diagnostic, Fix, FixKind, RuleMetadata
-from ..ports.rule import RuleContext
+from ..ports.rule import Rule, RuleContext
 
 
 MID_CLAUSE_BREAK = RuleMetadata(
@@ -18,7 +18,7 @@ LINE_TOO_LONG = RuleMetadata(
 )
 
 
-class MidClauseBreakRule:
+class MidClauseBreakRule(Rule):
     metadata = MID_CLAUSE_BREAK
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
@@ -36,7 +36,7 @@ class MidClauseBreakRule:
         )
 
 
-class LineTooLongRule:
+class LineTooLongRule(Rule):
     metadata = LINE_TOO_LONG
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:

@@ -1,3 +1,4 @@
+import abc
 import dataclasses
 import typing
 
@@ -20,8 +21,8 @@ class RuleContext:
         return self.rule_set.settings_for(rule_id)
 
 
-class Rule(typing.Protocol):
-    @property
-    def metadata(self) -> RuleMetadata: ...
+class Rule(abc.ABC):
+    metadata: RuleMetadata
 
+    @abc.abstractmethod
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]: ...

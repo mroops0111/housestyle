@@ -4,7 +4,7 @@ import shutil
 import pytest
 
 from housestyle.application import Linter, ReportAggregator, RuleEngine
-from housestyle.domain import Diagnostic, Document, Fix, FixKind, RuleSet, SourceRange
+from housestyle.domain import Diagnostic, Document, ExternalLinter, Fix, FixKind, RuleSet, SourceRange
 from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER, AutoCorrectLinter, ValeLinter
 
 
@@ -14,7 +14,7 @@ MIS_WRAPPED = (
 )
 
 
-class StubLinter:
+class StubLinter(ExternalLinter):
     def __init__(self, name: str, available: bool = True, diagnostics: tuple[Diagnostic, ...] = ()) -> None:
         self.name = name
         self._available = available

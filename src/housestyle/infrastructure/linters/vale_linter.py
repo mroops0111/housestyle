@@ -7,6 +7,7 @@ import pydantic
 from ...domain.models.diagnostic import SEVERITY_BY_NAME, Diagnostic, Fix, Severity
 from ...domain.models.document import Document
 from ...domain.models.position import Position, SourceRange
+from ...domain.ports.external_linter import ExternalLinter
 
 
 TIMEOUT_SECONDS = 30
@@ -36,7 +37,7 @@ class ValeReport(pydantic.RootModel[dict[str, list[ValeAlert]]]):
         return tuple(alert for alerts in report.root.values() for alert in alerts)
 
 
-class ValeLinter:
+class ValeLinter(ExternalLinter):
     name = 'vale'
 
     def __init__(self, executable: str = 'vale') -> None:

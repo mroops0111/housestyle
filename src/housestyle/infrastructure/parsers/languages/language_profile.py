@@ -1,5 +1,5 @@
+import abc
 import enum
-import typing
 
 from ....domain.models.comment import SymbolKind
 from ....domain.ports.language_conventions import LanguageConventions
@@ -12,12 +12,15 @@ class NodeRole(enum.Enum):
     OTHER = 'other'
 
 
-class GrammarAdapter(typing.Protocol):
+class GrammarAdapter(abc.ABC):
+    @abc.abstractmethod
     def query(self) -> str: ...
 
+    @abc.abstractmethod
     def role_of(self, node_type: str) -> NodeRole: ...
 
+    @abc.abstractmethod
     def symbol_kind(self, node_type: str) -> SymbolKind: ...
 
 
-class LanguageProfile(LanguageConventions, GrammarAdapter, typing.Protocol): ...
+class LanguageProfile(LanguageConventions, GrammarAdapter): ...
