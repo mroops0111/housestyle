@@ -2,9 +2,9 @@ import pathlib
 
 import pytest
 
-from housestyle.application import Linter, RuleEngine
-from housestyle.domain import Document, RuleSet
-from housestyle.infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, PYTHON
+from subedit.application import Linter, RuleEngine
+from subedit.domain import Document, RuleSet
+from subedit.infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, PYTHON
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -37,7 +37,7 @@ def test_the_project_carries_comments_worth_checking() -> None:
     assert blocks > 0, 'a clean self-hosting run means nothing if there is nothing to check'
 
 
-def test_housestyle_lints_itself_clean() -> None:
+def test_subedit_lints_itself_clean() -> None:
     rules = DEFAULT_CONFIG_SOURCE.resolve(str(SOURCE_ROOT))
     engine = RuleEngine(ALL_RULES)
     linter = Linter(DEFAULT_PARSER, engine)
@@ -80,16 +80,16 @@ def test_the_project_config_is_readable_and_enables_every_rule() -> None:
 
 
 def test_the_generated_rule_reference_is_in_sync() -> None:
-    from housestyle.infrastructure import ALL_RULES
-    from housestyle.presentation import rule_reference
+    from subedit.infrastructure import ALL_RULES
+    from subedit.presentation import rule_reference
 
     reference = REPO_ROOT / 'docs' / 'rules.md'
-    assert reference.is_file(), 'run: housestyle rules --write docs/rules.md'
+    assert reference.is_file(), 'run: subedit rules --write docs/rules.md'
     assert reference.read_text(encoding='utf-8') == rule_reference.render(ALL_RULES)
 
 
 def test_every_rule_appears_in_the_reference() -> None:
-    from housestyle.infrastructure import ALL_RULES
+    from subedit.infrastructure import ALL_RULES
 
     reference = (REPO_ROOT / 'docs' / 'rules.md').read_text(encoding='utf-8')
     missing = [rule.metadata.rule_id for rule in ALL_RULES if f'`{rule.metadata.rule_id}`' not in reference]
@@ -106,16 +106,16 @@ def test_the_repository_installs_its_own_hook() -> None:
         for entry in group['hooks']
         if entry.get('type') == 'command'
     ]
-    assert any('housestyle-hook' in command for command in commands)
+    assert any('subedit-hook' in command for command in commands)
 
 
 def test_the_excluded_fixture_is_actually_excluded() -> None:
-    from housestyle.infrastructure import DEFAULT_CONFIG_SOURCE
+    from subedit.infrastructure import DEFAULT_CONFIG_SOURCE
 
     fixture = REPO_ROOT / 'tests' / 'fixtures' / 'vale' / 'violations.py'
     patterns = DEFAULT_CONFIG_SOURCE.exclude_patterns(str(fixture))
     assert patterns, 'the project config must declare an exclude for deliberate fixtures'
     assert DEFAULT_CONFIG_SOURCE.is_excluded(fixture, REPO_ROOT, patterns)
     assert not DEFAULT_CONFIG_SOURCE.is_excluded(
-        REPO_ROOT / 'src' / 'housestyle' / 'domain' / 'prose.py', REPO_ROOT, patterns
+        REPO_ROOT / 'src' / 'subedit' / 'domain' / 'prose.py', REPO_ROOT, patterns
     )

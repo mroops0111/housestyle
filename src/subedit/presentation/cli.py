@@ -98,7 +98,7 @@ def rules(
 
 @app.command()
 def version() -> None:
-    typer.echo(f'housestyle {__version__}')
+    typer.echo(f'subedit {__version__}')
 
 
 def main() -> int:

@@ -1,8 +1,8 @@
 import sys
 
-from housestyle.application import Linter, RuleEngine
-from housestyle.domain import Document, RuleSet
-from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER
+from subedit.application import Linter, RuleEngine
+from subedit.domain import Document, RuleSet
+from subedit.infrastructure import ALL_RULES, DEFAULT_PARSER
 
 
 SOURCE = """def build(value):

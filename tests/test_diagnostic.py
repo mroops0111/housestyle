@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.domain import Diagnostic, Fix, FixKind, Report, RuleMetadata, Severity, SourceRange, TextEdit
+from subedit.domain import Diagnostic, Fix, FixKind, Report, RuleMetadata, Severity, SourceRange, TextEdit
 
 
 def edit(start: int = 0, end: int = 1, new_text: str = 'x') -> TextEdit:
@@ -57,7 +57,7 @@ def test_a_rule_needs_an_id() -> None:
 def test_rule_meta_defaults_to_error() -> None:
     metadata = RuleMetadata(rule_id='mid-clause-break', summary='s', fix_kind=FixKind.REFLOW)
     assert metadata.default_severity is Severity.ERROR
-    assert metadata.source == 'housestyle'
+    assert metadata.source == 'subedit'
 
 
 def test_report_partitions_by_who_can_fix() -> None:

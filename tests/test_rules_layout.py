@@ -1,8 +1,8 @@
 import pytest
 
-from housestyle.application import Linter, RuleEngine
-from housestyle.domain import Document, FixKind, RuleSet, apply_edits
-from housestyle.infrastructure import DEFAULT_PARSER, LAYOUT_RULES
+from subedit.application import Linter, RuleEngine
+from subedit.domain import Document, FixKind, RuleSet, apply_edits
+from subedit.infrastructure import DEFAULT_PARSER, LAYOUT_RULES
 
 
 ALL_LAYOUT = frozenset({'mid-clause-break', 'line-too-long'})

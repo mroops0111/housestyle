@@ -3,7 +3,7 @@ import typing
 
 import pytest
 
-from housestyle.presentation.harnesses import ALL_HARNESSES, ClaudeCodeHarness, CodexHarness, HarnessMetadata, resolve
+from subedit.presentation.harnesses import ALL_HARNESSES, ClaudeCodeHarness, CodexHarness, HarnessMetadata, resolve
 
 
 @pytest.fixture

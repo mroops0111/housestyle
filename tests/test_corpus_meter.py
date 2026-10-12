@@ -1,8 +1,8 @@
 import pytest
 
-from housestyle.application import CorpusMeter, Distribution
-from housestyle.domain import Document
-from housestyle.infrastructure import DEFAULT_PARSER
+from subedit.application import CorpusMeter, Distribution
+from subedit.domain import Document
+from subedit.infrastructure import DEFAULT_PARSER
 
 
 def measure(*sources: str):

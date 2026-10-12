@@ -6,7 +6,7 @@ from ...domain.models.rule_set import RuleSet, RuleSettings
 from .config_schema import ConfigFile, RuleTable
 
 
-CONFIG_NAME = 'housestyle.toml'
+CONFIG_NAME = 'subedit.toml'
 PYPROJECT_NAME = 'pyproject.toml'
 DEFAULT_WIDTH = 120
 
@@ -26,7 +26,7 @@ class TomlConfigSource:
 
     def exclude_patterns(self, path: str) -> tuple[str, ...]:
         config_file = self._read(path)
-        return config_file.housestyle.exclude if config_file else ()
+        return config_file.subedit.exclude if config_file else ()
 
     def is_excluded(self, target: pathlib.Path, root: pathlib.Path, patterns: tuple[str, ...]) -> bool:
         try:
@@ -55,11 +55,11 @@ class TomlConfigSource:
 
     def _reshape_pyproject(self, raw_table: dict[str, object]) -> dict[str, object] | None:
         tools = raw_table.get('tool')
-        tool_section = tools.get('housestyle') if isinstance(tools, dict) else None
+        tool_section = tools.get('subedit') if isinstance(tools, dict) else None
         if not isinstance(tool_section, dict):
             return None
         return {
-            'housestyle': {name: setting for name, setting in tool_section.items() if name != 'rules'},
+            'subedit': {name: setting for name, setting in tool_section.items() if name != 'rules'},
             'rules': tool_section.get('rules', {}),
         }
 
@@ -79,7 +79,7 @@ class TomlConfigSource:
             tools = tomllib.loads(config_path.read_text(encoding='utf-8')).get('tool')
         except (OSError, tomllib.TOMLDecodeError):
             return False
-        return isinstance(tools, dict) and 'housestyle' in tools
+        return isinstance(tools, dict) and 'subedit' in tools
 
     def _to_rule_set(self, config_file: ConfigFile) -> RuleSet:
         enabled_ids = set(self._available_rule_ids)
@@ -98,5 +98,5 @@ class TomlConfigSource:
         return RuleSet(
             enabled_rule_ids=frozenset(enabled_ids),
             settings=settings,
-            line_width=config_file.housestyle.line_width,
+            line_width=config_file.subedit.line_width,
         )

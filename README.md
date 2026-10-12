@@ -1,8 +1,10 @@
-# housestyle
+# subedit
 
 Your house style, enforced in the places prose hides inside a codebase.
 
-Linters check your code. Almost nothing checks the sentences you write around it. `housestyle` reads the comments and docstrings in your source, lays them out one sentence per line, and only tells you about the sentences a tool cannot fix for you.
+A subeditor is the person at a publication who makes every piece of copy match its house style. `subedit` does that job for the prose in your code.
+
+Linters check your code. Almost nothing checks the sentences you write around it. `subedit` reads the comments and docstrings in your source, lays them out one sentence per line, and only tells you about the sentences a tool cannot fix for you.
 
 ## Example
 
@@ -13,7 +15,7 @@ An editor wraps a comment at whatever column it reaches, so sentences break mid 
     # read faults the job. Retry once, then give up.
 ```
 
-`housestyle fix --write` repairs the layout and says nothing.
+`subedit fix --write` repairs the layout and says nothing.
 
 ```python
     # Cap the buffer at the runner limit, because an unbounded read faults the job.
@@ -32,11 +34,13 @@ line 2  [unbreakable-sentence]
 
 ## Installation
 
-Install the command line tool with uv.
+Install the command line tool from PyPI.
 
 ```bash
-uv tool install git+https://github.com/mroops0111/housestyle@v0.1.0
+uv tool install subedit
 ```
+
+`pipx install subedit` and `pip install subedit` work as well.
 
 ## Commands
 
@@ -44,12 +48,12 @@ Every command takes files or directories.
 
 | Command | Result |
 | --- | --- |
-| `housestyle check src/` | every finding |
-| `housestyle check src/ --output=actionable` | only the sentences that need rewriting |
-| `housestyle fix src/` | the repairs, as a diff |
-| `housestyle fix src/ --write` | the repairs, applied |
-| `housestyle stats src/` | comment shapes across the codebase, for setting thresholds from data |
-| `housestyle rules` | every rule and who resolves it |
+| `subedit check src/` | every finding |
+| `subedit check src/ --output=actionable` | only the sentences that need rewriting |
+| `subedit fix src/` | the repairs, as a diff |
+| `subedit fix src/ --write` | the repairs, applied |
+| `subedit stats src/` | comment shapes across the codebase, for setting thresholds from data |
+| `subedit rules` | every rule and who resolves it |
 
 `check` and `fix` exit 1 while anything needs an author, so they drop into pre-commit or CI as they are.
 
@@ -67,15 +71,15 @@ Rewriting a sentence needs its meaning, which a deterministic process cannot sup
 
 ## Agent Hook
 
-`housestyle-hook` runs after every file an agent edits. It repairs the mechanical findings in place, and exits 2 only when a sentence needs rewriting, which hands the message back to the model.
+`subedit-hook` runs after every file an agent edits. It repairs the mechanical findings in place, and exits 2 only when a sentence needs rewriting, which hands the message back to the model.
 
 ### Claude Code
 
 The plugin registers the hook. It cannot install the tool, so install that first.
 
 ```text
-/plugin marketplace add mroops0111/housestyle
-/plugin install housestyle@mroops
+/plugin marketplace add mroops0111/subedit
+/plugin install subedit@mroops
 ```
 
 To register it by hand instead, add this to `.claude/settings.json`.
@@ -86,7 +90,7 @@ To register it by hand instead, add this to `.claude/settings.json`.
     "PostToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit|NotebookEdit",
-        "hooks": [{ "type": "command", "command": "housestyle-hook" }]
+        "hooks": [{ "type": "command", "command": "subedit-hook" }]
       }
     ]
   }
@@ -100,21 +104,21 @@ Add this to `~/.codex/hooks.json`.
 ```json
 {
   "hooks": {
-    "PostToolUse": [{ "command": "housestyle-hook" }]
+    "PostToolUse": [{ "command": "subedit-hook" }]
   }
 }
 ```
 
 ### Several Agents
 
-Registering the hook with both agents is the normal case. Each agent names its edit tools differently, so every payload identifies its sender, and a payload from anything else exits 0 untouched. `housestyle-hook --help` prints the payload shapes it accepts.
+Registering the hook with both agents is the normal case. Each agent names its edit tools differently, so every payload identifies its sender, and a payload from anything else exits 0 untouched. `subedit-hook --help` prints the payload shapes it accepts.
 
 ## Configuration
 
-Settings come from `housestyle.toml`, or from `[tool.housestyle]` in `pyproject.toml`, whichever sits closest above the file being checked.
+Settings come from `subedit.toml`, or from `[tool.subedit]` in `pyproject.toml`, whichever sits closest above the file being checked.
 
 ```toml
-[housestyle]
+[subedit]
 line-width = 120
 exclude = ["tests/fixtures/**"]
 
@@ -127,7 +131,7 @@ Rule names describe the problem they report. `docs/rules.md` lists every rule, g
 
 ## Delegated Tools
 
-`housestyle check` also runs two tools where they are installed, and folds their findings into its own report.
+`subedit check` also runs two tools where they are installed, and folds their findings into its own report.
 
 - **Vale**: punctuation, banned phrasing, and anything a markup aware prose linter already handles
 - **AutoCorrect**: spacing and punctuation width between CJK and Latin text
@@ -146,13 +150,13 @@ Code comments are the first surface, and Markdown comes next.
 
 ## Related Tools
 
-`housestyle` covers the one thing the usual Python tools leave alone.
+`subedit` covers the one thing the usual Python tools leave alone.
 
 | Tool | Checks |
 | --- | --- |
 | ruff | code structure |
 | basedpyright | types |
-| **housestyle** | **the natural language inside source** |
+| **subedit** | **the natural language inside source** |
 
 ## License
 

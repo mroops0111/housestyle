@@ -5,14 +5,14 @@ import typing
 
 import pytest
 
-from housestyle.presentation.harnesses.claude_code_harness import EDIT_TOOLS
+from subedit.presentation.harnesses.claude_code_harness import EDIT_TOOLS
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / '.claude-plugin' / 'plugin.json'
 MARKETPLACE = ROOT / '.claude-plugin' / 'marketplace.json'
 HOOKS = ROOT / 'hooks' / 'hooks.json'
-WRAPPER = ROOT / 'hooks' / 'run-housestyle-hook.sh'
+WRAPPER = ROOT / 'hooks' / 'run-subedit-hook.sh'
 
 
 def load(path: pathlib.Path) -> typing.Any:
@@ -25,7 +25,7 @@ def test_every_plugin_file_is_valid_json(path: pathlib.Path) -> None:
 
 
 def test_the_manifest_names_the_plugin() -> None:
-    assert load(MANIFEST)['name'] == 'housestyle'
+    assert load(MANIFEST)['name'] == 'subedit'
 
 
 def test_the_manifest_version_matches_the_package() -> None:
@@ -74,5 +74,5 @@ def test_the_wrapper_says_what_to_install_when_nothing_is_found() -> None:
 def test_the_marketplace_points_at_this_repository() -> None:
     listed = load(MARKETPLACE)['plugins']
 
-    assert [plugin['name'] for plugin in listed] == ['housestyle']
-    assert listed[0]['source']['repo'] == 'mroops0111/housestyle'
+    assert [plugin['name'] for plugin in listed] == ['subedit']
+    assert listed[0]['source']['repo'] == 'mroops0111/subedit'

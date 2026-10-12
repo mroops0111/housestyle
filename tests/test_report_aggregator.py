@@ -3,9 +3,9 @@ import shutil
 
 import pytest
 
-from housestyle.application import Linter, ReportAggregator, RuleEngine
-from housestyle.domain import Diagnostic, Document, ExternalLinter, Fix, FixKind, RuleSet, SourceRange
-from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER, AutoCorrectLinter, ValeLinter
+from subedit.application import Linter, ReportAggregator, RuleEngine
+from subedit.domain import Diagnostic, Document, ExternalLinter, Fix, FixKind, RuleSet, SourceRange
+from subedit.infrastructure import ALL_RULES, DEFAULT_PARSER, AutoCorrectLinter, ValeLinter
 
 
 ENABLED = frozenset(rule.metadata.rule_id for rule in ALL_RULES)
@@ -51,7 +51,7 @@ def aggregate(linters, text: str = MIS_WRAPPED, width: int = 60):
 def test_native_findings_survive_with_no_linters() -> None:
     report = aggregate(())
     assert report.diagnostics
-    assert all(item.source == 'housestyle' for item in report.diagnostics)
+    assert all(item.source == 'subedit' for item in report.diagnostics)
 
 
 def test_external_findings_are_merged_in() -> None:

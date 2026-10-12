@@ -1,7 +1,7 @@
 import pytest
 
-from housestyle.application import Linter, RuleEngine
-from housestyle.domain import (
+from subedit.application import Linter, RuleEngine
+from subedit.domain import (
     CommentGroup,
     Diagnostic,
     Document,
@@ -16,7 +16,7 @@ from housestyle.domain import (
     SourceRange,
     TextEdit,
 )
-from housestyle.infrastructure import DEFAULT_PARSER
+from subedit.infrastructure import DEFAULT_PARSER
 
 
 class RecordingRule(Rule):

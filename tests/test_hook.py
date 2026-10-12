@@ -5,10 +5,10 @@ import sys
 
 import pytest
 
-from housestyle.presentation import hook
+from subedit.presentation import hook
 
 
-CONFIG = '[housestyle]\nline-width = 74\n'
+CONFIG = '[subedit]\nline-width = 74\n'
 MIS_WRAPPED = (
     'def f():\n'
     '    # cap the size to the shared limit so the mmap does not\n'
@@ -25,7 +25,7 @@ def payload(path: pathlib.Path, tool: str = 'Edit') -> dict[str, object]:
 
 
 def seed(tmp_path: pathlib.Path, body: str, name: str = 'probe.py') -> pathlib.Path:
-    (tmp_path / 'housestyle.toml').write_text(CONFIG, encoding='utf-8')
+    (tmp_path / 'subedit.toml').write_text(CONFIG, encoding='utf-8')
     target = tmp_path / name
     target.write_text(body, encoding='utf-8')
     return target
@@ -101,7 +101,7 @@ def test_write_can_be_suppressed(tmp_path: pathlib.Path) -> None:
 @pytest.mark.parametrize('body', ['not json at all', '[]', '"a string"'])
 def test_malformed_input_never_blocks(body: str) -> None:
     result = subprocess.run(
-        [sys.executable, '-m', 'housestyle.presentation.hook'],
+        [sys.executable, '-m', 'subedit.presentation.hook'],
         input=body,
         capture_output=True,
         text=True,
@@ -113,7 +113,7 @@ def test_malformed_input_never_blocks(body: str) -> None:
 def test_the_entry_point_blocks_on_a_rewrite_finding(tmp_path: pathlib.Path) -> None:
     target = seed(tmp_path, UNBREAKABLE)
     result = subprocess.run(
-        [sys.executable, '-m', 'housestyle.presentation.hook'],
+        [sys.executable, '-m', 'subedit.presentation.hook'],
         input=json.dumps(payload(target)),
         capture_output=True,
         text=True,
@@ -154,4 +154,4 @@ def test_the_hook_can_list_the_shapes_it_accepts() -> None:
     assert 'claude-code' in described
     assert 'codex' in described
     assert 'exits 0' in described
-    assert 'housestyle fix' in described, 'a non agent caller needs pointing at the CLI'
+    assert 'subedit fix' in described, 'a non agent caller needs pointing at the CLI'

@@ -1,12 +1,12 @@
 {
-  "name": "housestyle",
-  "displayName": "housestyle",
+  "name": "subedit",
+  "displayName": "subedit",
   "version": "0.1.0",
   "description": "Repairs comment layout silently on write, and returns only what needs rewriting.",
   "author": {
     "name": "mroops0111"
   },
-  "homepage": "https://github.com/mroops0111/housestyle",
-  "repository": "https://github.com/mroops0111/housestyle",
+  "homepage": "https://github.com/mroops0111/subedit",
+  "repository": "https://github.com/mroops0111/subedit",
   "license": "MIT"
 }

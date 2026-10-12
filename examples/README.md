@@ -25,11 +25,11 @@ Passing a different width changes where the sentence has to break, which is the 
 ## The Probe
 
 ```bash
-uv run housestyle check examples/probe.py --output=full
-uv run housestyle check examples/probe.py --output=actionable
+uv run subedit check examples/probe.py --output=full
+uv run subedit check examples/probe.py --output=actionable
 ```
 
-`examples/probe.py` carries one finding of each kind, under the narrow width in `examples/housestyle.toml`.
+`examples/probe.py` carries one finding of each kind, under the narrow width in `examples/subedit.toml`.
 
 - **full** lists both, one repairable and one not.
 - **actionable** lists only the sentence with no comma, because a tool cannot decide where its meaning divides.
@@ -42,6 +42,6 @@ Three files, smallest first. Together they are about two hundred lines, and the 
 
 | File | Lines | What it teaches |
 | --- | --- | --- |
-| `src/housestyle/domain/models/text.py` | 23 | what a value object looks like here |
-| `src/housestyle/domain/rules/layout.py` | 57 | what a rule looks like |
-| `src/housestyle/domain/models/diagnostic.py` | 123 | why `FixKind` is the centre of the design |
+| `src/subedit/domain/models/text.py` | 23 | what a value object looks like here |
+| `src/subedit/domain/rules/layout.py` | 57 | what a rule looks like |
+| `src/subedit/domain/models/diagnostic.py` | 123 | why `FixKind` is the centre of the design |
