@@ -1,7 +1,7 @@
 import pytest
 
-from housestyle.application import Fixer, Linter, RuleEngine
-from housestyle.domain import (
+from subedit.application import Fixer, Linter, RuleEngine
+from subedit.domain import (
     CommentGroup,
     Diagnostic,
     Document,
@@ -14,7 +14,7 @@ from housestyle.domain import (
     SourceRange,
     TextEdit,
 )
-from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER
+from subedit.infrastructure import ALL_RULES, DEFAULT_PARSER
 
 
 LAYOUT = frozenset({'mid-clause-break', 'line-too-long', 'stub-fragment', 'unbreakable-sentence'})

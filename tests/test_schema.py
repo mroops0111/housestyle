@@ -1,24 +1,24 @@
 import pytest
 
-from housestyle.domain import Severity
-from housestyle.infrastructure.config_sources import ConfigFile, HousestyleSection, RuleTable
-from housestyle.infrastructure.linters.vale_linter import ValeReport
+from subedit.domain import Severity
+from subedit.infrastructure.config_sources import ConfigFile, RuleTable, SubeditSection
+from subedit.infrastructure.linters.vale_linter import ValeReport
 
 
 def test_a_missing_section_falls_back_to_defaults() -> None:
     parsed = ConfigFile.parse({})
-    assert parsed.housestyle.line_width == 120
-    assert parsed.housestyle.exclude == ()
+    assert parsed.subedit.line_width == 120
+    assert parsed.subedit.exclude == ()
     assert parsed.rules == {}
 
 
 def test_the_hyphenated_key_is_accepted() -> None:
-    assert ConfigFile.parse({'housestyle': {'line-width': 88}}).housestyle.line_width == 88
+    assert ConfigFile.parse({'subedit': {'line-width': 88}}).subedit.line_width == 88
 
 
 @pytest.mark.parametrize('width', ['wide', 0, -10, None, [80]])
 def test_a_nonsense_width_falls_back_rather_than_raising(width: object) -> None:
-    assert ConfigFile.parse({'housestyle': {'line-width': width}}).housestyle.line_width == 120
+    assert ConfigFile.parse({'subedit': {'line-width': width}}).subedit.line_width == 120
 
 
 def test_a_rule_entry_may_be_a_boolean_a_string_or_a_table() -> None:
@@ -43,14 +43,14 @@ def test_extra_options_survive_on_a_rule_table() -> None:
 
 
 def test_exclude_patterns_are_read() -> None:
-    assert ConfigFile.parse({'housestyle': {'exclude': ['a/**', 'b.py']}}).housestyle.exclude == ('a/**', 'b.py')
+    assert ConfigFile.parse({'subedit': {'exclude': ['a/**', 'b.py']}}).subedit.exclude == ('a/**', 'b.py')
 
 
 def test_a_project_section_rejects_a_zero_width_at_the_boundary() -> None:
     import pydantic
 
     with pytest.raises(pydantic.ValidationError):
-        HousestyleSection.model_validate({'line-width': 0})
+        SubeditSection.model_validate({'line-width': 0})
 
 
 def test_a_vale_report_decodes_alerts() -> None:

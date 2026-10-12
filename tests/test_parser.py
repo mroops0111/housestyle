@@ -1,9 +1,9 @@
 import pytest
 
-from housestyle.domain import CommentForm, CommentGroup, CommentPlacement, Document, SymbolKind, Visibility
-from housestyle.domain.ports import DelimiterSplit
-from housestyle.infrastructure import DEFAULT_PARSER, PYTHON, LanguageProfile, TreeSitterParser
-from housestyle.infrastructure.parsers.languages import NodeRole
+from subedit.domain import CommentForm, CommentGroup, CommentPlacement, Document, SymbolKind, Visibility
+from subedit.domain.ports import DelimiterSplit
+from subedit.infrastructure import DEFAULT_PARSER, PYTHON, LanguageProfile, TreeSitterParser
+from subedit.infrastructure.parsers.languages import NodeRole
 
 
 def parse(source: str) -> tuple[CommentGroup, ...]:
@@ -162,8 +162,8 @@ def test_blocks_come_back_in_source_order() -> None:
 
 
 def test_the_profile_satisfies_the_language_profile_port() -> None:
-    from housestyle.domain import SourceParser
-    from housestyle.infrastructure import PYTHON, LanguageProfile
+    from subedit.domain import SourceParser
+    from subedit.infrastructure import PYTHON, LanguageProfile
 
     profile: LanguageProfile = PYTHON
     parser: SourceParser = DEFAULT_PARSER

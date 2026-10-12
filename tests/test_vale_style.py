@@ -45,5 +45,5 @@ def test_allowed_constructs_stay_silent() -> None:
     assert run_vale('tests/fixtures/vale/clean.md').strip() == ''
 
 
-def test_housestyle_lints_itself_clean() -> None:
+def test_subedit_lints_itself_clean() -> None:
     assert run_vale('src', 'tests', 'README.md').strip() == ''

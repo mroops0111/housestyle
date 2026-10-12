@@ -107,7 +107,7 @@ BLOCK_TOO_LONG = RuleMetadata(
 )
 
 
-# Set from the p95 of a measured corpus, which housestyle stats reports.
+# Set from the p95 of a measured corpus, which subedit stats reports.
 # A comment past this length has usually started restating the code below it.
 DEFAULT_LIMITS = {
     'line': 4,

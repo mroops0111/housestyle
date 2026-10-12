@@ -1,4 +1,4 @@
-[housestyle]
+[subedit]
 line-width = 120
 exclude = ["tests/fixtures/**", "examples/probe.py"]
 

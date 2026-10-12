@@ -1,7 +1,7 @@
 import pathlib
 
-from housestyle.domain import Severity
-from housestyle.infrastructure import CONFIG_NAME, TomlConfigSource
+from subedit.domain import Severity
+from subedit.infrastructure import CONFIG_NAME, TomlConfigSource
 
 
 AVAILABLE = ('mid-clause-break', 'line-too-long', 'stub-fragment')
@@ -27,7 +27,7 @@ def test_defaults_enable_every_available_rule(tmp_path: pathlib.Path) -> None:
 def test_configuration_is_found_by_walking_upward(tmp_path: pathlib.Path) -> None:
     nested = tmp_path / 'a' / 'b'
     nested.mkdir(parents=True)
-    write(tmp_path, '[housestyle]\nline-width = 88\n')
+    write(tmp_path, '[subedit]\nline-width = 88\n')
     assert source().resolve(str(nested / 'module.py')).line_width == 88
 
 
@@ -57,7 +57,7 @@ def test_an_unknown_rule_is_ignored(tmp_path: pathlib.Path) -> None:
 
 
 def test_a_nonsense_width_falls_back_to_the_default(tmp_path: pathlib.Path) -> None:
-    target = write(tmp_path, '[housestyle]\nline-width = "wide"\n')
+    target = write(tmp_path, '[subedit]\nline-width = "wide"\n')
     assert source().resolve(str(target)).line_width == 120
 
 
@@ -72,12 +72,12 @@ def write_pyproject(directory: pathlib.Path, body: str) -> pathlib.Path:
 
 
 def test_settings_are_read_from_pyproject(tmp_path: pathlib.Path) -> None:
-    target = write_pyproject(tmp_path, '[project]\nname = "x"\n\n[tool.housestyle]\nline-width = 96\n')
+    target = write_pyproject(tmp_path, '[project]\nname = "x"\n\n[tool.subedit]\nline-width = 96\n')
     assert source().resolve(str(target)).line_width == 96
 
 
 def test_rules_nest_under_the_tool_table_in_pyproject(tmp_path: pathlib.Path) -> None:
-    body = '[tool.housestyle]\nline-width = 96\n\n[tool.housestyle.rules]\nmid-clause-break = false\n'
+    body = '[tool.subedit]\nline-width = 96\n\n[tool.subedit.rules]\nmid-clause-break = false\n'
     rules = source().resolve(str(write_pyproject(tmp_path, body)))
 
     assert not rules.is_enabled('mid-clause-break')
@@ -85,7 +85,7 @@ def test_rules_nest_under_the_tool_table_in_pyproject(tmp_path: pathlib.Path) ->
 
 
 def test_excludes_are_read_from_pyproject(tmp_path: pathlib.Path) -> None:
-    body = '[tool.housestyle]\nexclude = ["build/**"]\n'
+    body = '[tool.subedit]\nexclude = ["build/**"]\n'
     assert source().exclude_patterns(str(write_pyproject(tmp_path, body))) == ('build/**',)
 
 
@@ -95,6 +95,6 @@ def test_a_pyproject_without_our_table_is_ignored(tmp_path: pathlib.Path) -> Non
 
 
 def test_a_dedicated_file_wins_over_pyproject(tmp_path: pathlib.Path) -> None:
-    (tmp_path / PYPROJECT).write_text('[tool.housestyle]\nline-width = 96\n', encoding='utf-8')
-    target = write(tmp_path, '[housestyle]\nline-width = 70\n')
+    (tmp_path / PYPROJECT).write_text('[tool.subedit]\nline-width = 96\n', encoding='utf-8')
+    target = write(tmp_path, '[subedit]\nline-width = 70\n')
     assert source().resolve(str(target)).line_width == 70

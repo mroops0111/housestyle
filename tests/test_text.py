@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.domain import Document, SourceRange, TextEdit, apply_edits
+from subedit.domain import Document, SourceRange, TextEdit, apply_edits
 
 
 def edit(start: int, end: int, new_text: str) -> TextEdit:

@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/run-housestyle-hook.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/run-subedit-hook.sh",
             "timeout": 30
           }
         ]

@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.domain.models import Prose
+from subedit.domain.models import Prose
 
 
 def texts(prose: Prose) -> list[str]:

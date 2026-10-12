@@ -54,7 +54,7 @@ class RuleMetadata:
     summary: str
     fix_kind: FixKind
     default_severity: Severity = Severity.ERROR
-    source: str = 'housestyle'
+    source: str = 'subedit'
 
     def __post_init__(self) -> None:
         if not self.rule_id:
@@ -68,7 +68,7 @@ class Diagnostic:
     message: str
     severity: Severity = Severity.ERROR
     fix: Fix | None = None
-    source: str = 'housestyle'
+    source: str = 'subedit'
 
     def __post_init__(self) -> None:
         if not self.message:

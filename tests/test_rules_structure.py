@@ -1,8 +1,8 @@
 import pytest
 
-from housestyle.application import Linter, RuleEngine
-from housestyle.domain import Document, FixKind, RuleSet, RuleSettings
-from housestyle.infrastructure import ALL_RULES, DEFAULT_PARSER
+from subedit.application import Linter, RuleEngine
+from subedit.domain import Document, FixKind, RuleSet, RuleSettings
+from subedit.infrastructure import ALL_RULES, DEFAULT_PARSER
 
 
 STRUCTURAL = frozenset({'file-header-comment', 'plain-comment-on-public', 'signature-restating-tag', 'block-too-long'})

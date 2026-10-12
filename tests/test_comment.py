@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.domain import (
+from subedit.domain import (
     CommentForm,
     CommentGroup,
     CommentLine,

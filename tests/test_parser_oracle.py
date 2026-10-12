@@ -5,8 +5,8 @@ import tokenize
 
 import pytest
 
-from housestyle.domain import CommentForm, Document
-from housestyle.infrastructure import DEFAULT_PARSER
+from subedit.domain import CommentForm, Document
+from subedit.infrastructure import DEFAULT_PARSER
 
 
 DEFINITIONS = (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)

@@ -2,11 +2,11 @@ import pathlib
 
 import pytest
 
-from housestyle.presentation.cli import app
+from subedit.presentation.cli import app
 
 
 def test_version_prints_the_package_version(capsys: pytest.CaptureFixture[str]) -> None:
-    from housestyle import __version__
+    from subedit import __version__
 
     with pytest.raises(SystemExit) as exit_info:
         app(['version'])
@@ -40,7 +40,7 @@ def test_check_reports_findings_and_exits_non_zero(tmp_path: pathlib.Path, capsy
         'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n',
         encoding='utf-8',
     )
-    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 60\n', encoding='utf-8')
+    (tmp_path / 'subedit.toml').write_text('[subedit]\nline-width = 60\n', encoding='utf-8')
 
     with pytest.raises(SystemExit) as exit_info:
         app(['check', str(target)])
@@ -70,7 +70,7 @@ def test_fix_prints_a_diff_without_write(tmp_path: pathlib.Path, capsys: pytest.
         'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n'
     )
     target.write_text(original, encoding='utf-8')
-    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 60\n', encoding='utf-8')
+    (tmp_path / 'subedit.toml').write_text('[subedit]\nline-width = 60\n', encoding='utf-8')
 
     with pytest.raises(SystemExit):
         app(['fix', str(target)])
@@ -84,7 +84,7 @@ def test_fix_write_applies_the_change(tmp_path: pathlib.Path) -> None:
         'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n'
     )
     target.write_text(original, encoding='utf-8')
-    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 60\n', encoding='utf-8')
+    (tmp_path / 'subedit.toml').write_text('[subedit]\nline-width = 60\n', encoding='utf-8')
 
     with pytest.raises(SystemExit):
         app(['fix', str(target), '--write'])
@@ -100,7 +100,7 @@ def test_the_actionable_format_shows_only_findings_needing_an_author(
         'def f():\n    # this single sentence has no comma anywhere and runs well past the budget here.\n    pass\n',
         encoding='utf-8',
     )
-    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 50\n', encoding='utf-8')
+    (tmp_path / 'subedit.toml').write_text('[subedit]\nline-width = 50\n', encoding='utf-8')
 
     with pytest.raises(SystemExit):
         app(['check', str(target), '--output', 'actionable'])
@@ -119,7 +119,7 @@ def test_the_json_format_encodes_ranges_and_fix_kind(
         'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n',
         encoding='utf-8',
     )
-    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 60\n', encoding='utf-8')
+    (tmp_path / 'subedit.toml').write_text('[subedit]\nline-width = 60\n', encoding='utf-8')
 
     with pytest.raises(SystemExit):
         app(['check', str(target), '--output', 'json'])
@@ -136,7 +136,7 @@ def test_the_actionable_format_says_so_when_only_mechanical_findings_exist(
         'def f():\n    # cap the size so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n',
         encoding='utf-8',
     )
-    (tmp_path / 'housestyle.toml').write_text('[housestyle]\nline-width = 60\n', encoding='utf-8')
+    (tmp_path / 'subedit.toml').write_text('[subedit]\nline-width = 60\n', encoding='utf-8')
 
     with pytest.raises(SystemExit):
         app(['check', str(target), '--output', 'actionable'])

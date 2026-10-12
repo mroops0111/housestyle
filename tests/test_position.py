@@ -1,6 +1,6 @@
 import pytest
 
-from housestyle.domain import Encoding, Position, PositionMap, SourceRange
+from subedit.domain import Encoding, Position, PositionMap, SourceRange
 
 
 ONE_BYTE = 'const x = 1\nconst y = 2\n'
