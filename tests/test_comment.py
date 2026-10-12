@@ -137,7 +137,9 @@ def test_prose_preserves_indentation_relative_to_the_block() -> None:
 
 
 def test_prose_keeps_uniformly_indented_lines_flush() -> None:
-    lines = tuple(CommentLine(SourceRange(i, i + 1), '        ', '# ', text) for i, text in enumerate(('one', 'two')))
+    lines = tuple(
+        CommentLine(SourceRange(index, index + 1), '        ', '# ', text) for index, text in enumerate(('one', 'two'))
+    )
     group = CommentGroup(
         range=SourceRange(0, 2),
         lines=lines,

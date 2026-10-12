@@ -5,9 +5,9 @@ import subprocess
 import pytest
 
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-CONFIG = REPO_ROOT / '.vale.ini'
-FIXTURES = REPO_ROOT / 'tests' / 'fixtures' / 'vale'
+REPOSITORY_ROOT = pathlib.Path(__file__).resolve().parent.parent
+CONFIG = REPOSITORY_ROOT / '.vale.ini'
+FIXTURES = REPOSITORY_ROOT / 'tests' / 'fixtures' / 'vale'
 
 EXPECTED_RULES = [
     'SignatureTag',
@@ -25,7 +25,7 @@ pytestmark = pytest.mark.skipif(shutil.which('vale') is None, reason='vale is no
 def run_vale(*targets: str) -> str:
     result = subprocess.run(
         ['vale', '--no-exit', '--output=line', f'--config={CONFIG}', *targets],
-        cwd=REPO_ROOT,
+        cwd=REPOSITORY_ROOT,
         capture_output=True,
         text=True,
         check=True,

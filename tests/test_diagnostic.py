@@ -54,7 +54,7 @@ def test_a_rule_needs_an_id() -> None:
         RuleMetadata(rule_id='', summary='s', fix_kind=FixKind.REFLOW)
 
 
-def test_rule_meta_defaults_to_error() -> None:
+def test_rule_metadata_defaults_to_error() -> None:
     metadata = RuleMetadata(rule_id='mid-clause-break', summary='s', fix_kind=FixKind.REFLOW)
     assert metadata.default_severity is Severity.ERROR
     assert metadata.source == 'subedit'

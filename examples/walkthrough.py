@@ -14,29 +14,29 @@ SOURCE = """def build(value):
 WIDTH = int(sys.argv[1]) if len(sys.argv) > 1 else 60
 
 
-def show(n, title, body):
-    print(f'\n{"─" * 62}\n{n}. {title}\n{"─" * 62}')
+def show(step_number, title, body):
+    print(f'\n{"─" * 62}\n{step_number}. {title}\n{"─" * 62}')
     print(body)
 
 
-show(1, '原始碼 (就是一串字)', SOURCE.rstrip())
+show(1, 'Source (just a string)', SOURCE.rstrip())
 
-doc = Document(uri='file:///demo.py', text=SOURCE, language_id='python')
-group = DEFAULT_PARSER.parse(doc)[0]
+document = Document(uri='file:///demo.py', text=SOURCE, language_id='python')
+group = DEFAULT_PARSER.parse(document)[0]
 
 show(
     2,
-    'Parser 把它變成物件 CommentGroup',
-    f"""form       = {group.form.value}          註解的外形
-placement  = {group.placement.value}   它站在哪
-attachment = {group.attachment}      它在說誰
+    'The parser turns it into a CommentGroup',
+    f"""form       = {group.form.value}          shape of the comment
+placement  = {group.placement.value}   where it sits
+attachment = {group.attachment}      what it documents
 line_count = {group.line_count}
-widest     = {group.longest_line} 字元""",
+widest     = {group.longest_line} characters""",
 )
 
 show(
     3,
-    '每一行被拆成三塊 (這是量寬度的關鍵)',
+    'Each line splits into three parts (the key to measuring width)',
     '\n'.join(
         f'  indent={line.indent!r:6s} delimiter={line.delimiter!r:5s} text={line.text!r}' for line in group.lines
     ),
@@ -44,25 +44,28 @@ show(
 
 show(
     4,
-    'Prose 是剝掉標記後的純文字',
+    'Prose is the plain text left once the markers are stripped',
     f"""physical_lines = {group.prose().physical_lines}
 
 flattened      = {group.prose().flattened!r}
 
-sentences      = {[s.text for s in group.prose().sentences()]}""",
+sentences      = {[sentence.text for sentence in group.prose().sentences()]}""",
 )
 
-show(5, f'reflow 算出正確排版 (一句一行, 寬度 {WIDTH})', group.reflow(WIDTH).render())
+show(5, f'reflow computes the right layout (one sentence per line, width {WIDTH})', group.reflow(WIDTH).render())
 
 report = Linter(DEFAULT_PARSER, RuleEngine(ALL_RULES)).run(
-    doc, RuleSet(enabled_rule_ids=frozenset(rule.metadata.rule_id for rule in ALL_RULES), line_width=WIDTH)
+    document, RuleSet(enabled_rule_ids=frozenset(rule.metadata.rule_id for rule in ALL_RULES), line_width=WIDTH)
 )
 
 show(
     6,
-    '8 條規則各問一個問題，這些有意見',
-    '\n'.join(f'  {d.rule_id:22s} 誰修? {"工具" if d.is_mechanical else "作者"}' for d in report.diagnostics),
+    'Each of the 8 rules asks one question, and these answered',
+    '\n'.join(
+        f'  {diagnostic.rule_id:22s} fixed by {"the tool" if diagnostic.is_mechanical else "the author"}'
+        for diagnostic in report.diagnostics
+    ),
 )
 
-print(f'\n  → 機械可修 {len(report.mechanical)} 條，工具靜默處理')
-print(f'  → 需要作者 {len(report.needing_author)} 條，只有這些會給 AI 看')
+print(f'\n  → {len(report.mechanical)} mechanical, repaired silently by the tool')
+print(f'  → {len(report.needing_author)} need the author, and only these reach an agent')

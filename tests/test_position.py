@@ -4,11 +4,11 @@ from subedit.domain import Encoding, Position, PositionMap, SourceRange
 
 
 ONE_BYTE = 'const x = 1\nconst y = 2\n'
-TWO_BYTE = 'cafe\u0301 vs café\nsegunda línea\n'
-THREE_BYTE = 'a three byte run 中文\nsecond line 日本\n'
+TWO_BYTE = 'cafe\u0301 vs café\nsecond naïve line\n'
+THREE_BYTE = 'a three byte run €€\nsecond line ✓✓\n'
 FOUR_BYTE = 'tail 🐍 head\nsecond 🎯 line\n'
 JOINED_GRAPHEME = 'family 👨\u200d👩\u200d👧 done\n'
-MIXED_WIDTH = '// note é 中 🐍 together\n// second\n'
+MIXED_WIDTH = '// note é € 🐍 together\n// second\n'
 CRLF_LINES = 'alpha\r\nbeta\r\n'
 NO_FINAL_NEWLINE = 'alpha\nbeta'
 EMPTY = ''
@@ -62,8 +62,8 @@ def test_utf16_counts_surrogate_pairs_as_two() -> None:
 
 
 def test_multibyte_below_the_bmp_costs_one_unit_in_both_utf16_and_utf32() -> None:
-    mapper = PositionMap('中文')
-    offset = len('中文'.encode())
+    mapper = PositionMap('€✓')
+    offset = len('€✓'.encode())
     assert mapper.to_position(offset, Encoding.UTF16).character == 2
     assert mapper.to_position(offset, Encoding.UTF32).character == 2
     assert mapper.to_position(offset, Encoding.UTF8).character == 6

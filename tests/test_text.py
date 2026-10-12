@@ -30,10 +30,10 @@ def test_insertion_and_deletion() -> None:
 
 
 def test_edits_respect_byte_offsets_on_multibyte_text() -> None:
-    text = '使用 MCP 協定'
-    start = len('使用 '.encode())
-    end = start + len(b'MCP')
-    assert apply_edits(text, (edit(start, end, 'HTTP'),)) == '使用 HTTP 協定'
+    text = '€✓ old ✓€'
+    start = len('€✓ '.encode())
+    end = start + len(b'old')
+    assert apply_edits(text, (edit(start, end, 'new'),)) == '€✓ new ✓€'
 
 
 def test_overlapping_edits_are_rejected() -> None:

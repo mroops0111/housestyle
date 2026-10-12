@@ -50,6 +50,28 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
       - run: uv sync --extra dev
+
+      # Without these, every test against a real tool skips and the self-hosting check runs neither.
+      - name: Install Vale
+        env:
+          VALE_VERSION: 3.18.0
+        run: |
+          curl -sSfL "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP" vale
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Install AutoCorrect
+        env:
+          AUTOCORRECT_VERSION: 2.16.3
+        run: |
+          curl -sSfL "https://github.com/huacnlee/autocorrect/releases/download/v${AUTOCORRECT_VERSION}/autocorrect-linux-amd64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP" autocorrect
+
+      - name: Confirm delegated tools
+        run: |
+          vale --version
+          autocorrect --version
+
       - run: uv run pytest tests/ -v --tb=short
 
       - name: Self-hosting
