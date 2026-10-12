@@ -6,18 +6,18 @@ from .linter import Linter
 
 
 class ReportAggregator:
-    def __init__(self, linter: Linter, linters: tuple[ExternalLinter, ...] = ()) -> None:
+    def __init__(self, linter: Linter, external_linters: tuple[ExternalLinter, ...] = ()) -> None:
         self._linter = linter
-        self._linters = linters
+        self._external_linters = external_linters
 
     def run(self, document: Document, rule_set: RuleSet) -> Report:
         report = self._linter.run(document, rule_set)
         missing_sources: list[str] = []
-        for linter in self._linters:
-            if not linter.is_available():
-                missing_sources.append(linter.name)
+        for external_linter in self._external_linters:
+            if not external_linter.is_available():
+                missing_sources.append(external_linter.name)
                 continue
-            report = report.merged_with(Report(linter.run(document)))
+            report = report.merged_with(Report(external_linter.run(document)))
         if missing_sources:
             report = report.merged_with(Report(unavailable_sources=tuple(missing_sources)))
         return report

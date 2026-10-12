@@ -117,3 +117,26 @@ def test_adapters_report_absence_without_raising() -> None:
     missing = Document(uri='file:///nowhere/gone.py', text='# note\n', language_id='python')
     assert ValeLinter(executable='definitely-not-installed').run(missing) == ()
     assert AutoCorrectLinter(executable='definitely-not-installed').run(missing) == ()
+
+
+@pytest.mark.skipif(shutil.which('vale') is None, reason='vale is not installed')
+def test_the_vale_adapter_lints_the_text_it_is_given_rather_than_the_disk(tmp_path: pathlib.Path) -> None:
+    repo_config = pathlib.Path(__file__).resolve().parent.parent / '.vale.ini'
+    shutil.copy(repo_config, tmp_path / '.vale.ini')
+    shutil.copytree(repo_config.parent / 'styles', tmp_path / 'styles')
+    target = tmp_path / 'probe.py'
+    target.write_text('def f():\n    pass\n', encoding='utf-8')
+    unsaved = 'def f():\n    # a semicolon; which is forbidden here.\n    pass\n'
+
+    found = ValeLinter().run(Document(uri=target.resolve().as_uri(), text=unsaved, language_id='python'))
+    assert any('Semicolon' in item.rule_id for item in found)
+
+
+@pytest.mark.skipif(shutil.which('autocorrect') is None, reason='autocorrect is not installed')
+def test_the_autocorrect_adapter_offers_an_edit_for_text_never_saved() -> None:
+    text = '# 使用MCP協定\nx = 1\n'
+    found = AutoCorrectLinter().run(Document(uri='file:///nowhere/probe.py', text=text, language_id='python'))
+
+    assert len(found) == 1
+    assert found[0].fix is not None and found[0].fix.kind is FixKind.TARGETED
+    assert found[0].fix.edits[0].new_text == '# 使用 MCP 協定'

@@ -5,12 +5,14 @@ from subedit.domain import (
     CommentGroup,
     Diagnostic,
     Document,
+    ExternalLinter,
     Fix,
     FixKind,
     Rule,
     RuleContext,
     RuleMetadata,
     RuleSet,
+    SourceParser,
     SourceRange,
     TextEdit,
 )
@@ -157,3 +159,47 @@ def test_fixing_is_idempotent_at_every_width(width: int) -> None:
     source = 'def f():\n    # cap the size, an unbounded value faults the runner. retry later if it fails.\n    pass\n'
     once = run(source, width=width).document.text
     assert run(once, width=width).document.text == once
+
+
+class SilentParser(SourceParser):
+    def supports(self, language_id: str) -> bool:
+        return True
+
+    def parse(self, document: Document) -> tuple[CommentGroup, ...]:
+        return ()
+
+
+class ShoutingLinter(ExternalLinter):
+    """Lowercases the first SHOUT it finds, one per run, like a tool that fixes what it reports."""
+
+    name = 'shouting'
+
+    def __init__(self) -> None:
+        self.seen: list[str] = []
+
+    def is_available(self) -> bool:
+        return True
+
+    def run(self, document: Document) -> tuple[Diagnostic, ...]:
+        self.seen.append(document.text)
+        start = document.text.find('SHOUT')
+        if start < 0:
+            return ()
+        edit = TextEdit(SourceRange(start, start + len('SHOUT')), 'shout')
+        return (Diagnostic(rule_id='shouting', range=edit.range, message='lower it', fix=Fix.targeted(edit)),)
+
+
+def test_external_linter_edits_are_applied_until_none_remain() -> None:
+    linter = ShoutingLinter()
+    document = Document(uri='file:///a.py', text='# SHOUT once\n# SHOUT twice\n', language_id='python')
+    result = Fixer(Linter(SilentParser(), RuleEngine(())), (linter,)).run(document, RuleSet(frozenset()))
+
+    assert result.document.text == '# shout once\n# shout twice\n'
+    assert result.report.is_clean
+    assert linter.seen[-1] == result.document.text, 'each round must lint the text as it stands, not the original'
+
+
+def test_without_external_linters_their_findings_never_appear() -> None:
+    document = Document(uri='file:///a.py', text='# SHOUT\n', language_id='python')
+    result = Fixer(Linter(SilentParser(), RuleEngine(()))).run(document, RuleSet(frozenset()))
+    assert result.document.text == '# SHOUT\n'

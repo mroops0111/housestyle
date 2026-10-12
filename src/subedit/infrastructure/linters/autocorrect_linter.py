@@ -1,4 +1,3 @@
-import pathlib
 import re
 import shutil
 import subprocess
@@ -25,25 +24,25 @@ class AutoCorrectLinter(ExternalLinter):
         return shutil.which(self._executable) is not None
 
     def run(self, document: Document) -> tuple[Diagnostic, ...]:
-        source_path = pathlib.Path(document.uri.removeprefix('file://'))
-        if not self.is_available() or not source_path.is_file():
+        if not self.is_available():
             return ()
-        corrected_text = self._run_autocorrect(source_path)
+        corrected_text = self._run_autocorrect(document)
         if corrected_text is None or corrected_text == document.text:
             return ()
         return self._diff_lines(document, corrected_text)
 
-    def _run_autocorrect(self, source_path: pathlib.Path) -> str | None:
+    # The path only tells AutoCorrect which file type to parse, so it need not exist on disk.
+    def _run_autocorrect(self, document: Document) -> str | None:
         try:
             process = subprocess.run(  # noqa: S603
-                [self._executable, '--stdin', str(source_path)],
+                [self._executable, '--stdin', document.uri.removeprefix('file://')],
                 capture_output=True,
                 text=True,
                 check=False,
                 timeout=TIMEOUT_SECONDS,
-                input=source_path.read_text(encoding='utf-8'),
+                input=document.text,
             )
-        except (OSError, UnicodeDecodeError, subprocess.TimeoutExpired):
+        except (OSError, subprocess.TimeoutExpired):
             return None
         return process.stdout if process.stdout else None
 

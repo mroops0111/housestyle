@@ -131,12 +131,12 @@ Rule names describe the problem they report. `docs/rules.md` lists every rule, g
 
 ## Delegated Tools
 
-`subedit check` also runs two tools where they are installed, and folds their findings into its own report.
+`check`, `fix`, and the agent hook also run two tools where they are installed, and fold their findings into the same report.
 
-- **Vale**: punctuation, banned phrasing, and anything a markup aware prose linter already handles
-- **AutoCorrect**: spacing and punctuation width between CJK and Latin text
+- **Vale**: punctuation, banned phrasing, and anything a markup aware prose linter already handles. Vale has no autofix, so its findings come back as rewrites.
+- **AutoCorrect**: spacing and punctuation width between CJK and Latin text. Its corrections are applied silently, like any other mechanical fix.
 
-`--no-delegate` skips both. `fix` and the agent hook do not run them.
+`--no-delegate` skips both for `check` and `fix`.
 
 ## Surfaces
 

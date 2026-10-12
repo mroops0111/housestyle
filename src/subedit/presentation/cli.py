@@ -8,6 +8,7 @@ import typer
 from .. import __version__
 from ..application import CorpusMeter, CorpusStatistics, Fixer, Linter, ReportAggregator, RuleEngine
 from ..domain.models.document import Document
+from ..domain.ports.external_linter import ExternalLinter
 from ..infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, EXTERNAL_LINTERS, PYTHON
 from . import report as reporters
 from . import rule_reference
@@ -51,11 +52,12 @@ def check(
 def fix(
     paths: list[pathlib.Path] = typer.Argument(..., help='Files or directories to fix.'),
     write: bool = typer.Option(False, '--write', help='Write changes instead of printing a diff.'),
+    delegate: bool = typer.Option(True, '--delegate/--no-delegate', help='Also run Vale and AutoCorrect.'),
 ) -> None:
     documents = _load(tuple(paths))
     _require(documents)
 
-    fixer = Fixer(_build_linter())
+    fixer = Fixer(_build_linter(), _external_linters(delegate))
     changed_file_count = 0
     unresolved_finding_count = 0
     for document in documents:
@@ -141,7 +143,11 @@ def _build_linter() -> Linter:
 
 
 def _build_report_aggregator(delegate: bool) -> ReportAggregator:
-    return ReportAggregator(_build_linter(), EXTERNAL_LINTERS if delegate else ())
+    return ReportAggregator(_build_linter(), _external_linters(delegate))
+
+
+def _external_linters(delegate: bool) -> tuple[ExternalLinter, ...]:
+    return EXTERNAL_LINTERS if delegate else ()
 
 
 def _file_path(document: Document) -> str:
