@@ -5,7 +5,7 @@ import sys
 
 from ..application import Fixer, Linter, RuleEngine
 from ..domain.models.document import Document
-from ..infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, PYTHON
+from ..infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, EXTERNAL_LINTERS, PYTHON
 from . import report as reporters
 from .harnesses import ALL_HARNESSES, BLOCK_EXIT, Payload, resolve
 
@@ -33,7 +33,7 @@ def run(payload: Payload, *, write: bool = True) -> HookResult:
     if not edited_paths:
         return HookResult(exit_code=0, harness_name=harness.metadata.name)
 
-    fixer = Fixer(Linter(DEFAULT_PARSER, RuleEngine(ALL_RULES)))
+    fixer = Fixer(Linter(DEFAULT_PARSER, RuleEngine(ALL_RULES)), EXTERNAL_LINTERS)
     author_messages: list[str] = []
     repaired_paths: list[str] = []
 

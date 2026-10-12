@@ -1,4 +1,3 @@
-import pathlib
 import shutil
 import subprocess
 
@@ -47,12 +46,15 @@ class ValeLinter(ExternalLinter):
         return shutil.which(self._executable) is not None
 
     def run(self, document: Document) -> tuple[Diagnostic, ...]:
-        source_path = pathlib.Path(document.uri.removeprefix('file://'))
-        if not self.is_available() or not source_path.is_file():
+        if not self.is_available():
             return ()
+        # The text goes in on stdin, because during a fix it is ahead of what the file on disk holds.
+        # The path still selects the config sections, and Vale matches them exactly as for a file.
+        source_path = document.uri.removeprefix('file://')
         try:
             process = subprocess.run(  # noqa: S603
-                [self._executable, '--no-exit', '--output=JSON', str(source_path)],
+                [self._executable, '--no-exit', '--output=JSON', f'--path={source_path}'],
+                input=document.text,
                 capture_output=True,
                 text=True,
                 check=False,

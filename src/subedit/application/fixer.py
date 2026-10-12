@@ -4,7 +4,9 @@ from ..domain.models.diagnostic import Diagnostic, FixKind, Report
 from ..domain.models.document import Document
 from ..domain.models.rule_set import RuleSet
 from ..domain.models.text import TextEdit, apply_edits
+from ..domain.ports.external_linter import ExternalLinter
 from .linter import Linter
+from .report_aggregator import ReportAggregator
 
 
 MAX_ROUNDS = 10
@@ -27,15 +29,21 @@ class FixResult:
 
 
 class Fixer:
-    def __init__(self, linter: Linter, max_rounds: int = MAX_ROUNDS) -> None:
-        self._linter = linter
+    def __init__(
+        self,
+        linter: Linter,
+        external_linters: tuple[ExternalLinter, ...] = (),
+        max_rounds: int = MAX_ROUNDS,
+    ) -> None:
+        # External findings join every round, so an edit they carry is applied like a native one.
+        self._aggregator = ReportAggregator(linter, external_linters)
         self._max_rounds = max_rounds
 
     def run(self, document: Document, rule_set: RuleSet) -> FixResult:
         working_document = document
         applied_edit_count = 0
         round_count = 0
-        report = self._linter.run(working_document, rule_set)
+        report = self._aggregator.run(working_document, rule_set)
 
         while round_count < self._max_rounds:
             edits = self._next_edits(report)
@@ -44,7 +52,7 @@ class Fixer:
             working_document = working_document.with_text(apply_edits(working_document.text, edits))
             applied_edit_count += len(edits)
             round_count += 1
-            report = self._linter.run(working_document, rule_set)
+            report = self._aggregator.run(working_document, rule_set)
 
         return FixResult(
             document=working_document, report=report, round_count=round_count, applied_edit_count=applied_edit_count
