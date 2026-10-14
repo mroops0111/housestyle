@@ -146,8 +146,19 @@ def _build_report_aggregator(delegate: bool) -> ReportAggregator:
     return ReportAggregator(_build_linter(), _external_linters(delegate))
 
 
+# A command can wait for a download, unlike the hook, and a skipped tool must not read as a clean run.
 def _external_linters(delegate: bool) -> tuple[ExternalLinter, ...]:
-    return EXTERNAL_LINTERS if delegate else ()
+    if not delegate:
+        return ()
+    for external_linter in EXTERNAL_LINTERS:
+        external_linter.prepare()
+        if not external_linter.is_available():
+            typer.echo(
+                f'{external_linter.name} is not installed, so its checks were skipped. '
+                'Install subedit[vale] for Vale, or pass --no-delegate to skip it on purpose.',
+                err=True,
+            )
+    return EXTERNAL_LINTERS
 
 
 def _file_path(document: Document) -> str:
