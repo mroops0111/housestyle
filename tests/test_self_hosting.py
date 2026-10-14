@@ -7,8 +7,8 @@ from subedit.domain import Document, RuleSet
 from subedit.infrastructure import ALL_RULES, DEFAULT_CONFIG_SOURCE, DEFAULT_PARSER, PYTHON
 
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-SOURCE_ROOT = REPO_ROOT / 'src'
+REPOSITORY_ROOT = pathlib.Path(__file__).resolve().parent.parent
+SOURCE_ROOT = REPOSITORY_ROOT / 'src'
 
 
 def lint_text(text: str, rules: RuleSet | None = None):
@@ -50,7 +50,7 @@ def test_subedit_lints_itself_clean() -> None:
             language_id=PYTHON.language_id,
         )
         for item in linter.run(document, rules).diagnostics:
-            findings.append(f'{path.relative_to(REPO_ROOT)}: {item.rule_id} {item.message[:80]}')
+            findings.append(f'{path.relative_to(REPOSITORY_ROOT)}: {item.rule_id} {item.message[:80]}')
     assert not findings, f'{len(findings)} self-hosting findings: {findings[:5]}'
 
 
@@ -83,7 +83,7 @@ def test_the_generated_rule_reference_is_in_sync() -> None:
     from subedit.infrastructure import ALL_RULES
     from subedit.presentation import rule_reference
 
-    reference = REPO_ROOT / 'docs' / 'rules.md'
+    reference = REPOSITORY_ROOT / 'docs' / 'rules.md'
     assert reference.is_file(), 'run: subedit rules --write docs/rules.md'
     assert reference.read_text(encoding='utf-8') == rule_reference.render(ALL_RULES)
 
@@ -91,7 +91,7 @@ def test_the_generated_rule_reference_is_in_sync() -> None:
 def test_every_rule_appears_in_the_reference() -> None:
     from subedit.infrastructure import ALL_RULES
 
-    reference = (REPO_ROOT / 'docs' / 'rules.md').read_text(encoding='utf-8')
+    reference = (REPOSITORY_ROOT / 'docs' / 'rules.md').read_text(encoding='utf-8')
     missing = [rule.metadata.rule_id for rule in ALL_RULES if f'`{rule.metadata.rule_id}`' not in reference]
     assert not missing, f'rules absent from the reference: {missing}'
 
@@ -99,7 +99,7 @@ def test_every_rule_appears_in_the_reference() -> None:
 def test_the_repository_installs_its_own_hook() -> None:
     import json
 
-    settings = json.loads((REPO_ROOT / '.claude' / 'settings.json').read_text(encoding='utf-8'))
+    settings = json.loads((REPOSITORY_ROOT / '.claude' / 'settings.json').read_text(encoding='utf-8'))
     commands = [
         entry['command']
         for group in settings['hooks']['PostToolUse']
@@ -112,10 +112,10 @@ def test_the_repository_installs_its_own_hook() -> None:
 def test_the_excluded_fixture_is_actually_excluded() -> None:
     from subedit.infrastructure import DEFAULT_CONFIG_SOURCE
 
-    fixture = REPO_ROOT / 'tests' / 'fixtures' / 'vale' / 'violations.py'
+    fixture = REPOSITORY_ROOT / 'tests' / 'fixtures' / 'vale' / 'violations.py'
     patterns = DEFAULT_CONFIG_SOURCE.exclude_patterns(str(fixture))
     assert patterns, 'the project config must declare an exclude for deliberate fixtures'
-    assert DEFAULT_CONFIG_SOURCE.is_excluded(fixture, REPO_ROOT, patterns)
+    assert DEFAULT_CONFIG_SOURCE.is_excluded(fixture, REPOSITORY_ROOT, patterns)
     assert not DEFAULT_CONFIG_SOURCE.is_excluded(
-        REPO_ROOT / 'src' / 'subedit' / 'domain' / 'prose.py', REPO_ROOT, patterns
+        REPOSITORY_ROOT / 'src' / 'subedit' / 'domain' / 'prose.py', REPOSITORY_ROOT, patterns
     )

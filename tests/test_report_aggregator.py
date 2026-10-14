@@ -97,9 +97,9 @@ def test_a_clean_document_with_a_silent_linter_is_clean() -> None:
 
 @pytest.mark.skipif(shutil.which('vale') is None, reason='vale is not installed')
 def test_the_vale_adapter_normalises_real_output(tmp_path: pathlib.Path) -> None:
-    repo_config = pathlib.Path(__file__).resolve().parent.parent / '.vale.ini'
-    shutil.copy(repo_config, tmp_path / '.vale.ini')
-    shutil.copytree(repo_config.parent / 'styles', tmp_path / 'styles')
+    repository_config = pathlib.Path(__file__).resolve().parent.parent / '.vale.ini'
+    shutil.copy(repository_config, tmp_path / '.vale.ini')
+    shutil.copytree(repository_config.parent / 'styles', tmp_path / 'styles')
     target = tmp_path / 'probe.py'
     target.write_text('def f():\n    # a semicolon; which is forbidden here.\n    pass\n', encoding='utf-8')
 
@@ -121,9 +121,9 @@ def test_adapters_report_absence_without_raising() -> None:
 
 @pytest.mark.skipif(shutil.which('vale') is None, reason='vale is not installed')
 def test_the_vale_adapter_lints_the_text_it_is_given_rather_than_the_disk(tmp_path: pathlib.Path) -> None:
-    repo_config = pathlib.Path(__file__).resolve().parent.parent / '.vale.ini'
-    shutil.copy(repo_config, tmp_path / '.vale.ini')
-    shutil.copytree(repo_config.parent / 'styles', tmp_path / 'styles')
+    repository_config = pathlib.Path(__file__).resolve().parent.parent / '.vale.ini'
+    shutil.copy(repository_config, tmp_path / '.vale.ini')
+    shutil.copytree(repository_config.parent / 'styles', tmp_path / 'styles')
     target = tmp_path / 'probe.py'
     target.write_text('def f():\n    pass\n', encoding='utf-8')
     unsaved = 'def f():\n    # a semicolon; which is forbidden here.\n    pass\n'
@@ -134,9 +134,10 @@ def test_the_vale_adapter_lints_the_text_it_is_given_rather_than_the_disk(tmp_pa
 
 @pytest.mark.skipif(shutil.which('autocorrect') is None, reason='autocorrect is not installed')
 def test_the_autocorrect_adapter_offers_an_edit_for_text_never_saved() -> None:
-    text = '# 使用MCP協定\nx = 1\n'
+    # The unspaced sample lives in an excluded fixture, so checking this repository does not flag it.
+    text = (pathlib.Path(__file__).parent / 'fixtures' / 'autocorrect' / 'unspaced.py').read_text(encoding='utf-8')
     found = AutoCorrectLinter().run(Document(uri='file:///nowhere/probe.py', text=text, language_id='python'))
 
     assert len(found) == 1
     assert found[0].fix is not None and found[0].fix.kind is FixKind.TARGETED
-    assert found[0].fix.edits[0].new_text == '# 使用 MCP 協定'
+    assert found[0].fix.edits[0].new_text == '# 今天下午 3 點開會'
