@@ -1,7 +1,7 @@
 import typing
 
 from ..models.comment import CommentForm, CommentGroup, CommentPlacement
-from ..models.diagnostic import Diagnostic, Fix, FixKind, RuleMetadata
+from ..models.diagnostic import Diagnostic, Fix, FixKind, RuleMetadata, Severity
 from ..ports.language_conventions import LanguageConventions
 from ..ports.rule import Rule, RuleContext
 
@@ -10,6 +10,7 @@ FILE_HEADER_COMMENT = RuleMetadata(
     rule_id='file-header-comment',
     summary='A file must not open with a banner comment before its first declaration.',
     fix_kind=FixKind.REWRITE,
+    default_severity=Severity.WARNING,
 )
 
 PLAIN_COMMENT_ON_PUBLIC = RuleMetadata(
@@ -104,6 +105,7 @@ BLOCK_TOO_LONG = RuleMetadata(
     rule_id='block-too-long',
     summary='A comment block long enough to restate the code has stopped earning its place.',
     fix_kind=FixKind.REWRITE,
+    default_severity=Severity.WARNING,
 )
 
 

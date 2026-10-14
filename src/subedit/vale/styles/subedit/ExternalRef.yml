@@ -1,0 +1,15 @@
+extends: existence
+message: "External reference '%s' a reader cannot open. Restate the constraint."
+level: error
+nonword: true
+tokens:
+  - '[A-Z]{2,}-\d+'
+# Standards and encodings are names a reader can look up, not tickets.
+exceptions:
+  - 'ISO-\d+'
+  - 'UTF-\d+'
+  - 'SHA-\d+'
+  - 'AES-\d+'
+  - 'CRC-\d+'
+  - 'IEEE-\d+'
+  - 'ECMA-\d+'

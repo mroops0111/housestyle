@@ -270,3 +270,27 @@ def test_a_profile_naming_its_captures_otherwise_yields_nothing() -> None:
         'a capture named anything but comment or doc is dropped, which is why the names are constants'
     )
     assert TreeSitterParser((PYTHON,)).parse(document) != ()
+
+
+def test_a_comment_set_apart_by_a_blank_line_documents_nothing() -> None:
+    source = (
+        'class C:\n'
+        '    def __init__(self):\n'
+        '        self.prefix = 1\n\n'
+        '    # Provider interface\n\n'
+        '    async def get(self):\n'
+        '        return 1\n'
+    )
+    groups = parse(source)
+    assert groups[0].attachment is None
+    assert groups[0].placement is CommentPlacement.INLINE_BODY
+
+
+def test_a_comment_touching_the_first_statement_is_no_file_header() -> None:
+    source = '# The upstream authorization server.\nISSUER = "https://auth.example.com"\n'
+    assert parse(source)[0].placement is not CommentPlacement.FILE_HEADER
+
+
+def test_a_comment_set_apart_at_the_top_is_a_file_header() -> None:
+    source = '# Banner about the module.\n\nISSUER = "https://auth.example.com"\n'
+    assert parse(source)[0].placement is CommentPlacement.FILE_HEADER

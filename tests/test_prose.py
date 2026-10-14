@@ -179,3 +179,8 @@ def test_an_unindented_line_after_a_list_is_prose_again() -> None:
     flowing = [segment for segment in prose.segments() if not segment.is_literal]
 
     assert any('A sentence at the left margin.' in line for segment in flowing for line in segment.lines)
+
+
+def test_a_possessive_ends_its_sentence() -> None:
+    prose = Prose("The audience is the gateway's URI, never the upstream API's. The spec requires it.")
+    assert texts(prose) == ["The audience is the gateway's URI, never the upstream API's.", 'The spec requires it.']

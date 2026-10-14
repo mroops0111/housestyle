@@ -3,6 +3,7 @@ import typing
 from ..models.comment import CommentGroup
 from ..models.diagnostic import Diagnostic, Fix, FixKind, RuleMetadata
 from ..ports.rule import Rule, RuleContext
+from .rewrite import stub_floor
 
 
 MID_CLAUSE_BREAK = RuleMetadata(
@@ -22,7 +23,7 @@ class MidClauseBreakRule(Rule):
     metadata = MID_CLAUSE_BREAK
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
-        reflowed = group.reflow(context.line_width)
+        reflowed = group.reflow(context.line_width, stub_floor(context))
         if reflowed.render() == group.render():
             return
         yield Diagnostic(
@@ -43,7 +44,7 @@ class LineTooLongRule(Rule):
         width = context.line_width
         if group.longest_line <= width:
             return
-        reflowed = group.reflow(width)
+        reflowed = group.reflow(width, stub_floor(context))
         if reflowed.longest_line > width:
             return
         yield Diagnostic(

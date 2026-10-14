@@ -38,14 +38,14 @@ def check(
         raise typer.Exit(2)
 
     aggregator = _build_report_aggregator(delegate)
-    finding_count = 0
+    has_errors = False
     for document in documents:
         report = aggregator.run(document, DEFAULT_CONFIG_SOURCE.resolve(_file_path(document)))
-        finding_count += len(report.diagnostics)
+        has_errors = has_errors or report.has_errors
         rendered_report = formatter(document, report)
         if rendered_report:
             typer.echo(rendered_report)
-    raise typer.Exit(1 if finding_count else 0)
+    raise typer.Exit(1 if has_errors else 0)
 
 
 @app.command()
@@ -71,6 +71,8 @@ def fix(
                 typer.echo(_diff(document, fix_result.document))
         if fix_result.unresolved_findings:
             typer.echo(reporters.brief(fix_result.document, fix_result.report))
+        if fix_result.report.advisory:
+            typer.echo(reporters.advice(fix_result.document, fix_result.report))
 
     action_word = 'rewrote' if write else 'would rewrite'
     typer.echo(
@@ -146,8 +148,19 @@ def _build_report_aggregator(delegate: bool) -> ReportAggregator:
     return ReportAggregator(_build_linter(), _external_linters(delegate))
 
 
+# A command can wait for a download, unlike the hook, and a skipped tool must not read as a clean run.
 def _external_linters(delegate: bool) -> tuple[ExternalLinter, ...]:
-    return EXTERNAL_LINTERS if delegate else ()
+    if not delegate:
+        return ()
+    for external_linter in EXTERNAL_LINTERS:
+        external_linter.prepare()
+        if not external_linter.is_available():
+            typer.echo(
+                f'{external_linter.name} is not installed, so its checks were skipped. '
+                'Install subedit[vale] for Vale, or pass --no-delegate to skip it on purpose.',
+                err=True,
+            )
+    return EXTERNAL_LINTERS
 
 
 def _file_path(document: Document) -> str:

@@ -129,11 +129,19 @@ block-too-long = { severity = "warning", line = 3, doc-public = 20 }
 
 Rule names describe the problem they report. `docs/rules.md` lists every rule, generated from the rules themselves.
 
+A rule at `error` fails `check` and stops an agent, while one at `warning` is shown as advice and blocks nothing. The same table sets the delegated Vale rules by name.
+
+```toml
+[rules]
+"subedit.MidSentenceColon" = "error"
+"subedit.DateRef" = "off"
+```
+
 ## Delegated Tools
 
 `check`, `fix`, and the agent hook also run two tools, and fold their findings into the same report.
 
-- **Vale**: punctuation, banned phrasing, and anything a markup aware prose linter already handles. Vale has no autofix, so its findings come back as rewrites. It runs where it is installed, or where the `vale` extra fetched it. A repository without its own `.vale.ini` gets the `mroops` style that ships with subedit.
+- **Vale**: punctuation, banned phrasing, and anything a markup aware prose linter already handles. Vale has no autofix, so its findings come back as rewrites. It runs where it is installed, or where the `vale` extra fetched it. A repository without its own `.vale.ini` gets the style that ships with subedit, whose rules are named `subedit.*`.
 - **AutoCorrect**: spacing and punctuation width between CJK and Latin text. Its corrections are applied silently, like any other mechanical fix. It arrives as a Python dependency, and reads `.autocorrectrc` from the working directory.
 
 `--no-delegate` skips both for `check` and `fix`.

@@ -2,6 +2,8 @@ import pathlib
 
 import pytest
 
+from subedit.domain import Diagnostic, Document, ExternalLinter
+from subedit.presentation import cli
 from subedit.presentation.cli import app
 
 
@@ -154,3 +156,51 @@ def test_the_actionable_format_says_so_when_nothing_is_wrong(
     with pytest.raises(SystemExit):
         app(['check', str(target), '--output', 'actionable'])
     assert 'No findings' in capsys.readouterr().out
+
+
+class _PreparedLinter(ExternalLinter):
+    name = 'probe'
+
+    def __init__(self, ready_after_prepare: bool) -> None:
+        self._ready_after_prepare = ready_after_prepare
+        self.prepared = False
+
+    def prepare(self) -> None:
+        self.prepared = True
+
+    def is_available(self) -> bool:
+        return self.prepared and self._ready_after_prepare
+
+    def run(self, document: Document) -> tuple[Diagnostic, ...]:
+        return ()
+
+
+@pytest.mark.parametrize('ready_after_prepare', [True, False])
+def test_check_prepares_delegated_tools_and_says_when_one_is_missing(
+    tmp_path: pathlib.Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    ready_after_prepare: bool,
+) -> None:
+    probe = _PreparedLinter(ready_after_prepare)
+    monkeypatch.setattr(cli, 'EXTERNAL_LINTERS', (probe,))
+    source = tmp_path / 'sample.py'
+    source.write_text('def build():\n    pass\n', encoding='utf-8')
+
+    with pytest.raises(SystemExit):
+        app(['check', str(source)])
+
+    assert probe.prepared, 'a command waits for what a delegated tool needs, unlike the hook'
+    warned = 'probe is not installed' in capsys.readouterr().err
+    assert warned is not ready_after_prepare, 'a skipped tool must not read as a clean run'
+
+
+def test_check_passes_when_only_warnings_remain(tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]) -> None:
+    source = tmp_path / 'sample.py'
+    source.write_text('# A banner about the module.\n\nVALUE = 1\n', encoding='utf-8')
+
+    with pytest.raises(SystemExit) as exit_info:
+        app(['check', str(source), '--no-delegate'])
+
+    assert 'warning  file-header-comment' in capsys.readouterr().out
+    assert exit_info.value.code == 0, 'a warning shows in the output but does not fail the run'

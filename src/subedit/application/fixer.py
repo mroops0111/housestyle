@@ -25,7 +25,7 @@ class FixResult:
 
     @property
     def unresolved_findings(self) -> tuple[Diagnostic, ...]:
-        return self.report.needing_author
+        return self.report.blocking
 
 
 class Fixer:

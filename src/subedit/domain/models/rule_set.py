@@ -19,6 +19,8 @@ class RuleSet:
     enabled_rule_ids: frozenset[str]
     settings: typing.Mapping[str, RuleSettings] = dataclasses.field(default_factory=dict)
     line_width: int = 120
+    # A delegated tool's rules are not known up front, so they are listed when switched off instead.
+    disabled_external_ids: frozenset[str] = frozenset()
 
     def is_enabled(self, rule_id: str) -> bool:
         return rule_id in self.enabled_rule_ids
@@ -28,3 +30,6 @@ class RuleSet:
 
     def severity_for(self, metadata: RuleMetadata) -> Severity:
         return self.settings_for(metadata.rule_id).severity or metadata.default_severity
+
+    def allows_external(self, rule_id: str) -> bool:
+        return rule_id not in self.disabled_external_ids

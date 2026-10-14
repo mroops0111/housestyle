@@ -203,3 +203,32 @@ def test_without_external_linters_their_findings_never_appear() -> None:
     document = Document(uri='file:///a.py', text='# SHOUT\n', language_id='python')
     result = Fixer(Linter(SilentParser(), RuleEngine(()))).run(document, RuleSet(frozenset()))
     assert result.document.text == '# SHOUT\n'
+
+
+def test_a_docstring_whose_text_joins_onto_one_line_closes_on_that_line() -> None:
+    source = 'def f():\n    """Yield each parameter,\n    skipping repeats.\n    """\n'
+    assert run(source, width=120).document.text == 'def f():\n    """Yield each parameter, skipping repeats."""\n'
+
+
+def test_a_one_line_docstring_that_fits_is_left_alone() -> None:
+    source = 'def f():\n    """Release the resources. Default is a no-op."""\n'
+    assert run(source, width=120).document.text == source
+
+
+def test_a_summary_sentence_is_followed_by_a_blank_line() -> None:
+    source = 'def f():\n    """Release the resources. Default is a no-op,\n    and callers may skip it.\n    """\n'
+    expected = 'def f():\n    """Release the resources.\n\n    Default is a no-op, and callers may skip it.\n    """\n'
+    assert run(source, width=120).document.text == expected
+
+
+def test_a_sentence_whose_split_strands_a_stub_keeps_the_author_layout() -> None:
+    source = (
+        'class C:\n'
+        '    """Settings.\n\n'
+        '    ``token``, ``issuer`` and the fields under ``upstream`` accept ``${ENV_VAR}``\n'
+        '    and ``${ENV_VAR:-default}`` substitution at resolve time and nowhere else.\n'
+        '    """\n'
+    )
+    outcome = run(source, width=80)
+    assert outcome.document.text == source, 'a fix must not lay out a stub its own check rejects'
+    assert [item.rule_id for item in outcome.report.needing_author] == ['stub-fragment']

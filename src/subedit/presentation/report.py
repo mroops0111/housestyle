@@ -16,14 +16,26 @@ def full(document: Document, report: Report) -> str:
 
 
 def brief(document: Document, report: Report) -> str:
-    if not report.needing_author:
+    if not report.blocking:
         return ''
     return _rewrite_brief(document, report)
 
 
+def advice(document: Document, report: Report) -> str:
+    if not report.advisory:
+        return ''
+    lines = [
+        f'{len(report.advisory)} comment {"warning" if len(report.advisory) == 1 else "warnings"} in {_path(document)}, worth a look but not required.'
+    ]
+    lines.extend(_finding_lines(document, report.advisory))
+    return '\n'.join(lines)
+
+
 def actionable(document: Document, report: Report) -> str:
-    if report.needing_author:
+    if report.blocking:
         return _rewrite_brief(document, report)
+    if report.advisory:
+        return advice(document, report)
     if report.mechanical:
         mechanical_count = len(report.mechanical)
         return (
@@ -46,17 +58,23 @@ def as_json(document: Document, report: Report) -> str:
 
 
 def _rewrite_brief(document: Document, report: Report) -> str:
-    finding_count = len(report.needing_author)
+    finding_count = len(report.blocking)
     lines = [
         f'{finding_count} comment {"finding needs" if finding_count == 1 else "findings need"} rewriting in {_path(document)}.',
         'Each states the fix. Apply it in place, do not add a suppression comment.',
         '',
     ]
-    for diagnostic in report.needing_author:
+    lines.extend(_finding_lines(document, report.blocking))
+    return '\n'.join(lines)
+
+
+def _finding_lines(document: Document, diagnostics: tuple[Diagnostic, ...]) -> list[str]:
+    lines: list[str] = []
+    for diagnostic in diagnostics:
         position = document.positions.to_position(diagnostic.range.start)
         lines.append(f'line {position.line + 1}  [{diagnostic.rule_id}]')
         lines.append(f'  {diagnostic.message}')
-    return '\n'.join(lines)
+    return lines
 
 
 def _encode(document: Document, diagnostic: Diagnostic) -> dict[str, object]:

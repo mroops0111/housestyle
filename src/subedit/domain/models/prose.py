@@ -26,6 +26,7 @@ _FENCE = re.compile(r'^\s*(```|~~~)')
 _LIST_DELIMITER = re.compile(r'^\s*(?:[0-9]+[.)]|[-*+]|[a-zA-Z][.)])\s')
 _LITERAL_DELIMITER = '\\b'
 _CLOSING_MARKS = '"\')]}'
+_APOSTROPHES = ("'", '\u2019')
 
 # Only before a number, since "No. 5" abbreviates while a trailing no ends its sentence.
 NUMBER_ABBREVIATION = 'no'
@@ -161,6 +162,9 @@ class Prose:
         if offset + 1 < len(text) and text[offset + 1].isdigit():
             return False
         trailing_word = _TRAILING_WORD.search(text[:offset])
+        # The s of a possessive is no initial, so a sentence closing on a word like API's still ends there.
+        if trailing_word and text[: trailing_word.start()].endswith(_APOSTROPHES):
+            return self._followed_by_break(text, offset)
         word = trailing_word.group(1).lower().rstrip('.') if trailing_word else ''
         if word in ABBREVIATIONS:
             return False

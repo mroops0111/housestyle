@@ -13,6 +13,8 @@ from ...domain.ports.external_linter import ExternalLinter
 
 
 TIMEOUT_SECONDS = 30
+# The first run of the vale extra downloads the binary, which a slow link can take minutes over.
+PREPARE_TIMEOUT_SECONDS = 900
 BUNDLED_CONFIG = pathlib.Path(__file__).resolve().parents[2] / 'vale' / 'vale.ini'
 # Vale exits with this code when its own search finds no config.
 NO_CONFIG_CODE = 'E100'
@@ -54,6 +56,20 @@ class ValeLinter(ExternalLinter):
 
     def is_available(self) -> bool:
         return shutil.which(self._executable) is not None and _launcher_is_ready()
+
+    def prepare(self) -> None:
+        """Let the vale extra finish its download, with progress left on stderr so a waiting command shows why."""
+        if _launcher_is_ready() or shutil.which(self._executable) is None:
+            return
+        try:
+            subprocess.run(  # noqa: S603
+                [self._executable, '--version'],
+                stdout=subprocess.DEVNULL,
+                check=False,
+                timeout=PREPARE_TIMEOUT_SECONDS,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return
 
     def run(self, document: Document) -> tuple[Diagnostic, ...]:
         if not self.is_available():
