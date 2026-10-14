@@ -35,14 +35,19 @@ def sentence_budget(group: CommentGroup, context: RuleContext) -> int:
     return max(20, context.line_width - group.lines[0].prefix_width)
 
 
+def stub_floor(context: RuleContext) -> int:
+    """Reflow reads the same floor, so a fix never lays out a stub that this rule then rejects."""
+    if not context.rule_set.is_enabled(STUB_FRAGMENT.rule_id):
+        return 0
+    return context.settings(STUB_FRAGMENT.rule_id).integer('minimum_characters', DEFAULT_MINIMUM_CHARACTERS)
+
+
 class StubFragmentRule(Rule):
     metadata = STUB_FRAGMENT
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         budget = sentence_budget(group, context)
-        minimum_length = context.settings(self.metadata.rule_id).integer(
-            'minimum_characters', DEFAULT_MINIMUM_CHARACTERS
-        )
+        minimum_length = stub_floor(context)
         for sentence in prose_sentences(group):
             split_pieces = reflow_sentence(sentence, budget)
             if len(split_pieces) < 2:

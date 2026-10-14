@@ -10,6 +10,7 @@ from ....domain.ports.language_conventions import LanguageConventions
 class NodeRole(enum.Enum):
     ROOT = 'root'
     DEFINITION = 'definition'
+    IMPORT = 'import'
     COMMENT = 'comment'
     OTHER = 'other'
 

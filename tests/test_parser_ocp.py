@@ -70,7 +70,7 @@ def test_a_second_grammar_needs_no_parser_change() -> None:
 
 def test_a_typescript_file_header_is_recognised_through_the_profile_root_node() -> None:
     parser = TreeSitterParser((TypeScriptProfile(),))
-    source = '// a header note\nconst x = 1\n'
+    source = '// a header note\n\nconst x = 1\n'
     blocks = parser.parse(Document(uri='file:///a.ts', text=source, language_id='typescript'))
     assert blocks[0].placement is CommentPlacement.FILE_HEADER
 

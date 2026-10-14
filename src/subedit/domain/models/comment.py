@@ -97,24 +97,34 @@ class CommentGroup:
         ]
         return Prose('\n'.join(rendered_lines))
 
-    def reflow(self, width: int) -> 'CommentGroup':
-        texts = self._reflow_into_texts(width)
+    def reflow(self, width: int, stub_floor: int = 0) -> 'CommentGroup':
+        # A one line docstring that fits is the summary convention, not a block to lay out.
+        if self.form is CommentForm.DOC and self.line_count == 1 and self.longest_line <= width:
+            return self
+        texts = self._reflow_into_texts(width, stub_floor)
         if not texts:
             return self
         return self._rebuild_lines(texts)
 
-    def _reflow_into_texts(self, width: int) -> tuple[str, ...]:
+    # A sentence whose split strands a stub needs its author,
+    # so the block keeps the layout they gave it rather than one its own check rejects.
+    def _reflow_into_texts(self, width: int, stub_floor: int) -> tuple[str, ...]:
         budget = max(20, width - self.lines[0].prefix_width)
         out: list[str] = []
-        for paragraph, is_literal in self._split_into_paragraphs():
+        for paragraph_index, (paragraph, is_literal) in enumerate(self._split_into_paragraphs()):
             if out:
                 out.append('')
             if is_literal:
                 out.extend(paragraph)
                 continue
             joined_text = ' '.join(line.strip() for line in paragraph if line.strip())
-            for sentence in Prose(joined_text).sentences():
-                out.extend(reflow_sentence(sentence.text, budget))
+            for sentence_index, sentence in enumerate(Prose(joined_text).sentences()):
+                if sentence_index == 1 and paragraph_index == 0 and self.form is CommentForm.DOC:
+                    out.append('')
+                sentence_lines = reflow_sentence(sentence.text, budget)
+                if len(sentence_lines) > 1 and min(map(len, sentence_lines)) < stub_floor:
+                    return ()
+                out.extend(sentence_lines)
         return tuple(out)
 
     def _split_into_paragraphs(self) -> tuple[tuple[tuple[str, ...], bool], ...]:
@@ -138,7 +148,8 @@ class CommentGroup:
         closes_alone = len(self.lines) > 1 and not closing.text.strip()
         body = [dataclasses.replace(opening, delimiter='', suffix='', text=text, range=opening.range) for text in texts]
         body[0] = dataclasses.replace(body[0], delimiter=opening.delimiter)
-        if closes_alone or len(texts) > 1:
+        # Text that fits one line closes on that line, as ruff and black format it.
+        if len(texts) > 1:
             body.append(
                 dataclasses.replace(closing, delimiter=closing.delimiter or opening.delimiter, text='', suffix='')
             )

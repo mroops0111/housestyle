@@ -4,4 +4,4 @@ level: error
 nonword: true
 scope: raw
 tokens:
-  - '\w\s+\w+:\s+\w'
+  - '\w\s+\w+:[ \t]+\w'

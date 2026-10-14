@@ -32,6 +32,9 @@ class PythonProfile(LanguageProfile):
         'function_definition': NodeRole.DEFINITION,
         'class_definition': NodeRole.DEFINITION,
         'decorated_definition': NodeRole.DEFINITION,
+        'import_statement': NodeRole.IMPORT,
+        'import_from_statement': NodeRole.IMPORT,
+        'future_import_statement': NodeRole.IMPORT,
     }
 
     def language(self) -> Language:

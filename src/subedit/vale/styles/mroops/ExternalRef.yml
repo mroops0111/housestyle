@@ -4,4 +4,12 @@ level: error
 nonword: true
 tokens:
   - '[A-Z]{2,}-\d+'
-  - '\d{4}-\d{2}-\d{2}'
+# Standards and encodings are names a reader can look up, not tickets.
+exceptions:
+  - 'ISO-\d+'
+  - 'UTF-\d+'
+  - 'SHA-\d+'
+  - 'AES-\d+'
+  - 'CRC-\d+'
+  - 'IEEE-\d+'
+  - 'ECMA-\d+'

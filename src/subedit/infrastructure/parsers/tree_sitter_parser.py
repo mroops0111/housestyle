@@ -150,9 +150,23 @@ class TreeSitterParser(SourceParser):
             return CommentPlacement.LEADING_DECLARATION
         parent = node.parent
         is_root = parent is not None and profile.role_of(parent.type) is NodeRole.ROOT
-        if is_root and not self._has_code_before(profile, node):
+        if is_root and not self._has_code_before(profile, node) and not self._touches_next_code(profile, node):
             return CommentPlacement.FILE_HEADER
         return CommentPlacement.INLINE_BODY
+
+    # A comment on the line right above a statement describes that statement, even at the top of a file.
+    # Imports are the exception, since a comment over them is a banner rather than a note on one import.
+    def _touches_next_code(self, profile: LanguageProfile, node: Node) -> bool:
+        candidate = node.next_named_sibling
+        return (
+            candidate is not None
+            and profile.role_of(candidate.type) not in (NodeRole.COMMENT, NodeRole.IMPORT)
+            and self._is_adjacent(node, candidate)
+        )
+
+    # A blank line between a comment and what follows sets the comment apart, as a section divider does.
+    def _is_adjacent(self, upper: Node, lower: Node) -> bool:
+        return lower.start_point[0] == upper.end_point[0] + 1
 
     def _has_code_before(self, profile: LanguageProfile, node: Node) -> bool:
         parent = node.parent
@@ -164,13 +178,15 @@ class TreeSitterParser(SourceParser):
         )
 
     def _find_next_definition(self, profile: LanguageProfile, node: Node) -> Node | None:
+        previous = node
         candidate = node.next_named_sibling
-        while candidate is not None:
+        while candidate is not None and self._is_adjacent(previous, candidate):
             role = profile.role_of(candidate.type)
             if role is NodeRole.DEFINITION:
                 return candidate
             if role is not NodeRole.COMMENT:
                 return None
+            previous = candidate
             candidate = candidate.next_named_sibling
         return None
 
