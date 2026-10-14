@@ -1,5 +1,8 @@
 import re
 
+import tree_sitter_typescript
+from tree_sitter import Language
+
 from subedit.domain import CommentForm, CommentPlacement, Document, SymbolKind, Visibility
 from subedit.domain.ports import DelimiterSplit
 from subedit.infrastructure import TreeSitterParser
@@ -8,6 +11,7 @@ from subedit.infrastructure.parsers.languages import LanguageProfile, NodeRole
 
 _TS_DELIMITER = re.compile(r'^(/\*\*|/\*|//+)\s?')
 
+TYPESCRIPT_LANGUAGE = Language(tree_sitter_typescript.language_typescript())
 TYPESCRIPT_QUERY = '(comment) @comment'
 
 
@@ -24,6 +28,9 @@ class TypeScriptProfile(LanguageProfile):
         'method_definition': NodeRole.DEFINITION,
         'export_statement': NodeRole.DEFINITION,
     }
+
+    def language(self) -> Language:
+        return TYPESCRIPT_LANGUAGE
 
     def query(self) -> str:
         return TYPESCRIPT_QUERY

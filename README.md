@@ -40,7 +40,7 @@ Install the command line tool from PyPI.
 uv tool install subedit
 ```
 
-`pipx install subedit` and `pip install subedit` work as well.
+`pipx install subedit` and `pip install subedit` work as well. Add the `vale` extra, as in `uv tool install 'subedit[vale]'`, to have Vale fetched for you.
 
 ## Commands
 
@@ -75,7 +75,7 @@ Rewriting a sentence needs its meaning, which a deterministic process cannot sup
 
 ### Claude Code
 
-The plugin registers the hook. It cannot install the tool, so install that first.
+The plugin needs only [uv](https://docs.astral.sh/uv/). It runs subedit from PyPI with the `vale` extra, and warms that environment in the background when a session starts, so no edit waits on the first download.
 
 ```text
 /plugin marketplace add mroops0111/subedit
@@ -131,10 +131,10 @@ Rule names describe the problem they report. `docs/rules.md` lists every rule, g
 
 ## Delegated Tools
 
-`check`, `fix`, and the agent hook also run two tools where they are installed, and fold their findings into the same report.
+`check`, `fix`, and the agent hook also run two tools, and fold their findings into the same report.
 
-- **Vale**: punctuation, banned phrasing, and anything a markup aware prose linter already handles. Vale has no autofix, so its findings come back as rewrites.
-- **AutoCorrect**: spacing and punctuation width between CJK and Latin text. Its corrections are applied silently, like any other mechanical fix.
+- **Vale**: punctuation, banned phrasing, and anything a markup aware prose linter already handles. Vale has no autofix, so its findings come back as rewrites. It runs where it is installed, or where the `vale` extra fetched it. A repository without its own `.vale.ini` gets the `mroops` style that ships with subedit.
+- **AutoCorrect**: spacing and punctuation width between CJK and Latin text. Its corrections are applied silently, like any other mechanical fix. It arrives as a Python dependency, and reads `.autocorrectrc` from the working directory.
 
 `--no-delegate` skips both for `check` and `fix`.
 

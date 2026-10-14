@@ -1,21 +1,27 @@
 #!/usr/bin/env bash
-# The plugin cannot install subedit, so a missing command has to say so
-# rather than failing in a way that reads as a clean run.
+# Runs subedit from PyPI through uvx, so the plugin needs nothing installed but uv.
+# With "prepare", it warms the same environment in the background instead,
+# because the first run installs subedit and downloads Vale, which no edit should wait on.
 set -uo pipefail
 
-if command -v subedit-hook >/dev/null 2>&1; then
-    exec subedit-hook
-fi
+SPEC='subedit[vale]>=0.1.1'
+# A bare uvx takes the first Python it finds, which on a stock Mac is too old for subedit.
+PYTHON='>=3.11'
 
-if command -v uvx >/dev/null 2>&1; then
-    exec uvx --from git+https://github.com/mroops0111/subedit subedit-hook
-fi
+if ! command -v uvx >/dev/null 2>&1; then
+    cat >&2 <<'MESSAGE'
+subedit needs uv, so comment checks are not running.
 
-cat >&2 <<'MESSAGE'
-subedit-hook is not installed, so comment checks are not running.
-
-    uv tool install git+https://github.com/mroops0111/subedit
+    curl -LsSf https://astral.sh/uv/install.sh | sh
 
 Install it, or remove the subedit plugin.
 MESSAGE
-exit 1
+    exit 1
+fi
+
+if [ "${1:-}" = prepare ]; then
+    nohup uvx --python "$PYTHON" --from "$SPEC" vale --version >/dev/null 2>&1 &
+    exit 0
+fi
+
+exec uvx --python "$PYTHON" --from "$SPEC" subedit-hook

@@ -68,7 +68,22 @@ def test_the_wrapper_says_what_to_install_when_nothing_is_found() -> None:
     )
 
     assert completed.returncode == 1
-    assert 'uv tool install' in completed.stderr, 'a missing command must say how to get it'
+    assert 'astral.sh/uv' in completed.stderr, 'a missing command must say how to get it'
+
+
+def test_the_wrapper_runs_the_released_version() -> None:
+    pyproject = (ROOT / 'pyproject.toml').read_text(encoding='utf-8')
+    version = next(line for line in pyproject.splitlines() if line.startswith('version')).split('"')[1]
+
+    assert f"SPEC='subedit[vale]>={version}'" in WRAPPER.read_text(encoding='utf-8'), (
+        'a plugin pinned below the package it ships with runs an older release than this one'
+    )
+
+
+def test_a_session_start_warms_the_same_wrapper() -> None:
+    command = load(HOOKS)['hooks']['SessionStart'][0]['hooks'][0]['command']
+
+    assert command == f'${{CLAUDE_PLUGIN_ROOT}}/hooks/{WRAPPER.name} prepare'
 
 
 def test_the_marketplace_points_at_this_repository() -> None:

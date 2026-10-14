@@ -1,4 +1,5 @@
 import pytest
+from tree_sitter import Language
 
 from subedit.domain import CommentForm, CommentGroup, CommentPlacement, Document, SymbolKind, Visibility
 from subedit.domain.ports import DelimiterSplit
@@ -244,6 +245,9 @@ def test_a_profile_naming_its_captures_otherwise_yields_nothing() -> None:
         extensions = frozenset({'.py'})
         doc_delimiter = '"""'
         signature_tags = ()
+
+        def language(self) -> Language:
+            return PYTHON.language()
 
         def query(self) -> str:
             return '(comment) @remark'

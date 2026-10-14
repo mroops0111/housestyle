@@ -1,5 +1,8 @@
+import importlib.util
+import pathlib
 import shutil
 import subprocess
+import sys
 
 import pydantic
 
@@ -10,6 +13,11 @@ from ...domain.ports.external_linter import ExternalLinter
 
 
 TIMEOUT_SECONDS = 30
+BUNDLED_CONFIG = pathlib.Path(__file__).resolve().parents[2] / 'vale' / 'vale.ini'
+# Vale exits with this code when its own search finds no config.
+NO_CONFIG_CODE = 'E100'
+# The vale extra's placeholder is smaller than this until the real binary replaces it.
+PLACEHOLDER_BYTES = 1000
 
 
 class ValeAlert(pydantic.BaseModel):
@@ -39,11 +47,13 @@ class ValeReport(pydantic.RootModel[dict[str, list[ValeAlert]]]):
 class ValeLinter(ExternalLinter):
     name = 'vale'
 
-    def __init__(self, executable: str = 'vale') -> None:
-        self._executable = executable
+    def __init__(self, executable: str | None = None, fallback_config: pathlib.Path = BUNDLED_CONFIG) -> None:
+        self._executable = executable or _default_executable()
+        self._fallback_config = fallback_config
+        self._needs_fallback = False
 
     def is_available(self) -> bool:
-        return shutil.which(self._executable) is not None
+        return shutil.which(self._executable) is not None and _launcher_is_ready()
 
     def run(self, document: Document) -> tuple[Diagnostic, ...]:
         if not self.is_available():
@@ -51,9 +61,23 @@ class ValeLinter(ExternalLinter):
         # The text goes in on stdin, because during a fix it is ahead of what the file on disk holds.
         # The path still selects the config sections, and Vale matches them exactly as for a file.
         source_path = document.uri.removeprefix('file://')
+        if not self._needs_fallback:
+            process = self._run_vale(document, source_path)
+            if process is None:
+                return ()
+            if NO_CONFIG_CODE not in process.stderr:
+                return self._decode(document, process.stdout)
+            # A repo with no config of its own gets the bundled one, and every later file skips the miss.
+            self._needs_fallback = True
+        process = self._run_vale(document, source_path, f'--config={self._fallback_config}')
+        return () if process is None else self._decode(document, process.stdout)
+
+    def _run_vale(
+        self, document: Document, source_path: str, *extra_args: str
+    ) -> subprocess.CompletedProcess[str] | None:
         try:
-            process = subprocess.run(  # noqa: S603
-                [self._executable, '--no-exit', '--output=JSON', f'--path={source_path}'],
+            return subprocess.run(  # noqa: S603
+                [self._executable, '--no-exit', '--output=JSON', *extra_args, f'--path={source_path}'],
                 input=document.text,
                 capture_output=True,
                 text=True,
@@ -61,8 +85,7 @@ class ValeLinter(ExternalLinter):
                 timeout=TIMEOUT_SECONDS,
             )
         except (OSError, subprocess.TimeoutExpired):
-            return ()
-        return self._decode(document, process.stdout)
+            return None
 
     def _decode(self, document: Document, payload: str) -> tuple[Diagnostic, ...]:
         diagnostics: list[Diagnostic] = []
@@ -87,3 +110,21 @@ class ValeLinter(ExternalLinter):
             fix=Fix.rewrite(),
             source=self.name,
         )
+
+
+# The vale extra installs its launcher beside this interpreter, which uvx does not put on PATH.
+def _default_executable() -> str:
+    return shutil.which('vale', path=str(pathlib.Path(sys.executable).parent)) or 'vale'
+
+
+# The vale extra downloads the real binary on its first run, in place of a small placeholder.
+# Until that lands, Vale counts as missing, so an edit never waits on a download.
+def _launcher_is_ready() -> bool:
+    spec = importlib.util.find_spec('vale')
+    if spec is None or spec.origin is None:
+        return True
+    placeholder = pathlib.Path(spec.origin).parent / 'vale_bin'
+    try:
+        return placeholder.stat().st_size >= PLACEHOLDER_BYTES
+    except OSError:
+        return True

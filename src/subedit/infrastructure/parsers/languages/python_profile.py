@@ -1,5 +1,8 @@
 import re
 
+import tree_sitter_python
+from tree_sitter import Language
+
 from ....domain.models.comment import CommentForm, SymbolKind, Visibility
 from ....domain.ports.language_conventions import DelimiterSplit
 from .language_profile import LanguageProfile, NodeRole
@@ -8,11 +11,13 @@ from .language_profile import LanguageProfile, NodeRole
 _DOC_DELIMITER = re.compile(r'^([rRbBuUfF]{0,2})("""|\'\'\')')
 _HASH_DELIMITER = re.compile(r'^(#+\s?)')
 
+_LANGUAGE = Language(tree_sitter_python.language())
+
 QUERY = """
 (comment) @comment
-(module . (string) @doc)
-(function_definition body: (block . (string) @doc))
-(class_definition body: (block . (string) @doc))
+(module . (expression_statement . (string) @doc .))
+(function_definition body: (block . (expression_statement . (string) @doc .)))
+(class_definition body: (block . (expression_statement . (string) @doc .)))
 """
 
 
@@ -28,6 +33,9 @@ class PythonProfile(LanguageProfile):
         'class_definition': NodeRole.DEFINITION,
         'decorated_definition': NodeRole.DEFINITION,
     }
+
+    def language(self) -> Language:
+        return _LANGUAGE
 
     def query(self) -> str:
         return QUERY

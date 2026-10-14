@@ -1,6 +1,6 @@
-import re
-import shutil
-import subprocess
+import pathlib
+
+import autocorrect_py
 
 from ...domain.models.diagnostic import Diagnostic, Fix, Severity
 from ...domain.models.document import Document
@@ -9,42 +9,43 @@ from ...domain.models.text import TextEdit
 from ...domain.ports.external_linter import ExternalLinter
 
 
-LOCATION = re.compile(r'^(?P<source_path>.+?):(?P<line>\d+):(?P<column>\d+)$')
-TIMEOUT_SECONDS = 30
 RULE_ID = 'autocorrect/spacing'
+CONFIG_PATH = pathlib.Path('.autocorrectrc')
 
 
 class AutoCorrectLinter(ExternalLinter):
     name = 'autocorrect'
 
-    def __init__(self, executable: str = 'autocorrect') -> None:
-        self._executable = executable
+    def __init__(self, config_path: pathlib.Path = CONFIG_PATH) -> None:
+        self._config_path = config_path
+        self._config_loaded = False
 
     def is_available(self) -> bool:
-        return shutil.which(self._executable) is not None
+        """Always true, since AutoCorrect arrives as a Python dependency rather than a separate install."""
+        return True
 
     def run(self, document: Document) -> tuple[Diagnostic, ...]:
-        if not self.is_available():
-            return ()
-        corrected_text = self._run_autocorrect(document)
-        if corrected_text is None or corrected_text == document.text:
+        """Diff AutoCorrect's rewrite of the text into one targeted edit per changed line.
+
+        The path only tells AutoCorrect which file type to parse, so it need not exist on disk.
+        """
+        self._load_config()
+        corrected_text = autocorrect_py.format_for(document.text, document.uri.removeprefix('file://'))
+        if corrected_text == document.text:
             return ()
         return self._diff_lines(document, corrected_text)
 
-    # The path only tells AutoCorrect which file type to parse, so it need not exist on disk.
-    def _run_autocorrect(self, document: Document) -> str | None:
+    # The command line tool reads .autocorrectrc from the working directory, so the library does the same.
+    # The config is global to the library, so it loads once.
+    def _load_config(self) -> None:
+        if self._config_loaded:
+            return
+        self._config_loaded = True
         try:
-            process = subprocess.run(  # noqa: S603
-                [self._executable, '--stdin', document.uri.removeprefix('file://')],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=TIMEOUT_SECONDS,
-                input=document.text,
-            )
-        except (OSError, subprocess.TimeoutExpired):
-            return None
-        return process.stdout if process.stdout else None
+            config_text = self._config_path.read_text(encoding='utf-8')
+        except (OSError, UnicodeDecodeError):
+            return
+        autocorrect_py.load_config(config_text)  # pyright: ignore[reportAttributeAccessIssue]
 
     def _diff_lines(self, document: Document, corrected_text: str) -> tuple[Diagnostic, ...]:
         original_lines = document.text.splitlines(keepends=True)
