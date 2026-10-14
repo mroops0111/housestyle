@@ -97,6 +97,19 @@ class Report:
         return tuple(diagnostic for diagnostic in self.diagnostics if diagnostic.needs_author)
 
     @property
+    def blocking(self) -> tuple[Diagnostic, ...]:
+        """The findings an author must resolve, since a warning reaches them as advice and blocks nothing."""
+        return tuple(diagnostic for diagnostic in self.needing_author if diagnostic.severity is Severity.ERROR)
+
+    @property
+    def advisory(self) -> tuple[Diagnostic, ...]:
+        return tuple(diagnostic for diagnostic in self.needing_author if diagnostic.severity is not Severity.ERROR)
+
+    @property
+    def has_errors(self) -> bool:
+        return any(diagnostic.severity is Severity.ERROR for diagnostic in self.diagnostics)
+
+    @property
     def is_clean(self) -> bool:
         return not self.diagnostics
 

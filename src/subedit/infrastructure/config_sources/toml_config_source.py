@@ -83,13 +83,16 @@ class TomlConfigSource:
 
     def _to_rule_set(self, config_file: ConfigFile) -> RuleSet:
         enabled_ids = set(self._available_rule_ids)
+        disabled_external_ids: set[str] = set()
         settings: dict[str, RuleSettings] = {}
 
+        # A name subedit does not define belongs to a delegated tool, such as subedit.Semicolon from Vale.
         for rule_id, rule_entry in config_file.rules.items():
-            if rule_id not in self._available_rule_ids:
-                continue
             if rule_entry is False or rule_entry == 'off':
-                enabled_ids.discard(rule_id)
+                if rule_id in self._available_rule_ids:
+                    enabled_ids.discard(rule_id)
+                else:
+                    disabled_external_ids.add(rule_id)
             elif isinstance(rule_entry, RuleTable):
                 settings[rule_id] = RuleSettings(severity=rule_entry.resolved_severity, options=rule_entry.options)
             elif isinstance(rule_entry, str):
@@ -99,4 +102,5 @@ class TomlConfigSource:
             enabled_rule_ids=frozenset(enabled_ids),
             settings=settings,
             line_width=config_file.subedit.line_width,
+            disabled_external_ids=frozenset(disabled_external_ids),
         )

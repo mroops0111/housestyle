@@ -55,12 +55,12 @@ def test_a_project_section_rejects_a_zero_width_at_the_boundary() -> None:
 
 def test_a_vale_report_decodes_alerts() -> None:
     payload = """
-    {"a.py": [{"Check": "mroops.Semicolon", "Message": "no semicolons", "Line": 3,
+    {"a.py": [{"Check": "subedit.Semicolon", "Message": "no semicolons", "Line": 3,
                "Span": [10, 11], "Severity": "warning"}]}
     """
     alerts = ValeReport.parse(payload)
     assert len(alerts) == 1
-    assert alerts[0].check == 'mroops.Semicolon'
+    assert alerts[0].check == 'subedit.Semicolon'
     assert alerts[0].span == (10, 11)
     assert alerts[0].resolved_severity is Severity.WARNING
 

@@ -193,3 +193,14 @@ def test_check_prepares_delegated_tools_and_says_when_one_is_missing(
     assert probe.prepared, 'a command waits for what a delegated tool needs, unlike the hook'
     warned = 'probe is not installed' in capsys.readouterr().err
     assert warned is not ready_after_prepare, 'a skipped tool must not read as a clean run'
+
+
+def test_check_passes_when_only_warnings_remain(tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]) -> None:
+    source = tmp_path / 'sample.py'
+    source.write_text('# A banner about the module.\n\nVALUE = 1\n', encoding='utf-8')
+
+    with pytest.raises(SystemExit) as exit_info:
+        app(['check', str(source), '--no-delegate'])
+
+    assert 'warning  file-header-comment' in capsys.readouterr().out
+    assert exit_info.value.code == 0, 'a warning shows in the output but does not fail the run'

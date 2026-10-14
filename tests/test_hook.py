@@ -155,3 +155,8 @@ def test_the_hook_can_list_the_shapes_it_accepts() -> None:
     assert 'codex' in described
     assert 'exits 0' in described
     assert 'subedit fix' in described, 'a non agent caller needs pointing at the CLI'
+
+
+def test_a_warning_alone_never_blocks_the_agent(tmp_path: pathlib.Path) -> None:
+    target = seed(tmp_path, '# A banner about the module.\n\nVALUE = 1\n')
+    assert not hook.run(payload(target)).is_blocking

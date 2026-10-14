@@ -1,4 +1,6 @@
-from ..domain.models.diagnostic import Report
+import dataclasses
+
+from ..domain.models.diagnostic import Diagnostic, Report
 from ..domain.models.document import Document
 from ..domain.models.rule_set import RuleSet
 from ..domain.ports.external_linter import ExternalLinter
@@ -17,7 +19,17 @@ class ReportAggregator:
             if not external_linter.is_available():
                 missing_sources.append(external_linter.name)
                 continue
-            report = report.merged_with(Report(external_linter.run(document)))
+            report = report.merged_with(Report(self._configured(external_linter.run(document), rule_set)))
         if missing_sources:
             report = report.merged_with(Report(unavailable_sources=tuple(missing_sources)))
         return report
+
+    # The project's config has the last word on a delegated rule, as it does on a native one.
+    def _configured(self, diagnostics: tuple[Diagnostic, ...], rule_set: RuleSet) -> tuple[Diagnostic, ...]:
+        configured: list[Diagnostic] = []
+        for diagnostic in diagnostics:
+            if not rule_set.allows_external(diagnostic.rule_id):
+                continue
+            severity = rule_set.settings_for(diagnostic.rule_id).severity
+            configured.append(dataclasses.replace(diagnostic, severity=severity) if severity else diagnostic)
+        return tuple(configured)

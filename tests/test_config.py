@@ -51,9 +51,17 @@ def test_a_table_carries_severity_and_options(tmp_path: pathlib.Path) -> None:
     assert settings.integer('minimum_characters', 24) == 30
 
 
-def test_an_unknown_rule_is_ignored(tmp_path: pathlib.Path) -> None:
+def test_an_unknown_rule_leaves_the_native_rules_alone(tmp_path: pathlib.Path) -> None:
     target = write(tmp_path, '[rules]\nnot-a-rule = false\n')
     assert source().resolve(str(target)).enabled_rule_ids == frozenset(AVAILABLE)
+
+
+def test_a_delegated_rule_can_be_tuned_or_switched_off(tmp_path: pathlib.Path) -> None:
+    target = write(tmp_path, '[rules]\n"subedit.MidSentenceColon" = "error"\n"subedit.DateRef" = "off"\n')
+    rules = source().resolve(str(target))
+    assert rules.settings_for('subedit.MidSentenceColon').severity is Severity.ERROR
+    assert not rules.allows_external('subedit.DateRef')
+    assert rules.allows_external('subedit.Semicolon')
 
 
 def test_a_nonsense_width_falls_back_to_the_default(tmp_path: pathlib.Path) -> None:

@@ -1,6 +1,6 @@
 extends: existence
 message: "Colon in running prose. Allowed only as a 'Label:' prefix."
-level: error
+level: warning
 nonword: true
 tokens:
   - '\w\s+\w+:[ \t]+\w'

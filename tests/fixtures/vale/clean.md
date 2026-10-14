@@ -8,7 +8,7 @@ Every construct here is allowed, so the style must stay silent on it.
 A `TODO:` prefix is a label, not running prose.
 
 Timestamps follow ISO-8601 and text is UTF-8.
-The MCP 2025-11-25 spec names its versions by date.
+Version 2026.8 and RFC 9207 are names, not dates.
 Resolution order:
 
 1. Detect the flows.

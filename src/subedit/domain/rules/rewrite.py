@@ -1,7 +1,7 @@
 import typing
 
 from ..models.comment import CommentGroup
-from ..models.diagnostic import Diagnostic, Fix, FixKind, RuleMetadata
+from ..models.diagnostic import Diagnostic, Fix, FixKind, RuleMetadata, Severity
 from ..models.prose import Prose, reflow_sentence
 from ..ports.rule import Rule, RuleContext
 
@@ -10,6 +10,7 @@ STUB_FRAGMENT = RuleMetadata(
     rule_id='stub-fragment',
     summary='A sentence forced to break must not leave a stub of a line behind.',
     fix_kind=FixKind.REWRITE,
+    default_severity=Severity.WARNING,
 )
 
 UNBREAKABLE_SENTENCE = RuleMetadata(
