@@ -1,6 +1,8 @@
 import abc
 import enum
 
+from tree_sitter import Language
+
 from ....domain.models.comment import SymbolKind
 from ....domain.ports.language_conventions import LanguageConventions
 
@@ -13,6 +15,10 @@ class NodeRole(enum.Enum):
 
 
 class GrammarAdapter(abc.ABC):
+    # The grammar ships as a wheel, so a first run never reaches the network.
+    @abc.abstractmethod
+    def language(self) -> Language: ...
+
     @abc.abstractmethod
     def query(self) -> str: ...
 

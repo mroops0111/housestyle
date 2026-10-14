@@ -1,5 +1,4 @@
-from tree_sitter import Node, Query, QueryCursor
-from tree_sitter_language_pack import get_language, get_parser
+from tree_sitter import Node, Parser, Query, QueryCursor
 
 from ...domain.models.comment import CommentForm, CommentGroup, CommentLine, CommentPlacement, SymbolRef
 from ...domain.models.document import Document
@@ -36,8 +35,8 @@ class TreeSitterParser(SourceParser):
         if profile is None:
             return ()
         source_bytes = document.text.encode('utf-8')
-        tree = get_parser(document.language_id).parse(source_bytes)  # pyright: ignore[reportArgumentType]
-        grouped_captures = self._run_query(profile, document.language_id, tree.root_node)
+        tree = Parser(profile.language()).parse(source_bytes)
+        grouped_captures = self._run_query(profile, tree.root_node)
         comment_groups = [self._build_doc_group(profile, document, node) for node in grouped_captures[DOC_CAPTURE]]
         comment_groups.extend(
             self._build_line_group(profile, document, group)
@@ -45,8 +44,8 @@ class TreeSitterParser(SourceParser):
         )
         return tuple(sorted(comment_groups, key=lambda group: group.range.start))
 
-    def _run_query(self, profile: LanguageProfile, language_id: str, root: Node) -> dict[str, list[Node]]:
-        query = Query(get_language(language_id), profile.query())  # pyright: ignore[reportArgumentType]
+    def _run_query(self, profile: LanguageProfile, root: Node) -> dict[str, list[Node]]:
+        query = Query(profile.language(), profile.query())
         captures_by_name = QueryCursor(query).captures(root)
         # A node can match several patterns at once, so the same byte offset arrives twice.
         grouped_captures: dict[str, list[Node]] = {COMMENT_CAPTURE: [], DOC_CAPTURE: []}
