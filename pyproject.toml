@@ -21,6 +21,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "autocorrect-py>=2.14.0",
     "pydantic>=2.13.5",
     "tree-sitter>=0.26.0",
     "tree-sitter-python>=0.25.0",
@@ -33,6 +34,9 @@ dev = [
     "basedpyright>=1.40.1",
     "ruff>=0.16.7",
     "tree-sitter-typescript>=0.23.2",
+]
+vale = [
+    "vale>=3.22.0.0",
 ]
 
 [project.scripts]

@@ -1,3 +1,5 @@
+import importlib.machinery
+import importlib.util
 import pathlib
 import shutil
 
@@ -97,9 +99,6 @@ def test_a_clean_document_with_a_silent_linter_is_clean() -> None:
 
 @pytest.mark.skipif(shutil.which('vale') is None, reason='vale is not installed')
 def test_the_vale_adapter_normalises_real_output(tmp_path: pathlib.Path) -> None:
-    repository_config = pathlib.Path(__file__).resolve().parent.parent / '.vale.ini'
-    shutil.copy(repository_config, tmp_path / '.vale.ini')
-    shutil.copytree(repository_config.parent / 'styles', tmp_path / 'styles')
     target = tmp_path / 'probe.py'
     target.write_text('def f():\n    # a semicolon; which is forbidden here.\n    pass\n', encoding='utf-8')
 
@@ -113,17 +112,45 @@ def test_the_vale_adapter_normalises_real_output(tmp_path: pathlib.Path) -> None
 
 def test_adapters_report_absence_without_raising() -> None:
     assert ValeLinter(executable='definitely-not-installed').is_available() is False
-    assert AutoCorrectLinter(executable='definitely-not-installed').is_available() is False
     missing = Document(uri='file:///nowhere/gone.py', text='# note\n', language_id='python')
     assert ValeLinter(executable='definitely-not-installed').run(missing) == ()
-    assert AutoCorrectLinter(executable='definitely-not-installed').run(missing) == ()
+
+
+@pytest.mark.skipif(shutil.which('vale') is None, reason='vale is not installed')
+def test_a_repo_without_a_vale_config_gets_the_bundled_one(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv('HOME', str(tmp_path))
+    monkeypatch.delenv('VALE_CONFIG_PATH', raising=False)
+    linter = ValeLinter()
+    text = 'def f():\n    # a semicolon; which is forbidden here.\n    pass\n'
+    for name in ('first.py', 'second.py'):
+        found = linter.run(Document(uri=(tmp_path / name).as_uri(), text=text, language_id='python'))
+        assert any('Semicolon' in item.rule_id for item in found)
+
+
+def test_vale_counts_as_missing_until_the_extra_has_downloaded_it(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / '__init__.py').write_text('', encoding='utf-8')
+    placeholder = tmp_path / 'vale_bin'
+    placeholder.write_text('#!/bin/sh\n', encoding='utf-8')
+    found_spec = importlib.machinery.ModuleSpec('vale', None, origin=str(tmp_path / '__init__.py'))
+    monkeypatch.setattr(importlib.util, 'find_spec', lambda name: found_spec if name == 'vale' else None)
+    linter = ValeLinter(executable='sh')
+
+    assert linter.is_available() is False, 'a first edit must not wait while the extra downloads Vale'
+    placeholder.write_bytes(b'\0' * 4096)
+    assert linter.is_available() is True
+
+
+def test_autocorrect_needs_no_install() -> None:
+    assert AutoCorrectLinter().is_available() is True
 
 
 @pytest.mark.skipif(shutil.which('vale') is None, reason='vale is not installed')
 def test_the_vale_adapter_lints_the_text_it_is_given_rather_than_the_disk(tmp_path: pathlib.Path) -> None:
-    repository_config = pathlib.Path(__file__).resolve().parent.parent / '.vale.ini'
-    shutil.copy(repository_config, tmp_path / '.vale.ini')
-    shutil.copytree(repository_config.parent / 'styles', tmp_path / 'styles')
     target = tmp_path / 'probe.py'
     target.write_text('def f():\n    pass\n', encoding='utf-8')
     unsaved = 'def f():\n    # a semicolon; which is forbidden here.\n    pass\n'
@@ -132,7 +159,6 @@ def test_the_vale_adapter_lints_the_text_it_is_given_rather_than_the_disk(tmp_pa
     assert any('Semicolon' in item.rule_id for item in found)
 
 
-@pytest.mark.skipif(shutil.which('autocorrect') is None, reason='autocorrect is not installed')
 def test_the_autocorrect_adapter_offers_an_edit_for_text_never_saved() -> None:
     # The unspaced sample lives in an excluded fixture, so checking this repository does not flag it.
     text = (pathlib.Path(__file__).parent / 'fixtures' / 'autocorrect' / 'unspaced.py').read_text(encoding='utf-8')

@@ -12,6 +12,17 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/run-subedit-hook.sh prepare",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
