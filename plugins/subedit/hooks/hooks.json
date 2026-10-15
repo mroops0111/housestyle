@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/run-subedit-hook.sh",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/run-subedit-hook.sh",
             "timeout": 30
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/run-subedit-hook.sh prepare",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/run-subedit-hook.sh prepare",
             "timeout": 10
           }
         ]

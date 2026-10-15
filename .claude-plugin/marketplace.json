@@ -1,10 +1,11 @@
 {
   "name": "mroops",
   "owner": { "name": "mroops0111" },
+  "description": "Plugins built alongside subedit.",
   "plugins": [
     {
       "name": "subedit",
-      "source": { "source": "github", "repo": "mroops0111/subedit" },
+      "source": "./plugins/subedit",
       "description": "Repairs comment layout silently on write, and returns only what needs rewriting."
     }
   ]

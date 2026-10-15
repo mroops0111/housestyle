@@ -9,10 +9,12 @@ from subedit.presentation.harnesses.claude_code_harness import EDIT_TOOLS
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-MANIFEST = ROOT / '.claude-plugin' / 'plugin.json'
+PLUGIN = ROOT / 'plugins' / 'subedit'
+MANIFEST = PLUGIN / '.claude-plugin' / 'plugin.json'
 MARKETPLACE = ROOT / '.claude-plugin' / 'marketplace.json'
-HOOKS = ROOT / 'hooks' / 'hooks.json'
-WRAPPER = ROOT / 'hooks' / 'run-subedit-hook.sh'
+HOOKS = PLUGIN / 'hooks' / 'hooks.json'
+WRAPPER = PLUGIN / 'scripts' / 'run-subedit-hook.sh'
+WRAPPER_COMMAND = f'"${{CLAUDE_PLUGIN_ROOT}}"/scripts/{WRAPPER.name}'
 
 
 def load(path: pathlib.Path) -> typing.Any:
@@ -45,8 +47,7 @@ def test_the_hook_matcher_covers_every_tool_the_harness_recognises() -> None:
 def test_the_hook_runs_the_wrapper_from_the_plugin_directory() -> None:
     command = load(HOOKS)['hooks']['PostToolUse'][0]['hooks'][0]['command']
 
-    assert '${CLAUDE_PLUGIN_ROOT}' in command, 'a bare path breaks once the plugin is installed elsewhere'
-    assert command.endswith(WRAPPER.name)
+    assert command == WRAPPER_COMMAND, 'a bare or unquoted path breaks once the plugin is installed elsewhere'
 
 
 def test_the_wrapper_is_executable() -> None:
@@ -83,18 +84,24 @@ def test_the_wrapper_runs_the_released_version() -> None:
 def test_a_session_start_warms_the_same_wrapper() -> None:
     command = load(HOOKS)['hooks']['SessionStart'][0]['hooks'][0]['command']
 
-    assert command == f'${{CLAUDE_PLUGIN_ROOT}}/hooks/{WRAPPER.name} prepare'
+    assert command == f'{WRAPPER_COMMAND} prepare'
 
 
-def test_the_marketplace_points_at_this_repository() -> None:
+def test_the_marketplace_points_at_the_plugin_directory() -> None:
     listed = load(MARKETPLACE)['plugins']
 
     assert [plugin['name'] for plugin in listed] == ['subedit']
-    assert listed[0]['source']['repo'] == 'mroops0111/subedit'
+    assert (ROOT / listed[0]['source']).resolve() == PLUGIN, 'a relative source resolves from the marketplace root'
+
+
+def test_the_plugin_carries_everything_it_runs() -> None:
+    """An install copies only the plugin directory, so nothing it loads may live outside it."""
+    assert {path.name for path in PLUGIN.iterdir()} == {'.claude-plugin', 'hooks', 'scripts', 'skills'}
+    assert [path.name for path in (PLUGIN / '.claude-plugin').iterdir()] == ['plugin.json']
 
 
 def test_the_judging_skill_names_itself_as_its_folder_does() -> None:
-    skill = ROOT / 'skills' / 'judging-findings' / 'SKILL.md'
+    skill = PLUGIN / 'skills' / 'judging-findings' / 'SKILL.md'
     front_matter = skill.read_text(encoding='utf-8').split('---')[1]
 
     assert 'name: judging-findings' in front_matter, 'Claude Code loads a skill by the name in its front matter'
