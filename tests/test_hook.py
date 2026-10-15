@@ -160,3 +160,31 @@ def test_the_hook_can_list_the_shapes_it_accepts() -> None:
 def test_a_warning_alone_never_blocks_the_agent(tmp_path: pathlib.Path) -> None:
     target = seed(tmp_path, '# A banner about the module.\n\nVALUE = 1\n')
     assert not hook.run(payload(target)).is_blocking
+
+
+def test_a_warning_reaches_claude_code_without_blocking(tmp_path: pathlib.Path) -> None:
+    target = seed(tmp_path, '# A banner about the module.\n\nVALUE = 1\n')
+    outcome = hook.run(payload(target))
+
+    assert outcome.exit_code == 0
+    context = json.loads(outcome.stdout)['hookSpecificOutput']
+    assert context['hookEventName'] == 'PostToolUse'
+    assert 'file-header-comment' in context['additionalContext']
+
+
+def test_a_warning_rides_along_when_the_edit_blocks(tmp_path: pathlib.Path) -> None:
+    target = seed(tmp_path, '# A banner about the module.\n\n' + UNBREAKABLE)
+    outcome = hook.run(payload(target))
+
+    assert outcome.is_blocking
+    assert 'unbreakable-sentence' in outcome.stderr
+    assert 'file-header-comment' in outcome.stderr
+
+
+def test_codex_has_no_channel_for_a_warning(tmp_path: pathlib.Path) -> None:
+    target = seed(tmp_path, '# A banner about the module.\n\nVALUE = 1\n')
+    patch = f'*** Update File: {target}\n@@\n-old\n+new\n'
+    outcome = hook.run({'tool_name': 'apply_patch', 'tool_input': {'command': patch}})
+
+    assert outcome.exit_code == 0
+    assert outcome.stdout == ''

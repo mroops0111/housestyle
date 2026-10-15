@@ -17,6 +17,7 @@ HELP_FLAGS = frozenset({'--help', '-h', '--harnesses'})
 class HookResult:
     exit_code: int
     stderr: str = ''
+    stdout: str = ''
     repaired_paths: tuple[str, ...] = ()
     harness_name: str = ''
 
@@ -35,6 +36,7 @@ def run(payload: Payload, *, write: bool = True) -> HookResult:
 
     fixer = Fixer(Linter(DEFAULT_PARSER, RuleEngine(ALL_RULES)), EXTERNAL_LINTERS)
     author_messages: list[str] = []
+    advice_messages: list[str] = []
     repaired_paths: list[str] = []
 
     for source_path in edited_paths:
@@ -50,12 +52,21 @@ def run(payload: Payload, *, write: bool = True) -> HookResult:
         brief_report = reporters.brief(fix_result.document, fix_result.report)
         if brief_report:
             author_messages.append(brief_report)
+        advice_report = reporters.advice(fix_result.document, fix_result.report)
+        if advice_report:
+            advice_messages.append(advice_report)
 
     if not author_messages:
-        return HookResult(exit_code=0, repaired_paths=tuple(repaired_paths), harness_name=harness.metadata.name)
+        return HookResult(
+            exit_code=0,
+            stdout=harness.advisory_output('\n\n'.join(advice_messages)) if advice_messages else '',
+            repaired_paths=tuple(repaired_paths),
+            harness_name=harness.metadata.name,
+        )
+    # A blocked edit is already going back to the model, so its warnings ride along.
     return HookResult(
         exit_code=BLOCK_EXIT,
-        stderr='\n\n'.join(author_messages),
+        stderr='\n\n'.join(author_messages + advice_messages),
         repaired_paths=tuple(repaired_paths),
         harness_name=harness.metadata.name,
     )
@@ -99,6 +110,8 @@ def main() -> int:
     if not isinstance(payload, dict):
         return 0
     hook_result = run(payload)
+    if hook_result.stdout:
+        sys.stdout.write(hook_result.stdout + '\n')
     if hook_result.stderr:
         sys.stderr.write(hook_result.stderr + '\n')
     return hook_result.exit_code

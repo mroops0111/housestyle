@@ -15,12 +15,13 @@ STUB_FRAGMENT = RuleMetadata(
 
 UNBREAKABLE_SENTENCE = RuleMetadata(
     rule_id='unbreakable-sentence',
-    summary='A sentence over the width must carry a comma so it has somewhere legal to break.',
+    summary='A sentence over the width must carry a clause comma wherever it has to break.',
     fix_kind=FixKind.REWRITE,
 )
 
 
 DEFAULT_MINIMUM_CHARACTERS = 24
+BRACKET_NOTE = 'A comma inside brackets or a code span separates items, so it is no place to break. '
 
 
 def prose_sentences(group: CommentGroup) -> tuple[str, ...]:
@@ -32,8 +33,12 @@ def prose_sentences(group: CommentGroup) -> tuple[str, ...]:
     )
 
 
-def sentence_budget(group: CommentGroup, context: RuleContext) -> int:
-    return max(20, context.line_width - group.lines[0].prefix_width)
+def budgeted_sentences(group: CommentGroup, context: RuleContext) -> tuple[tuple[str, int], ...]:
+    """Pair each sentence with the budget reflow lays it out in, so no rule judges a layout reflow would not make."""
+    return tuple(
+        (sentence, group.text_budget(context.line_width, first_line=index == 0))
+        for index, sentence in enumerate(prose_sentences(group))
+    )
 
 
 def stub_floor(context: RuleContext) -> int:
@@ -47,10 +52,9 @@ class StubFragmentRule(Rule):
     metadata = STUB_FRAGMENT
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
-        budget = sentence_budget(group, context)
         minimum_length = stub_floor(context)
-        for sentence in prose_sentences(group):
-            split_pieces = reflow_sentence(sentence, budget)
+        for sentence, budget in budgeted_sentences(group, context):
+            split_pieces = reflow_sentence(sentence, budget, minimum_length)
             if len(split_pieces) < 2:
                 continue
             shortest_piece = min(split_pieces, key=len)
@@ -73,17 +77,23 @@ class UnbreakableSentenceRule(Rule):
     metadata = UNBREAKABLE_SENTENCE
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
-        budget = max(20, context.line_width - group.lines[0].prefix_width)
-        for sentence in prose_sentences(group):
-            if len(sentence) <= budget or ',' in sentence:
+        for sentence, budget in budgeted_sentences(group, context):
+            longest_line = max(reflow_sentence(sentence, budget), key=len)
+            if len(longest_line) <= budget:
                 continue
+            if longest_line == sentence:
+                cause = 'contains no comma that ends a clause, so there is no legal place to break it'
+            else:
+                cause = f'still leaves a line of {len(longest_line)} characters when broken at every clause comma'
             yield Diagnostic(
                 rule_id=self.metadata.rule_id,
                 range=group.range,
                 message=(
                     f'This sentence runs to {len(sentence)} characters against a budget of {budget} characters '
-                    'and contains no comma, so there is no legal place to break it. '
-                    'Add a comma at a clause boundary, or split it into two sentences.'
+                    f'and {cause}. '
+                    f'{BRACKET_NOTE if "," in sentence else ""}'
+                    'Add a comma at a clause boundary, or split it into two sentences. '
+                    f'The part that does not fit is "{longest_line}".'
                 ),
                 fix=Fix.rewrite(),
             )

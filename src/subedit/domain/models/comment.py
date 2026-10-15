@@ -1,8 +1,9 @@
 import dataclasses
 import enum
+import itertools
 
 from .position import SourceRange
-from .prose import Prose, reflow_sentence
+from .prose import Prose, Sentence, break_cost, comma_breaks, reflow_sentence
 from .text import TextEdit
 
 
@@ -102,14 +103,25 @@ class CommentGroup:
         if self.form is CommentForm.DOC and self.line_count == 1 and self.longest_line <= width:
             return self
         texts = self._reflow_into_texts(width, stub_floor)
+        # Text that ends up on one line closes there too, so the closing quotes need room beside it.
+        closing_width = len(self._closing_quotes())
+        if len(texts) == 1 and len(texts[0]) > self.text_budget(width, first_line=True) - closing_width:
+            texts = self._reflow_into_texts(width, stub_floor, closing_width)
         if not texts:
             return self
         return self._rebuild_lines(texts)
 
-    # A sentence whose split strands a stub needs its author,
-    # so the block keeps the layout they gave it rather than one its own check rejects.
-    def _reflow_into_texts(self, width: int, stub_floor: int) -> tuple[str, ...]:
-        budget = max(20, width - self.lines[0].prefix_width)
+    def text_budget(self, width: int, *, first_line: bool) -> int:
+        """The characters of text a line holds, which on a docstring's opening line also cede the quotes."""
+        opening = self.lines[0]
+        quoted = first_line or self.form is not CommentForm.DOC
+        return max(20, width - (opening.prefix_width if quoted else len(opening.indent)))
+
+    # A sentence takes as few lines as fit, and the author's layout stays when it breaks no worse than the best one.
+    # A sentence whose new layout would strand a stub or still overflow needs its author,
+    # so it keeps the layout they gave it rather than one its own check rejects.
+    def _reflow_into_texts(self, width: int, stub_floor: int, reserve: int = 0) -> tuple[str, ...]:
+        body_budget = self.text_budget(width, first_line=False)
         out: list[str] = []
         for paragraph_index, (paragraph, is_literal) in enumerate(self._split_into_paragraphs()):
             if out:
@@ -117,14 +129,23 @@ class CommentGroup:
             if is_literal:
                 out.extend(paragraph)
                 continue
-            joined_text = ' '.join(line.strip() for line in paragraph if line.strip())
-            for sentence_index, sentence in enumerate(Prose(joined_text).sentences()):
+            lines = tuple(line.strip() for line in paragraph if line.strip())
+            for sentence_index, sentence in enumerate(Prose(' '.join(lines)).sentences()):
                 if sentence_index == 1 and paragraph_index == 0 and self.form is CommentForm.DOC:
                     out.append('')
-                sentence_lines = reflow_sentence(sentence.text, budget)
-                if len(sentence_lines) > 1 and min(map(len, sentence_lines)) < stub_floor:
+                first_budget = self.text_budget(width, first_line=not out) - (reserve if not out else 0)
+                best_lines = reflow_sentence(sentence.text, body_budget, stub_floor, first_width=first_budget)
+                given_lines = _given_lines(lines, sentence)
+                if given_lines and _keeps_given(given_lines, best_lines, (first_budget, body_budget), stub_floor):
+                    out.extend(given_lines)
+                elif _is_legal(best_lines, (first_budget, body_budget), stub_floor):
+                    out.extend(best_lines)
+                elif given_lines:
+                    out.extend(given_lines)
+                elif _strands_stub(best_lines, stub_floor):
                     return ()
-                out.extend(sentence_lines)
+                else:
+                    out.extend(best_lines)
         return tuple(out)
 
     def _split_into_paragraphs(self) -> tuple[tuple[tuple[str, ...], bool], ...]:
@@ -156,8 +177,13 @@ class CommentGroup:
             if not closes_alone:
                 body[-1] = dataclasses.replace(body[-1], delimiter=opening.delimiter.strip())
         else:
-            body[0] = dataclasses.replace(body[0], suffix=closing.suffix or opening.delimiter.strip())
+            body[0] = dataclasses.replace(body[0], suffix=self._closing_quotes())
         return dataclasses.replace(self, lines=tuple(body))
+
+    def _closing_quotes(self) -> str:
+        if self.form is not CommentForm.DOC:
+            return ''
+        return self.lines[-1].suffix or self.lines[0].delimiter.strip()
 
     def with_texts(self, texts: tuple[str, ...]) -> 'CommentGroup':
         if not texts:
@@ -177,3 +203,59 @@ class CommentGroup:
 
     def as_edit(self) -> TextEdit:
         return TextEdit(self.range, self.render())
+
+
+# The lines a sentence already occupies, when it has them to itself.
+def _given_lines(lines: tuple[str, ...], sentence: Sentence) -> tuple[str, ...] | None:
+    covering: list[str] = []
+    start = 0
+    for line in lines:
+        end = start + len(line)
+        if start < sentence.end and end > sentence.offset:
+            if not covering and start != sentence.offset:
+                return None
+            covering.append(line)
+            if end == sentence.end:
+                return tuple(covering)
+            if end > sentence.end:
+                return None
+        start = end + 1
+    return None
+
+
+def _keeps_given(
+    given_lines: tuple[str, ...], best_lines: tuple[str, ...], budgets: tuple[int, int], stub_floor: int
+) -> bool:
+    # A colon ending a line in mid sentence is a rewrite finding, so its layout waits for that rewrite.
+    if _breaks_at_a_colon(given_lines):
+        return _fits(given_lines, budgets)
+    return (
+        len(given_lines) == len(best_lines)
+        and _is_legal(given_lines, budgets, stub_floor)
+        and break_cost(given_lines) <= break_cost(best_lines)
+    )
+
+
+def _breaks_at_a_colon(lines: tuple[str, ...]) -> bool:
+    return any(line.endswith(':') for line in lines[:-1])
+
+
+def _fits(lines: tuple[str, ...], budgets: tuple[int, int]) -> bool:
+    first_budget, body_budget = budgets
+    return all(len(line) <= (first_budget if index == 0 else body_budget) for index, line in enumerate(lines))
+
+
+def _is_legal(lines: tuple[str, ...], budgets: tuple[int, int], stub_floor: int) -> bool:
+    if not _fits(lines, budgets):
+        return False
+    if len(lines) == 1:
+        return True
+    if _strands_stub(lines, stub_floor):
+        return False
+    breaks = set(comma_breaks(' '.join(lines)))
+    line_ends = itertools.accumulate(len(line) + 1 for line in lines[:-1])
+    return all(line_end - 1 in breaks for line_end in line_ends)
+
+
+def _strands_stub(lines: tuple[str, ...], stub_floor: int) -> bool:
+    return len(lines) > 1 and min(map(len, lines)) < stub_floor

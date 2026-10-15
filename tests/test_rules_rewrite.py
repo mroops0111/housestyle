@@ -97,3 +97,8 @@ def test_the_budget_shrinks_with_indentation() -> None:
 def test_each_rule_can_be_disabled_independently(rule_id: str) -> None:
     source = comment('cap the size to the shared runner ceiling limit that we set here, ok.')
     assert rule_id not in ids(source, enabled_rule_ids=REWRITE_IDS - {rule_id})
+
+
+def test_a_clause_too_long_to_fit_is_unbreakable_despite_other_commas() -> None:
+    text = 'an opening clause long enough, and then a much longer clause carrying no further comma at all.'
+    assert ids(comment(text), width=60) == ['unbreakable-sentence']

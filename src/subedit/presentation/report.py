@@ -25,7 +25,8 @@ def advice(document: Document, report: Report) -> str:
     if not report.advisory:
         return ''
     lines = [
-        f'{len(report.advisory)} comment {"warning" if len(report.advisory) == 1 else "warnings"} in {_path(document)}, worth a look but not required.'
+        f'{len(report.advisory)} comment {"warning" if len(report.advisory) == 1 else "warnings"} in {_path(document)}, worth a look but not required.',
+        "Each is a judgment call. Rewrite the text where the finding holds, and leave it where the text meets the rule's criteria.",
     ]
     lines.extend(_finding_lines(document, report.advisory))
     return '\n'.join(lines)
