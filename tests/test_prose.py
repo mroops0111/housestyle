@@ -224,3 +224,16 @@ def test_a_brief_clause_standing_alone_is_no_list_item() -> None:
 def test_fewer_lines_outrank_a_clause_boundary() -> None:
     sentence = 'first clause here, second clause, third clause that runs on.'
     assert len(reflow_sentence(sentence, width=40)) == 2
+
+
+def test_an_appositive_is_no_list_item() -> None:
+    lines = (
+        'The extension adds a field and a required name to ``owner``, a ``Person``,',
+        'and types ``approver``, a ``Reviewer`` in ``Base``, by a second component, ``Admin``.',
+    )
+    assert break_cost(lines) == 0
+
+
+def test_parallel_items_led_by_articles_still_form_a_list() -> None:
+    lines = ('It feeds a cat, a dog,', 'and a bird every morning before the long walk.')
+    assert break_cost(lines) == 1

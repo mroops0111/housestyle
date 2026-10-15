@@ -226,6 +226,9 @@ def _given_lines(lines: tuple[str, ...], sentence: Sentence) -> tuple[str, ...] 
 def _keeps_given(
     given_lines: tuple[str, ...], best_lines: tuple[str, ...], budgets: tuple[int, int], stub_floor: int
 ) -> bool:
+    # A colon ending a line in mid sentence is a rewrite finding, so its layout waits for that rewrite.
+    if _breaks_at_a_colon(given_lines):
+        return _fits(given_lines, budgets)
     return (
         len(given_lines) == len(best_lines)
         and _is_legal(given_lines, budgets, stub_floor)
@@ -233,9 +236,17 @@ def _keeps_given(
     )
 
 
-def _is_legal(lines: tuple[str, ...], budgets: tuple[int, int], stub_floor: int) -> bool:
+def _breaks_at_a_colon(lines: tuple[str, ...]) -> bool:
+    return any(line.endswith(':') for line in lines[:-1])
+
+
+def _fits(lines: tuple[str, ...], budgets: tuple[int, int]) -> bool:
     first_budget, body_budget = budgets
-    if any(len(line) > (first_budget if index == 0 else body_budget) for index, line in enumerate(lines)):
+    return all(len(line) <= (first_budget if index == 0 else body_budget) for index, line in enumerate(lines))
+
+
+def _is_legal(lines: tuple[str, ...], budgets: tuple[int, int], stub_floor: int) -> bool:
+    if not _fits(lines, budgets):
         return False
     if len(lines) == 1:
         return True

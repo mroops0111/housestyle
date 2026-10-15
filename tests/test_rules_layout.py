@@ -174,3 +174,13 @@ def test_a_bracketed_ellipsis_is_not_a_place_to_break() -> None:
         '    """\n'
     )
     assert lint(source, width=90).is_clean
+
+
+def test_a_line_ending_on_a_colon_keeps_its_layout_for_the_rewrite() -> None:
+    source = (
+        'def f():\n'
+        '    # Both legs stay separate, which is what the spec requires:\n'
+        '    # the caller token is accepted only because it names this endpoint.\n'
+        '    pass\n'
+    )
+    assert lint(source, width=120).is_clean, 'the colon needs its author, and moving it mid line reads worse'

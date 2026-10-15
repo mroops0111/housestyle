@@ -284,6 +284,7 @@ CLAUSE_OPENERS = frozenset(
 # A piece this short between two commas is an item in a list, such as "base URL,", not a clause.
 LIST_ITEM_WORDS = 3
 LIST_CLOSERS = frozenset({'and', 'or'})
+ARTICLES = frozenset({'a', 'an', 'the'})
 
 
 def _best_layout(pieces: tuple[str, ...], width: int, opening_width: int, stub_floor: int) -> tuple[str, ...] | None:
@@ -326,8 +327,20 @@ def _is_list_item(pieces: tuple[str, ...], index: int) -> bool:
     if not 0 < index < len(pieces) - 1 or not _is_short(pieces[index]) or _opens_a_clause(pieces[index]):
         return False
     following = pieces[index + 1].split()
+    if _is_appositive(pieces[index], following):
+        return False
     closes_run = bool(following) and following[0].lower() in LIST_CLOSERS
     return closes_run or _is_short(pieces[index + 1]) or (index >= 2 and _is_short(pieces[index - 1]))
+
+
+# "``owner``, a ``Person``," renames what came before it,
+# unless the next piece runs on in parallel, as in "a cat, a dog".
+def _is_appositive(piece: str, following: list[str]) -> bool:
+    words = piece.split()
+    if not words or words[0].lower() not in ARTICLES:
+        return False
+    parallel = following[1:] if following and following[0].lower() in LIST_CLOSERS else following
+    return not parallel or parallel[0].lower() not in ARTICLES
 
 
 def _is_short(piece: str) -> bool:
