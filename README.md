@@ -71,11 +71,13 @@ Rewriting a sentence needs its meaning, which a deterministic process cannot sup
 
 ## Agent Hook
 
-`subedit-hook` runs after every file an agent edits. It repairs the mechanical findings in place, and exits 2 only when a sentence needs rewriting, which hands the message back to the model.
+`subedit-hook` runs after every file an agent edits. It repairs the mechanical findings in place, and exits 2 only when a sentence needs rewriting, which hands the message back to the model. In Claude Code a warning reaches the model too, as context beside the tool result, without blocking the edit.
 
 ### Claude Code
 
 The plugin needs only [uv](https://docs.astral.sh/uv/). It runs subedit from PyPI with the `vale` extra, and warms that environment in the background when a session starts, so no edit waits on the first download.
+
+It also ships the `subedit:judging-findings` skill, which gives the model the criteria for every finding a tool cannot fix, such as when a spec identifier stays and a ticket number goes. Criteria in your `CLAUDE.md`, `AGENTS.md`, or a skill of your own come first.
 
 ```text
 /plugin marketplace add mroops0111/subedit

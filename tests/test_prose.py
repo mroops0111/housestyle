@@ -1,6 +1,7 @@
 import pytest
 
 from subedit.domain.models import Prose
+from subedit.domain.models.prose import break_cost, reflow_sentence
 
 
 def texts(prose: Prose) -> list[str]:
@@ -184,3 +185,42 @@ def test_an_unindented_line_after_a_list_is_prose_again() -> None:
 def test_a_possessive_ends_its_sentence() -> None:
     prose = Prose("The audience is the gateway's URI, never the upstream API's. The spec requires it.")
     assert texts(prose) == ["The audience is the gateway's URI, never the upstream API's.", 'The spec requires it.']
+
+
+def test_a_period_inside_brackets_ends_no_sentence() -> None:
+    prose = Prose('headers (``Authorization``, ``X-API-Key``, ...) they want on the request.')
+    assert len(prose.sentences()) == 1
+
+
+@pytest.mark.parametrize(
+    ('sentence', 'expected'),
+    [
+        ('a list (one, two, three) and then, a clause.', ('a list (one, two, three) and then,', 'a clause.')),
+        ('the names ``a, b`` and more, then a clause.', ('the names ``a, b`` and more,', 'then a clause.')),
+        ('1) a stray bracket, then a clause.', ('1) a stray bracket,', 'then a clause.')),
+    ],
+)
+def test_only_a_comma_outside_brackets_and_code_breaks_a_sentence(sentence: str, expected: tuple[str, ...]) -> None:
+    assert reflow_sentence(sentence, width=len(sentence) - 1) == expected
+
+
+def test_a_break_lands_between_clauses_rather_than_inside_a_list() -> None:
+    sentence = (
+        'Goes through the full Gateway assembly, so the auth resolver, base URL, '
+        'and URI-template-driven kwarg passing are all exercised together.'
+    )
+    assert reflow_sentence(sentence, width=100) == (
+        'Goes through the full Gateway assembly,',
+        'so the auth resolver, base URL, and URI-template-driven kwarg passing are all exercised together.',
+    )
+
+
+def test_a_brief_clause_standing_alone_is_no_list_item() -> None:
+    pieces = ('A pointer into a component,', 'or a name outside the grammar,', 'returns ``None``,', 'so it is inlined.')
+    lines = (' '.join(pieces[:3]), pieces[3])
+    assert break_cost(lines) == 0
+
+
+def test_fewer_lines_outrank_a_clause_boundary() -> None:
+    sentence = 'first clause here, second clause, third clause that runs on.'
+    assert len(reflow_sentence(sentence, width=40)) == 2

@@ -1,3 +1,4 @@
+import json
 import pathlib
 import typing
 
@@ -35,3 +36,7 @@ class ClaudeCodeHarness(AgentHarness):
     def _tool_input(self, payload: Payload) -> typing.Mapping[str, object]:
         tool_input = payload.get('tool_input')
         return tool_input if isinstance(tool_input, dict) else {}
+
+    def advisory_output(self, advice: str) -> str:
+        # Claude Code reads stdout as JSON on exit zero, and adds this field beside the tool result.
+        return json.dumps({'hookSpecificOutput': {'hookEventName': 'PostToolUse', 'additionalContext': advice}})

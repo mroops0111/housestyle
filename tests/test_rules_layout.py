@@ -27,9 +27,9 @@ def test_already_correct_layout_is_clean() -> None:
 
 def test_a_mid_clause_break_is_reported_and_reflowed() -> None:
     source = 'def f():\n    # cap the size to the limit so the mmap does not\n    # blow past it, an unbounded value faults.\n    pass\n'
-    report = lint(source)
+    report = lint(source, width=70)
     assert 'mid-clause-break' in [item.rule_id for item in report.diagnostics]
-    assert '# cap the size to the limit so the mmap does not blow past it,\n' in fixed(source)
+    assert '# cap the size to the limit so the mmap does not blow past it,\n' in fixed(source, width=70)
 
 
 def test_reflow_splits_one_sentence_per_line() -> None:
@@ -134,3 +134,43 @@ def test_a_numbered_list_survives_reflow() -> None:
     result = fixed(source, width=60)
     assert '1. Detect the flows first.' in result
     assert '2. Pick one per entry, otherwise fall back.' in result
+
+
+def test_a_sentence_that_fits_comes_back_onto_one_line() -> None:
+    source = (
+        'def f():\n    # an unknown key is a mistake,\n    # and dropping one is worse than refusing it.\n    pass\n'
+    )
+    assert '    # an unknown key is a mistake, and dropping one is worse than refusing it.\n' in fixed(source, width=80)
+
+
+def test_a_needed_break_at_a_clause_comma_is_left_alone() -> None:
+    source = (
+        'def f():\n'
+        '    # Goes through the full Gateway assembly,\n'
+        '    # so the auth resolver, base URL, and URI-template-driven kwarg passing are all exercised together.\n'
+        '    pass\n'
+    )
+    assert lint(source, width=110).is_clean
+
+
+def test_a_docstring_line_counts_its_own_indent_not_the_opening_quotes() -> None:
+    sentence = 'x' * 60 + ', so rotation needs no restart and nothing else changes for it.'
+    source = f'class C:\n    """Verify tokens.\n\n    {sentence}\n    """\n'
+    width = len(f'    {sentence}')
+    assert lint(source, width=width).is_clean
+
+
+def test_a_one_line_docstring_leaves_room_for_its_closing_quotes() -> None:
+    source = 'def f():\n    """' + 'x' * 40 + ',\n    ' + 'y' * 10 + '.\n    """\n'
+    assert lint(source, width=60).is_clean, 'joined, the line with its closing quotes would run to 62'
+
+
+def test_a_bracketed_ellipsis_is_not_a_place_to_break() -> None:
+    source = (
+        'class C:\n'
+        '    """Resolve headers.\n\n'
+        '    Implementations return the headers (``Authorization``, ``X-API-Key``, ...) they want,\n'
+        '    and the generator merges that dict in unchanged.\n'
+        '    """\n'
+    )
+    assert lint(source, width=90).is_clean

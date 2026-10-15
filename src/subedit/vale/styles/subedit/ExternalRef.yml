@@ -1,6 +1,6 @@
 extends: existence
-message: "External reference '%s' a reader cannot open. Restate the constraint."
-level: error
+message: "Reference '%s' may be a ticket a reader cannot open. Keep a public identifier such as a spec proposal, and restate a private ticket's constraint instead."
+level: warning
 nonword: true
 tokens:
   - '[A-Z]{2,}-\d+'

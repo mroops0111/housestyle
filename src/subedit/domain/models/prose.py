@@ -1,4 +1,5 @@
 import dataclasses
+import itertools
 import re
 
 
@@ -21,7 +22,9 @@ ABBREVIATIONS = frozenset(
 _SENTENCE_END = re.compile(r'[.!?]')
 _TRAILING_WORD = re.compile(r'([A-Za-z][A-Za-z.]*)$')
 _URL = re.compile(r'\b(?:https?://|www\.)\S+')
-_CODE_SPAN = re.compile(r'`[^`]*`')
+# A span opened by two backticks, as reStructuredText writes code, closes on two.
+_CODE_RUN = re.compile(r'(`+).+?\1')
+_BRACKET_PAIRS = {'(': ')', '[': ']', '{': '}'}
 _FENCE = re.compile(r'^\s*(```|~~~)')
 _LIST_DELIMITER = re.compile(r'^\s*(?:[0-9]+[.)]|[-*+]|[a-zA-Z][.)])\s')
 _LITERAL_DELIMITER = '\\b'
@@ -148,9 +151,10 @@ class Prose:
             found_sentences.append(Sentence(text[start:].strip(), start))
         return tuple(sentence for sentence in found_sentences if sentence.text)
 
+    # A period inside brackets, as in an ellipsis closing a list of examples, ends no sentence outside them.
     def _find_protected_spans(self, text: str) -> tuple[tuple[int, int], ...]:
         spans = [(url.start(), url.end()) for url in _URL.finditer(text)]
-        spans.extend((code_span.start(), code_span.end()) for code_span in _CODE_SPAN.finditer(text))
+        spans.extend(_enclosed_spans(text))
         return tuple(spans)
 
     def _is_protected(self, offset: int, spans: tuple[tuple[int, int], ...]) -> bool:
@@ -183,25 +187,60 @@ class Prose:
         return not rest or rest[0] == ' '
 
 
-def reflow_sentence(sentence: str, width: int) -> tuple[str, ...]:
-    if len(sentence) <= width:
+def reflow_sentence(sentence: str, width: int, stub_floor: int = 0, first_width: int | None = None) -> tuple[str, ...]:
+    """Lay a sentence out on as few lines as fit, breaking only at clause commas.
+
+    Among layouts with that fewest count, one that leaves no stub wins, then one whose breaks split no list,
+    then one whose breaks each open a clause, then the one with the longest opening line.
+    A sentence with a clause too long for any line falls back to filling each line greedily,
+    which leaves the overflow where a rewrite finds it.
+    """
+    opening_width = width if first_width is None else first_width
+    if len(sentence) <= opening_width:
         return (sentence,)
     pieces = _comma_pieces(sentence)
     if len(pieces) == 1:
         return (sentence,)
-    return _pack(pieces, width)
+    return _best_layout(pieces, width, opening_width, stub_floor) or _pack(pieces, width)
 
 
 def _comma_pieces(sentence: str) -> tuple[str, ...]:
     pieces: list[str] = []
     start = 0
-    for comma in re.finditer(r',\s+', sentence):
-        pieces.append(sentence[start : comma.end()].rstrip())
-        start = comma.end()
+    for offset in comma_breaks(sentence):
+        pieces.append(sentence[start:offset].strip())
+        start = offset
     tail = sentence[start:].strip()
     if tail:
         pieces.append(tail)
     return tuple(pieces) if pieces else (sentence,)
+
+
+def comma_breaks(sentence: str) -> tuple[int, ...]:
+    """Offsets just past each comma that ends a clause, which are the only places a sentence may break.
+
+    A comma inside brackets or a code span separates items of one phrase, so a break there splits the phrase.
+    """
+    enclosed = _enclosed_spans(sentence)
+    return tuple(
+        comma.start() + 1
+        for comma in re.finditer(r',\s+', sentence)
+        if not any(start < comma.start() < end for start, end in enclosed)
+    )
+
+
+# Only a matched pair encloses anything, so a stray bracket such as the one in "1)" never swallows the sentence.
+def _enclosed_spans(sentence: str) -> tuple[tuple[int, int], ...]:
+    spans = [(code_span.start(), code_span.end()) for code_span in _CODE_RUN.finditer(sentence)]
+    open_brackets: list[tuple[str, int]] = []
+    for offset, character in enumerate(sentence):
+        if any(start <= offset < end for start, end in spans):
+            continue
+        if character in _BRACKET_PAIRS:
+            open_brackets.append((_BRACKET_PAIRS[character], offset))
+        elif open_brackets and character == open_brackets[-1][0]:
+            spans.append((open_brackets.pop()[1], offset + 1))
+    return tuple(spans)
 
 
 def _pack(pieces: tuple[str, ...], width: int) -> tuple[str, ...]:
@@ -217,3 +256,91 @@ def _pack(pieces: tuple[str, ...], width: int) -> tuple[str, ...]:
     if current_line:
         lines.append(current_line)
     return tuple(lines)
+
+
+# Words that open a clause, so a comma before one is where a sentence divides in meaning.
+# As is left out, since it opens an aside such as "as this once did" as often as a clause.
+CLAUSE_OPENERS = frozenset(
+    {
+        'although',
+        'and',
+        'because',
+        'but',
+        'nor',
+        'or',
+        'otherwise',
+        'since',
+        'so',
+        'then',
+        'though',
+        'unless',
+        'until',
+        'whereas',
+        'which',
+        'while',
+        'yet',
+    }
+)
+# A piece this short between two commas is an item in a list, such as "base URL,", not a clause.
+LIST_ITEM_WORDS = 3
+LIST_CLOSERS = frozenset({'and', 'or'})
+
+
+def _best_layout(pieces: tuple[str, ...], width: int, opening_width: int, stub_floor: int) -> tuple[str, ...] | None:
+    """Pick break points by dynamic programming over the pieces, scoring each layout from the end backwards."""
+    count = len(pieces)
+    finished: tuple[tuple[int, int, int, int], tuple[str, ...]] = ((0, 0, 0, 0), ())
+    best: list[tuple[tuple[int, int, int, int], tuple[str, ...]] | None] = [None] * count
+    best.append(finished)
+    for start in reversed(range(count)):
+        line_width = opening_width if start == 0 else width
+        for stop in range(start + 1, count + 1):
+            line = ' '.join(pieces[start:stop])
+            if len(line) > line_width:
+                break
+            rest = best[stop]
+            if rest is None:
+                continue
+            (rest_lines, rest_stubs, rest_lists, rest_asides), rest_layout = rest
+            is_stub = (start, stop) != (0, count) and len(line) < stub_floor
+            splits_list = stop < count and _splits_a_list(pieces, stop)
+            opens_aside = stop < count and not _opens_a_clause(pieces[stop])
+            score = (rest_lines + 1, rest_stubs + is_stub, rest_lists + splits_list, rest_asides + opens_aside)
+            candidate = (score, (line, *rest_layout))
+            current = best[start]
+            # On a tie the longer line wins, as filling greedily would choose.
+            if current is None or score <= current[0]:
+                best[start] = candidate
+    found = best[0]
+    return None if found is None else found[1]
+
+
+def _splits_a_list(pieces: tuple[str, ...], index: int) -> bool:
+    """Whether a break before ``pieces[index]`` falls beside an item of a list rather than between clauses."""
+    return _is_list_item(pieces, index - 1) or _is_list_item(pieces, index)
+
+
+# A short piece is an item, such as "base URL,", when the run goes on with another short piece or closes on and or or.
+# One standing alone, such as "returns ``None``,", or one opening a clause, such as "then optional params,", is not.
+def _is_list_item(pieces: tuple[str, ...], index: int) -> bool:
+    if not 0 < index < len(pieces) - 1 or not _is_short(pieces[index]) or _opens_a_clause(pieces[index]):
+        return False
+    following = pieces[index + 1].split()
+    closes_run = bool(following) and following[0].lower() in LIST_CLOSERS
+    return closes_run or _is_short(pieces[index + 1]) or (index >= 2 and _is_short(pieces[index - 1]))
+
+
+def _is_short(piece: str) -> bool:
+    return len(piece.split()) <= LIST_ITEM_WORDS
+
+
+def _opens_a_clause(piece: str) -> bool:
+    words = piece.split()
+    return bool(words) and words[0].lower() in CLAUSE_OPENERS
+
+
+def break_cost(lines: tuple[str, ...]) -> int:
+    """Count the breaks in a laid out sentence that split a list."""
+    pieces = _comma_pieces(' '.join(lines))
+    piece_ends = itertools.accumulate(len(_comma_pieces(line)) for line in lines[:-1])
+    return sum(_splits_a_list(pieces, piece_end) for piece_end in piece_ends)

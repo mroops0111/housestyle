@@ -9,10 +9,10 @@ The level says whether a rewrite blocks. An error fails check and stops an agent
 | Rule | Fix kind | Level | Summary |
 | --- | --- | --- | --- |
 | `line-too-long` | reflow | error | A physical comment line must fit the configured width, counting indent and delimiter. |
-| `mid-clause-break` | reflow | error | A comment block must be laid out one sentence per line, splitting only at commas. |
+| `mid-clause-break` | reflow | error | A sentence sits on one line when it fits, and otherwise breaks at clause commas, on as few lines as it can. |
 | `block-too-long` | rewrite | warning | A comment block long enough to restate the code has stopped earning its place. |
 | `file-header-comment` | rewrite | warning | A file must not open with a banner comment before its first declaration. |
 | `plain-comment-on-public` | rewrite | error | A public symbol must be documented in the doc comment form its language renders. |
 | `signature-restating-tag` | rewrite | error | A doc comment must not restate what the type signature already carries. |
 | `stub-fragment` | rewrite | warning | A sentence forced to break must not leave a stub of a line behind. |
-| `unbreakable-sentence` | rewrite | error | A sentence over the width must carry a comma so it has somewhere legal to break. |
+| `unbreakable-sentence` | rewrite | error | A sentence over the width must carry a clause comma wherever it has to break. |

@@ -91,3 +91,11 @@ def test_the_marketplace_points_at_this_repository() -> None:
 
     assert [plugin['name'] for plugin in listed] == ['subedit']
     assert listed[0]['source']['repo'] == 'mroops0111/subedit'
+
+
+def test_the_judging_skill_names_itself_as_its_folder_does() -> None:
+    skill = ROOT / 'skills' / 'judging-findings' / 'SKILL.md'
+    front_matter = skill.read_text(encoding='utf-8').split('---')[1]
+
+    assert 'name: judging-findings' in front_matter, 'Claude Code loads a skill by the name in its front matter'
+    assert 'description:' in front_matter

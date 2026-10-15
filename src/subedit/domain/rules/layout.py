@@ -8,7 +8,7 @@ from .rewrite import stub_floor
 
 MID_CLAUSE_BREAK = RuleMetadata(
     rule_id='mid-clause-break',
-    summary='A comment block must be laid out one sentence per line, splitting only at commas.',
+    summary='A sentence sits on one line when it fits, and otherwise breaks at clause commas, on as few lines as it can.',
     fix_kind=FixKind.REFLOW,
 )
 
@@ -31,7 +31,7 @@ class MidClauseBreakRule(Rule):
             range=group.range,
             message=(
                 'Comment layout differs from one sentence per line. '
-                'Break only at a period or a comma, never mid clause.'
+                'A sentence that fits takes one line, and a longer one breaks only at a comma ending a clause.'
             ),
             fix=Fix.reflow(reflowed.as_edit()),
         )

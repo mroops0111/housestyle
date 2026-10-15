@@ -231,4 +231,5 @@ def test_a_sentence_whose_split_strands_a_stub_keeps_the_author_layout() -> None
     )
     outcome = run(source, width=80)
     assert outcome.document.text == source, 'a fix must not lay out a stub its own check rejects'
-    assert [item.rule_id for item in outcome.report.needing_author] == ['stub-fragment']
+    # Past the stub, the rest of the sentence has no clause comma left to break at either.
+    assert [item.rule_id for item in outcome.report.needing_author] == ['stub-fragment', 'unbreakable-sentence']

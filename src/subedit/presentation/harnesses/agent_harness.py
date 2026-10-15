@@ -35,6 +35,13 @@ class AgentHarness(abc.ABC):
         """
         ...
 
+    def advisory_output(self, advice: str) -> str:
+        """Stdout that puts advice in front of the model without blocking, or nothing where the agent has no channel.
+
+        Exit two is the only shared way to reach the model, and it blocks, so a warning needs one of its own.
+        """
+        return ''
+
 
 def existing_source_files(
     candidates: typing.Iterable[str | pathlib.Path], extensions: frozenset[str]
