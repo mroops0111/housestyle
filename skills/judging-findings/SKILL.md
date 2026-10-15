@@ -25,8 +25,8 @@ A warning passes when the text meets its criterion. Leave such text exactly as i
 
 | Rule | Keep the text when | Rewrite it when |
 | --- | --- | --- |
-| `subedit.ExternalRef` | The identifier is public and resolvable by anyone, such as an RFC, an MCP SEP, a PEP, a CVE, or an ISO standard. | It is a private ticket, such as JIRA-123 or an internal issue key. State the constraint the ticket recorded instead. |
-| `subedit.DateRef` | The date names a version or a spec revision, such as the MCP 2025-11-25 specification. | It records when something happened or changed. State the constraint that holds now. |
+| `subedit.ExternalRef` | The identifier is public and resolvable by anyone, such as an RFC, an MCP SEP, a PEP, a CVE, or an ISO standard. | It is a private ticket, such as a Jira key or an internal issue number. State the constraint the ticket recorded instead. |
+| `subedit.DateRef` | The date names a version or a spec revision, such as the dated revision an MCP specification is named by. | It records when something happened or changed. State the constraint that holds now. |
 | `subedit.MidSentenceColon` | The colon introduces a list, an indented block, or a label such as `Note:`. | The sentence runs on after the colon. Split it into two sentences, or join the clauses with a comma and a conjunction. |
 | `block-too-long` | Every sentence states a constraint the code cannot show. | Some sentences narrate what the code does. Cut them, or move the explanation into a name. |
 | `file-header-comment` | It states a constraint about the whole module that no single declaration owns. | It is a banner or a summary of the file. Delete it, or move the constraint to the declaration it applies to. |
@@ -39,6 +39,6 @@ An error always needs a rewrite. The message states the fix, and these notes cov
 - `unbreakable-sentence`: a line can break only at a comma that ends a clause, and a comma inside brackets or a code span does not count. Add a comma at a clause boundary, or split the sentence in two.
 - `plain-comment-on-public`: move the text into the docstring.
 - `signature-restating-tag` and `subedit.SignatureTag`: delete the tag, since the signature already says it.
-- `subedit.EditHistory`: state the current behavior, not how it used to be.
+- `subedit.EditHistory`: state the current behavior, not its history.
 - `subedit.Semicolon`, `subedit.EmDash`: split into two sentences, or use a comma or parentheses.
 - `subedit.Ellipsis`: give two or three concrete examples, and end the list there.
