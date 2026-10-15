@@ -41,4 +41,4 @@ An error always needs a rewrite. The message states the fix, and these notes cov
 - `signature-restating-tag` and `subedit.SignatureTag`: delete the tag, since the signature already says it.
 - `subedit.EditHistory`: state the current behavior, not its history.
 - `subedit.Semicolon`, `subedit.EmDash`: split into two sentences, or use a comma or parentheses.
-- `subedit.Ellipsis`: give two or three concrete examples, and end the list there.
+- `subedit.Ellipsis`: name two or three concrete examples after "such as", as in "a transport failure, such as a connect, timeout, or DNS error". Dropping the trailing word and joining the rest with "or" turns a sample into the whole set, which narrows what the sentence claims.
