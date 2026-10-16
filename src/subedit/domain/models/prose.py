@@ -216,6 +216,11 @@ def _comma_pieces(sentence: str) -> tuple[str, ...]:
     return tuple(pieces) if pieces else (sentence,)
 
 
+def code_spans(text: str) -> tuple[tuple[int, int], ...]:
+    """The offsets each backtick code span covers, which hold code rather than prose."""
+    return tuple((code_span.start(), code_span.end()) for code_span in _CODE_RUN.finditer(text))
+
+
 def comma_breaks(sentence: str) -> tuple[int, ...]:
     """Offsets just past each comma that ends a clause, which are the only places a sentence may break.
 
@@ -231,7 +236,7 @@ def comma_breaks(sentence: str) -> tuple[int, ...]:
 
 # Only a matched pair encloses anything, so a stray bracket such as the one in "1)" never swallows the sentence.
 def _enclosed_spans(sentence: str) -> tuple[tuple[int, int], ...]:
-    spans = [(code_span.start(), code_span.end()) for code_span in _CODE_RUN.finditer(sentence)]
+    spans = list(code_spans(sentence))
     open_brackets: list[tuple[str, int]] = []
     for offset, character in enumerate(sentence):
         if any(start <= offset < end for start, end in spans):
@@ -285,6 +290,8 @@ CLAUSE_OPENERS = frozenset(
 LIST_ITEM_WORDS = 3
 LIST_CLOSERS = frozenset({'and', 'or'})
 ARTICLES = frozenset({'a', 'an', 'the'})
+# Prepositions that open a sentence's framing phrase, such as "By default,", rather than its first item.
+LEAD_IN_WORDS = frozenset({'after', 'at', 'before', 'by', 'during', 'for', 'from', 'in', 'on', 'once', 'when', 'with'})
 
 
 def _best_layout(pieces: tuple[str, ...], width: int, opening_width: int, stub_floor: int) -> tuple[str, ...] | None:
@@ -318,7 +325,7 @@ def _best_layout(pieces: tuple[str, ...], width: int, opening_width: int, stub_f
 
 def _splits_a_list(pieces: tuple[str, ...], index: int) -> bool:
     """Whether a break before ``pieces[index]`` falls beside an item of a list rather than between clauses."""
-    return _is_list_item(pieces, index - 1) or _is_list_item(pieces, index)
+    return _is_list_item(pieces, index - 1) or _is_list_item(pieces, index) or _splits_a_serial_run(pieces, index)
 
 
 # A short piece is an item, such as "base URL,", when the run goes on with another short piece or closes on and or or.
@@ -326,11 +333,41 @@ def _splits_a_list(pieces: tuple[str, ...], index: int) -> bool:
 def _is_list_item(pieces: tuple[str, ...], index: int) -> bool:
     if not 0 < index < len(pieces) - 1 or not _is_short(pieces[index]) or _opens_a_clause(pieces[index]):
         return False
-    following = pieces[index + 1].split()
-    if _is_appositive(pieces[index], following):
+    if _is_appositive(pieces[index], pieces[index + 1].split()):
         return False
-    closes_run = bool(following) and following[0].lower() in LIST_CLOSERS
-    return closes_run or _is_short(pieces[index + 1]) or (index >= 2 and _is_short(pieces[index - 1]))
+    return (
+        _closes_a_run(pieces[index + 1])
+        or _is_short(pieces[index + 1])
+        or (index >= 2 and _is_short(pieces[index - 1]))
+    )
+
+
+# In "No auth, a static token, and an OAuth client", a break before the second item or the closer splits the list,
+# however long one item runs, as long as another is short enough to read as an item.
+def _splits_a_serial_run(pieces: tuple[str, ...], index: int) -> bool:
+    for closer in (index, index + 1):
+        if not 2 <= closer < len(pieces) or not _closes_a_run(pieces[closer]):
+            continue
+        items = range(closer - 2, closer)
+        if any(_opens_a_clause(pieces[item]) for item in items):
+            continue
+        if any(_reads_as_item(pieces, item) for item in items):
+            return True
+    return False
+
+
+# A sentence's opening piece may instead lead in, as "However," or "In practice," does.
+def _reads_as_item(pieces: tuple[str, ...], index: int) -> bool:
+    piece = pieces[index]
+    if not _is_short(piece) or _is_appositive(piece, pieces[index + 1].split()):
+        return False
+    words = piece.split()
+    return index > 0 or (len(words) > 1 and words[0].lower() not in LEAD_IN_WORDS)
+
+
+def _closes_a_run(piece: str) -> bool:
+    words = piece.split()
+    return bool(words) and words[0].lower() in LIST_CLOSERS
 
 
 # "``owner``, a ``Person``," renames what came before it,

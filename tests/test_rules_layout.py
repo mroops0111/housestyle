@@ -184,3 +184,34 @@ def test_a_line_ending_on_a_colon_keeps_its_layout_for_the_rewrite() -> None:
         '    pass\n'
     )
     assert lint(source, width=120).is_clean, 'the colon needs its author, and moving it mid line reads worse'
+
+
+def test_a_docstring_summary_is_never_broken() -> None:
+    source = 'def f():\n    """Return the code, state, and iss of the redirect once the user completes the flow."""\n'
+    assert fixed(source, width=80) == source, 'PEP 257 keeps the summary to one line, so a long one waits for a rewrite'
+
+
+def test_a_serial_list_with_one_long_item_is_not_split() -> None:
+    source = (
+        'def f():\n'
+        '    """Pick a kind.\n\n'
+        '    No auth, a static ``bearer`` or ``api_key``, and an ``oauth2`` service token all call\n'
+        '    the API as one shared identity.\n'
+        '    """\n'
+    )
+    assert fixed(source, width=90) == source
+
+
+def test_a_line_comment_list_stays_right_under_its_introduction() -> None:
+    source = (
+        "# Where a card's suggestions land in the final message.\n"
+        "# * 'chip': quick-reply chips at message-envelope level\n"
+        "# * 'button': inline buttons in the bubble footer\n"
+        "PLACEMENT = 'chip'\n"
+    )
+    assert fixed(source, width=120) == source, 'a blank line added here would push the block past its line limit'
+
+
+def test_a_docstring_list_still_gets_the_blank_line_rest_needs() -> None:
+    source = 'def f():\n    """Pick one.\n\n    The order is fixed.\n    - detect\n    - pick\n    """\n'
+    assert '    The order is fixed.\n\n    - detect\n' in fixed(source, width=120)

@@ -1,6 +1,6 @@
 import typing
 
-from ..models.comment import CommentGroup
+from ..models.comment import CommentForm, CommentGroup
 from ..models.diagnostic import Diagnostic, Fix, FixKind, RuleMetadata, Severity
 from ..models.prose import Prose, reflow_sentence
 from ..ports.rule import Rule, RuleContext
@@ -15,7 +15,10 @@ STUB_FRAGMENT = RuleMetadata(
 
 UNBREAKABLE_SENTENCE = RuleMetadata(
     rule_id='unbreakable-sentence',
-    summary='A sentence over the width must carry a clause comma wherever it has to break.',
+    summary=(
+        'A sentence over the width must carry a clause comma, splitting no list, wherever it has to break, '
+        'and a docstring summary must fit one line.'
+    ),
     fix_kind=FixKind.REWRITE,
 )
 
@@ -41,6 +44,11 @@ def budgeted_sentences(group: CommentGroup, context: RuleContext) -> tuple[tuple
     )
 
 
+def is_summary(group: CommentGroup, index: int) -> bool:
+    """Whether a docstring's sentence is its summary, which reflow never breaks."""
+    return index == 0 and group.form is CommentForm.DOC
+
+
 def stub_floor(context: RuleContext) -> int:
     """Reflow reads the same floor, so a fix never lays out a stub that this rule then rejects."""
     if not context.rule_set.is_enabled(STUB_FRAGMENT.rule_id):
@@ -53,7 +61,9 @@ class StubFragmentRule(Rule):
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
         minimum_length = stub_floor(context)
-        for sentence, budget in budgeted_sentences(group, context):
+        for index, (sentence, budget) in enumerate(budgeted_sentences(group, context)):
+            if is_summary(group, index):
+                continue
             split_pieces = reflow_sentence(sentence, budget, minimum_length)
             if len(split_pieces) < 2:
                 continue
@@ -77,23 +87,53 @@ class UnbreakableSentenceRule(Rule):
     metadata = UNBREAKABLE_SENTENCE
 
     def check(self, group: CommentGroup, context: RuleContext) -> typing.Iterable[Diagnostic]:
-        for sentence, budget in budgeted_sentences(group, context):
-            longest_line = max(reflow_sentence(sentence, budget), key=len)
-            if len(longest_line) <= budget:
-                continue
-            if longest_line == sentence:
-                cause = 'contains no comma that ends a clause, so there is no legal place to break it'
+        sentences = budgeted_sentences(group, context)
+        for index, (sentence, budget) in enumerate(sentences):
+            if is_summary(group, index):
+                # A summary with nothing after it closes on its own line, so the quotes share its budget.
+                closing = len(group.closing_quotes()) if len(sentences) == 1 else 0
+                message = self._summary_message(sentence, budget - closing)
             else:
-                cause = f'still leaves a line of {len(longest_line)} characters when broken at every clause comma'
+                message = self._sentence_message(sentence, budget)
+            if message is not None:
+                yield Diagnostic(rule_id=self.metadata.rule_id, range=group.range, message=message, fix=Fix.rewrite())
+        for sentence in group.sentences_held_by_a_list(context.line_width, stub_floor(context)):
             yield Diagnostic(
                 rule_id=self.metadata.rule_id,
                 range=group.range,
-                message=(
-                    f'This sentence runs to {len(sentence)} characters against a budget of {budget} characters '
-                    f'and {cause}. '
-                    f'{BRACKET_NOTE if "," in sentence else ""}'
-                    'Add a comma at a clause boundary, or split it into two sentences. '
-                    f'The part that does not fit is "{longest_line}".'
-                ),
+                message=self._list_message(sentence),
                 fix=Fix.rewrite(),
             )
+
+    def _summary_message(self, sentence: str, budget: int) -> str | None:
+        if len(sentence) <= budget:
+            return None
+        return (
+            f'This docstring summary runs to {len(sentence)} characters against a budget of {budget} characters, '
+            'and PEP 257 asks that a summary fit one line, since indexing tools read only that line. '
+            'Shorten it to what the object does, and move the detail into the body below it.'
+        )
+
+    def _sentence_message(self, sentence: str, budget: int) -> str | None:
+        longest_line = max(reflow_sentence(sentence, budget), key=len)
+        if len(longest_line) <= budget:
+            return None
+        if longest_line == sentence:
+            cause = 'contains no comma that ends a clause, so there is no legal place to break it'
+        else:
+            cause = f'still leaves a line of {len(longest_line)} characters when broken at every clause comma'
+        return (
+            f'This sentence runs to {len(sentence)} characters against a budget of {budget} characters '
+            f'and {cause}. '
+            f'{BRACKET_NOTE if "," in sentence else ""}'
+            'Add a comma at a clause boundary, or split it into two sentences. '
+            f'The part that does not fit is "{longest_line}".'
+        )
+
+    def _list_message(self, sentence: str) -> str:
+        return (
+            f'This sentence breaks in mid clause, and every clause comma it could break at instead splits a list, '
+            'leaving its items on two lines. '
+            'Move the list to the end of the sentence, or split it into two sentences. '
+            f'The sentence opens with "{" ".join(sentence.split()[:8])}".'
+        )

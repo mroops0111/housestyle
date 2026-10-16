@@ -102,3 +102,26 @@ def test_each_rule_can_be_disabled_independently(rule_id: str) -> None:
 def test_a_clause_too_long_to_fit_is_unbreakable_despite_other_commas() -> None:
     text = 'an opening clause long enough, and then a much longer clause carrying no further comma at all.'
     assert ids(comment(text), width=60) == ['unbreakable-sentence']
+
+
+def test_a_sentence_that_breaks_only_inside_a_list_needs_its_author() -> None:
+    text = 'No auth, a static bearer or api key, and an oauth2 service token all call the API as one identity.'
+    report = lint(comment(text), width=80)
+    assert [item.rule_id for item in report.diagnostics] == ['unbreakable-sentence']
+    assert 'splits a list' in report.diagnostics[0].message
+
+
+def test_a_docstring_summary_too_long_for_one_line_needs_its_author() -> None:
+    source = 'def f():\n    """Return the code, state, and iss of the redirect once the user completes the flow."""\n'
+    report = lint(source, width=80)
+    assert [item.rule_id for item in report.diagnostics] == ['unbreakable-sentence']
+    assert 'PEP 257' in report.diagnostics[0].message
+
+
+def test_a_summary_that_fits_beside_its_quotes_is_fine() -> None:
+    assert ids('def f():\n    """Return the code once the user completes the flow."""\n', width=80) == []
+
+
+def test_a_summary_the_author_wrapped_still_needs_shortening() -> None:
+    source = 'def f():\n    """Return the code, state, and iss of the redirect\n    once the user completes the flow.\n    """\n'
+    assert ids(source, width=80) == ['unbreakable-sentence'], 'a wrapped summary is as far from one line as a long one'

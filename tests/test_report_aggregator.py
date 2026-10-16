@@ -169,6 +169,15 @@ def test_vale_counts_as_missing_until_the_extra_has_downloaded_it(
     assert linter.is_available() is True
 
 
+@pytest.mark.skipif(shutil.which('vale') is None, reason='vale is not installed')
+def test_vale_findings_inside_a_code_span_are_dropped(tmp_path: pathlib.Path) -> None:
+    text = 'def f():\n    """Parse it.\n\n    For example ``zh-TW,zh;q=0.9`` and `a;b` are headers; this is prose.\n    """\n'
+    found = ValeLinter().run(Document(uri=(tmp_path / 'probe.py').as_uri(), text=text, language_id='python'))
+    semicolons = [item for item in found if 'Semicolon' in item.rule_id]
+    assert [text[item.range.start] for item in semicolons] == [';'], 'code is not prose, so only the last one counts'
+    assert text.index('headers;') + len('headers') == semicolons[0].range.start
+
+
 def test_autocorrect_needs_no_install() -> None:
     assert AutoCorrectLinter().is_available() is True
 
