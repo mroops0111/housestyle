@@ -104,12 +104,18 @@ class CommentGroup:
             return self
         texts = self._reflow_into_texts(width, stub_floor)
         # Text that ends up on one line closes there too, so the closing quotes need room beside it.
-        closing_width = len(self._closing_quotes())
+        closing_width = len(self.closing_quotes())
         if len(texts) == 1 and len(texts[0]) > self.text_budget(width, first_line=True) - closing_width:
             texts = self._reflow_into_texts(width, stub_floor, closing_width)
         if not texts:
             return self
         return self._rebuild_lines(texts)
+
+    def sentences_held_by_a_list(self, width: int, stub_floor: int = 0) -> tuple[str, ...]:
+        """The sentences reflow leaves as the author broke them, since every legal break would split a list."""
+        held: list[str] = []
+        self._reflow_into_texts(width, stub_floor, held=held)
+        return tuple(held)
 
     def text_budget(self, width: int, *, first_line: bool) -> int:
         """The characters of text a line holds, which on a docstring's opening line also cede the quotes."""
@@ -118,13 +124,18 @@ class CommentGroup:
         return max(20, width - (opening.prefix_width if quoted else len(opening.indent)))
 
     # A sentence takes as few lines as fit, and the author's layout stays when it breaks no worse than the best one.
-    # A sentence whose new layout would strand a stub or still overflow needs its author,
+    # A sentence whose new layout would strand a stub, split a list, or still overflow needs its author,
     # so it keeps the layout they gave it rather than one its own check rejects.
-    def _reflow_into_texts(self, width: int, stub_floor: int, reserve: int = 0) -> tuple[str, ...]:
+    # A docstring's summary never breaks, since PEP 257 keeps it to one line.
+    def _reflow_into_texts(
+        self, width: int, stub_floor: int, reserve: int = 0, held: list[str] | None = None
+    ) -> tuple[str, ...]:
         body_budget = self.text_budget(width, first_line=False)
         out: list[str] = []
-        for paragraph_index, (paragraph, is_literal) in enumerate(self._split_into_paragraphs()):
-            if out:
+        for paragraph_index, (paragraph, is_literal, follows_blank) in enumerate(self._split_into_paragraphs()):
+            # reStructuredText reads a list as part of the paragraph above it unless a blank line parts them,
+            # while a line comment's list may sit right under the line that introduces it.
+            if out and (follows_blank or self.form is CommentForm.DOC):
                 out.append('')
             if is_literal:
                 out.extend(paragraph)
@@ -134,13 +145,20 @@ class CommentGroup:
                 if sentence_index == 1 and paragraph_index == 0 and self.form is CommentForm.DOC:
                     out.append('')
                 first_budget = self.text_budget(width, first_line=not out) - (reserve if not out else 0)
-                best_lines = reflow_sentence(sentence.text, body_budget, stub_floor, first_width=first_budget)
+                if self.form is CommentForm.DOC and paragraph_index == 0 and sentence_index == 0:
+                    best_lines: tuple[str, ...] = (sentence.text,)
+                else:
+                    best_lines = reflow_sentence(sentence.text, body_budget, stub_floor, first_width=first_budget)
                 given_lines = _given_lines(lines, sentence)
                 if given_lines and _keeps_given(given_lines, best_lines, (first_budget, body_budget), stub_floor):
                     out.extend(given_lines)
-                elif _is_legal(best_lines, (first_budget, body_budget), stub_floor):
+                elif _is_legal(best_lines, (first_budget, body_budget), stub_floor) and not (
+                    given_lines and break_cost(best_lines)
+                ):
                     out.extend(best_lines)
                 elif given_lines:
+                    if held is not None and _is_legal(best_lines, (first_budget, body_budget), stub_floor):
+                        held.append(sentence.text)
                     out.extend(given_lines)
                 elif _strands_stub(best_lines, stub_floor):
                     return ()
@@ -148,18 +166,23 @@ class CommentGroup:
                     out.extend(best_lines)
         return tuple(out)
 
-    def _split_into_paragraphs(self) -> tuple[tuple[tuple[str, ...], bool], ...]:
-        paragraphs: list[tuple[tuple[str, ...], bool]] = []
+    def _split_into_paragraphs(self) -> tuple[tuple[tuple[str, ...], bool, bool], ...]:
+        """Each paragraph's lines, whether they are literal, and whether a blank line comes before them."""
+        paragraphs: list[tuple[tuple[str, ...], bool, bool]] = []
+        follows_blank = False
         for segment in self.prose().segments():
             current_lines: list[str] = []
             for line in segment.lines:
                 if line.strip():
                     current_lines.append(line)
-                elif current_lines:
-                    paragraphs.append((tuple(current_lines), segment.is_literal))
+                    continue
+                if current_lines:
+                    paragraphs.append((tuple(current_lines), segment.is_literal, follows_blank))
                     current_lines = []
+                follows_blank = True
             if current_lines:
-                paragraphs.append((tuple(current_lines), segment.is_literal))
+                paragraphs.append((tuple(current_lines), segment.is_literal, follows_blank))
+                follows_blank = False
         return tuple(paragraphs)
 
     def _rebuild_lines(self, texts: tuple[str, ...]) -> 'CommentGroup':
@@ -177,10 +200,10 @@ class CommentGroup:
             if not closes_alone:
                 body[-1] = dataclasses.replace(body[-1], delimiter=opening.delimiter.strip())
         else:
-            body[0] = dataclasses.replace(body[0], suffix=self._closing_quotes())
+            body[0] = dataclasses.replace(body[0], suffix=self.closing_quotes())
         return dataclasses.replace(self, lines=tuple(body))
 
-    def _closing_quotes(self) -> str:
+    def closing_quotes(self) -> str:
         if self.form is not CommentForm.DOC:
             return ''
         return self.lines[-1].suffix or self.lines[0].delimiter.strip()

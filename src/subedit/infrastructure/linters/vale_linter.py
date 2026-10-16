@@ -9,6 +9,7 @@ import pydantic
 from ...domain.models.diagnostic import SEVERITY_BY_NAME, Diagnostic, Fix, Severity
 from ...domain.models.document import Document
 from ...domain.models.position import Position, SourceRange
+from ...domain.models.prose import code_spans
 from ...domain.ports.external_linter import ExternalLinter
 
 
@@ -113,6 +114,8 @@ class ValeLinter(ExternalLinter):
 
     def _to_diagnostic(self, document: Document, alert: ValeAlert) -> Diagnostic | None:
         start_column, end_column = alert.span
+        if _inside_code_span(document, alert.line, start_column):
+            return None
         try:
             start_offset = document.positions.to_offset(Position(alert.line - 1, start_column - 1))
             end_offset = document.positions.to_offset(Position(alert.line - 1, end_column))
@@ -126,6 +129,14 @@ class ValeLinter(ExternalLinter):
             fix=Fix.rewrite(),
             source=self.name,
         )
+
+
+# Vale ignores a code span only in markup, so in a source file it reads the code inside one as prose.
+def _inside_code_span(document: Document, line: int, column: int) -> bool:
+    lines = document.text.split('\n')
+    if not 0 < line <= len(lines):
+        return False
+    return any(start < column <= end for start, end in code_spans(lines[line - 1]))
 
 
 # The vale extra installs its launcher beside this interpreter, which uvx does not put on PATH.
